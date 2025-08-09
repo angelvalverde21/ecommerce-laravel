@@ -1,0 +1,14 @@
+[
+{"type":"header","version":"5.2.0","comment":"Export to JSON plugin for PHPMyAdmin"},
+{"type":"database","name":"erp"},
+{"type":"table","name":"payments_status","database":"erp","data":
+[
+{"id":"1","name":"unpaid","title":"Pendiente de pago","created_at":"2023-04-25 11:46:05","updated_at":"2023-04-25 11:46:05"},
+{"id":"2","name":"failed","title":"Error al hacer el pago","created_at":"2023-04-25 11:46:05","updated_at":"2023-04-25 11:46:05"},
+{"id":"3","name":"expired","title":"Expirado","created_at":"2023-04-25 11:46:05","updated_at":"2023-04-25 11:46:05"},
+{"id":"4","name":"paid","title":"Pagado","created_at":"2023-04-25 11:46:05","updated_at":"2023-04-25 11:46:05"},
+{"id":"5","name":"refunding","title":"En proceso de reembolso","created_at":"2023-04-25 11:46:05","updated_at":"2023-04-25 11:46:05"},
+{"id":"6","name":"refunded","title":"Reembolsado","created_at":"2023-04-25 11:46:05","updated_at":"2023-04-25 11:46:05"}
+]
+}
+]
