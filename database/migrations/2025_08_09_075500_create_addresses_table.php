@@ -21,7 +21,6 @@ return new class extends Migration
             // $table->tinyInteger('document_number');
 
             $table->string('type')->nullable(); //casa, oficina, trabajo, etc
-            $table->unsignedBigInteger('phone')->nullable();
             $table->string('primary')->nullable();
             $table->string('secondary')->nullable();
             $table->string('references')->nullable();

@@ -15,10 +15,14 @@ return new class extends Migration
             $table->id();
 
             $table->string('name');
-            $table->string('email')->unique();
-            $table->foreignId('identity_id')->nullable()->constrained()->onDelete('cascade'); //DNI, RUC, CE, etc
-            $table->string('document_number', 20)->unique();
+            $table->string('address')->nullable();
+            $table->string('email')->nullable()->unique();
+            $table->foreignId('store_id')->nullable()->constrained()->onDelete('cascade');
             $table->unsignedBigInteger('phone')->unique()->nullable();
+            $table->foreignId('identity_id')->nullable()->constrained()->onDelete('cascade'); //DNI, RUC, CE, etc
+            $table->string('document_number', 20)->nullable()->unique();
+
+            $table->unique(['store_id', 'phone']);
 
             $table->timestamps();
         });

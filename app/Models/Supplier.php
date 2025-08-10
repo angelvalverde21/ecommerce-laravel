@@ -9,4 +9,6 @@ class Supplier extends Model
 {
     /** @use HasFactory<\Database\Factories\SupplierFactory> */
     use HasFactory;
+
+    protected $guarded = ['id', 'created_at'];
 }

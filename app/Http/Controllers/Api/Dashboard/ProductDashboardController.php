@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -58,22 +59,14 @@ class ProductDashboardController extends Controller
     {
         //
 
-        try {
-            return responseOk($store->productById($product_id)
-                ->with([
-                    'sizes',
-                    'category',
-                    'colors',
-                    'colors' => function ($query) {
-                        $query->where('status', 1)
-                            ->withCount('images as count_images');
-                    },
-                ])
-                ->first(), "Datos obtenidos con exito (dashboard)");
-        } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError($th, "Error al obtener el producto x");
+        $product = $store->products()->find($product_id);
+
+        if (!$product) {
+            return responseError([], "Error al obtener el producto x");
         }
+        
+        return responseOk($product, "Datos obtenidos con exito del producto");
+
 
         // return $query;
     }
@@ -98,13 +91,12 @@ class ProductDashboardController extends Controller
             $product = Product::create(
                 [
                     'name' => $resp['name'],
-                    'body' => $resp['body'],
-                    'tags' => $resp['tags'],
-                    'price' => $resp['price'],
                     'slug' => Str::slug($resp['name']),
+                    'body' => $resp['body'],
                     'extract' => '',
-                    'user_id' => Auth()->user()->id,
-                    'category_id' => $resp['category_id'],
+                    'price' => $resp['price'],
+                    'unit_id' => $resp['unit_id'],
+                    'user_id' => Auth::id(),
                     'store_id' => $store->id,
                     'status' => 1,
                 ]
@@ -116,11 +108,14 @@ class ProductDashboardController extends Controller
             DB::commit();
 
             return responseOk($product, "se agrego correctamente el product en create");
+
         } catch (\Throwable $th) {
 
             DB::rollback();
             Log::info($th);
-            return responseError($th, "Ha sucedido un error interno al crear el producto store");
+
+            return responseError($th, "Ha sucedido un error interno al crear el producto store x");
+
         }
     }
 
@@ -170,12 +165,10 @@ class ProductDashboardController extends Controller
             $product->save();
 
             return responseOk($product, "Producto archivado correctamente (destroy)");
-
         } catch (\Throwable $th) {
 
             Log::error($th);
             return responseError($th, "Error al archiviar el product (destroy)");
-
         }
     }
 }

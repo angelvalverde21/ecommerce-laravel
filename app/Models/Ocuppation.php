@@ -5,10 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Unit extends Model
+class Ocuppation extends Model
 {
-    /** @use HasFactory<\Database\Factories\UnitFactory> */
+    /** @use HasFactory<\Database\Factories\OcuppationFactory> */
     use HasFactory;
-
-    protected $guarded = ['id', 'created_at'];
 }
