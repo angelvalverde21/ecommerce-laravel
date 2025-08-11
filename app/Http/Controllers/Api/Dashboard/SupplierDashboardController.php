@@ -65,6 +65,7 @@ class SupplierDashboardController extends Controller
                 [
                     'name' => $resp['name'],
                     'email' => $resp['email'],
+                    'address' => $resp['address'],
                     'identity_id' => $resp['identity_id'] != null ? $resp['identity_id'] : null,
                     'document_number' => $resp['document_number'] != null ?  $resp['document_number'] : null,
                     'phone' => $resp['phone'],
@@ -94,9 +95,16 @@ class SupplierDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Store $store, $supplier_id)
     {
-        //
+
+        $supplier = $store->suppliers()->find($supplier_id);
+
+    if (!$supplier) {
+            return responseError([], "Error al obtener el suppliero x");
+        }
+
+        return responseOk($supplier, "Datos obtenidos con exito del suppliero");
     }
 
     /**
@@ -110,9 +118,38 @@ class SupplierDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Store $store, Request $request, string $supplier_id)
     {
         //
+                // Implementa la lógica para actualizar un suppliero existente
+        // Esto podría implicar validar los datos de la solicitud,
+        // actualizar el suppliero en la base de datos y devolver el suppliero actualizado.
+        try {
+            Log::info('updatex');
+            Log::info($request->all());
+
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'nullable',
+                'address' => 'nullable',
+                'identity_id' => 'nullable',
+                'document_number' => 'nullable',
+                'phone' => 'nullable',
+            ]);
+
+            $validatedData['store_id'] = $store->id;
+
+            $supplier = Supplier::updateOrCreate(
+                ['id' => $supplier_id],  // El campo 'id' indica si se actualiza o crea
+
+                $validatedData
+            );
+            return responseOk($supplier, "Datos guardados correctamente update");
+        } catch (\Throwable $th) {
+            //throw $th;
+            Log::info($th);
+            return responseError("Error al guardar los datos del suppliero desde supplier Private controller - > update", $th);
+        }
     }
 
     /**

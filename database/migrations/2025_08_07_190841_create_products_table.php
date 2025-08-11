@@ -20,12 +20,12 @@ return new class extends Migration
             
             $table->string('name')->nullable();
             $table->string('slug');
-            $table->string('sku');
-            $table->string('barcode');
+            $table->string('sku')->nullable();
+            $table->string('barcode')->nullable();
             $table->text('body')->nullable();
             $table->string('extract')->nullable();
 
-            $table->float('price')->nullable()->default('0.00');
+            // $table->float('price')->nullable()->default('0.00');
 
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
             

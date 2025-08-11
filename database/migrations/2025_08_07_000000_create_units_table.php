@@ -14,6 +14,9 @@ return new class extends Migration
         Schema::create('units', function (Blueprint $table) {
             $table->id();
             $table->string('name');         // Nombre completo: "metros", "kilogramos"
+            $table->string('label');         // Nombre completo: "metros", "kilogramos"
+            $table->string('singular');         // Nombre completo: "metros", "kilogramos"
+            $table->string('plural');         // Nombre completo: "metros", "kilogramos"
             $table->string('abbreviation')->nullable(); // Abreviatura: "m", "kg"
             $table->string('type')->nullable();  // Tipo: "length", "weight", "count", etc. (opcional)
             $table->timestamps();
