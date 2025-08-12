@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthApiController;
-use App\Http\Controllers\api\public\StorePublicController;
+use App\Http\Controllers\Api\public\StorePublicController;
 // use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
