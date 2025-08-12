@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 use function Illuminate\Log\log;
 
@@ -21,7 +22,7 @@ class PurchaseDashboardController extends Controller
     {
         //
         try {
-            Log::info('exito');
+            Log::info('exito index');
             //selectFields esta en el modelo purchase
             return responseOk($store->purchases()->with(['unit', 'supplier'])->orderBy('id', 'desc')->get(), "El listado de compras ha sido obtenido correctamente (dashboard)");
         } catch (\Throwable $th) {
@@ -44,38 +45,67 @@ class PurchaseDashboardController extends Controller
     public function store(Store $store, Request $request)
     {
         //
+
+        $typeMap = [
+            'batch' => \App\Models\Batch::class,
+            // Agrega más modelos según tu caso
+        ];
+
+
         $resp = $request->all();
+
 
         // $rules = $this->rules;
 
         // $this->validate($rules);
+
+
+        $validated = $request->validate([
+            'purchaseable_type' => ['required', Rule::in(array_keys($typeMap))],
+            'purchaseable_id' => 'required|integer',
+            'name' => 'required|string|max:255',
+            'quantity' => 'required|numeric',
+            'unit_id' => 'required|integer|exists:units,id',
+            'price' => 'required|numeric',
+            'total' => 'required|numeric',
+            'section_id' => 'required|integer|exists:sections,id',
+            'supplier_id' => 'nullable|integer|exists:suppliers,id',
+            'observations' => 'nullable|string',
+        ]);
+
+
+        $modelClass = $typeMap[$validated['purchaseable_type']];
+
+        // Obtener nombre tabla para validar existencia
+        $tableName = (new $modelClass)->getTable();
+
+        $parentModel = $modelClass::where('store_id', $store->id)->findOrFail($validated['purchaseable_id']);
 
         try {
 
 
             DB::beginTransaction();
 
-
-            $purchase = Purchase::create(
-                [
-                    'name' => $resp['name'],
-                    'quantity' => $resp['quantity'],
-                    'unit_id' => $resp['unit_id'],
-                    'price' => $resp['price'],
-                    'total' => $resp['total'],
-                    'supplier_id' => $resp['supplier_id'],
-                    'observations' => $resp['observations'],
-                    'store_id' => $store->id,
-                    'user_id' => Auth::guard('api')->id(),
-                ]
-            );
+            $purchase = $parentModel->purchases()->create([
+                'name' => $validated['name'],
+                'quantity' => $validated['quantity'],
+                'unit_id' => $validated['unit_id'],
+                'price' => $validated['price'],
+                'total' => $validated['total'],
+                'section_id' => $validated['section_id'],
+                'supplier_id' => $validated['supplier_id'] ?? null,
+                'observations' => $validated['observations'] ?? null,
+                'user_id' => Auth::guard('api')->id(),
+                // No agregues store_id ni section_id aquí si es polimórfico
+            ]);
 
 
             // return redirect()->route('erp.purchases.edit', ['store' => $this->store, 'purchase' => $purchase]);
 
             DB::commit();
 
-            return responseOk($purchase, "se agrego correctamente el purchase en create");
+            return responseOk($purchase->load('supplier'), "se agrego correctamente el purchase en create");
+
         } catch (\Throwable $th) {
 
             DB::rollback();
@@ -91,7 +121,8 @@ class PurchaseDashboardController extends Controller
     public function show(Store $store, $purchase_id)
     {
 
-        $purchase = $store->purchases()->find($purchase_id);
+
+        $purchase = Purchase::find($purchase_id);
 
         if (!$purchase) {
             return responseError([], "Error al obtener el purchaseo x");
@@ -127,12 +158,12 @@ class PurchaseDashboardController extends Controller
                 'price' => 'nullable',
                 'total' => 'nullable',
                 'supplier_id' => 'nullable',
-                'store_id' => '',
+                'section_id' => 'required',
                 'user_id' => '',
                 'observations' => ''
             ]);
 
-            $validatedData['store_id'] = $store->id;
+            // $validatedData['store_id'] = $store->id;
             $validatedData['user_id']  = Auth::guard('api')->id();
 
             $purchase = Purchase::updateOrCreate(

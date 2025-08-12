@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Batche;
+use App\Models\Batch;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class BatcheDashboardController extends Controller
+class BatchDashboardController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -19,8 +19,8 @@ class BatcheDashboardController extends Controller
         //
         try {
             Log::info('exito');
-            //selectFields esta en el modelo batche
-            return responseOk($store->batches()->orderBy('id', 'desc')->get(), "El listado de batches ha sido obtenido correctamente (dashboard)");
+            //selectFields esta en el modelo batch
+            return responseOk($store->batches()->with('section.childrens')->orderBy('id', 'desc')->get(), "El listado de batchs ha sido obtenido correctamente (dashboard)");
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
@@ -43,7 +43,7 @@ class BatcheDashboardController extends Controller
 
         $resp = $request->all();
 
-        Log::info('creando batcheo');
+        Log::info('creando batcho');
 
         // $rules = $this->rules;
 
@@ -61,42 +61,52 @@ class BatcheDashboardController extends Controller
                 'quantity_approved' => 'nullable|numeric',
                 'quantity_waste' => 'nullable|numeric',
                 'production_cost' => 'nullable|numeric',
+                'store_id' => '',
+                'section_id' => '',
             ]);
 
+            $validatedData['section_id'] = 1;
             $validatedData['store_id'] = $store->id;
 
-            $batche = Batche::create($validatedData);
+            $batch = Batch::create($validatedData);
 
 
-            // return redirect()->route('erp.batches.edit', ['store' => $this->store, 'batche' => $batche]);
+            // return redirect()->route('erp.batchs.edit', ['store' => $this->store, 'batch' => $batch]);
 
             DB::commit();
 
-            return responseOk($batche, "se agrego correctamente el batche en create");
+            return responseOk($batch, "se agrego correctamente el batch en create");
         } catch (\Throwable $th) {
 
             DB::rollback();
 
             Log::info($th);
 
-            return responseError($th, "Ha sucedido un error interno al crear el batcheo store x");
+            return responseError($th, "Ha sucedido un error interno al crear el batcho store x");
         }
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Store $store, $batche_id)
+    public function show(Store $store, $batch_id)
     {
-        $batche = $store->batches()->find($batche_id);
+        // $batch = $store->batches()->with(['section.childrens.purchases'])->find($batch_id);
 
-        if (!$batche) {
-            return responseError([], "Error al obtener el batcheo x");
+        $batch = $store->batches()
+            ->with(['section.childrens.purchases' => function ($query) {
+                $query->with(['unit', 'supplier']);
+            }])
+            ->find($batch_id);
+
+        Log::info($batch->toSql());
+
+        if (!$batch) {
+            return responseError([], "Error al obtener el batcho x");
         }
 
-        return responseOk($batche, "Datos obtenidos con exito del batcheo");
+        return responseOk($batch, "Datos obtenidos con exito del batcho");
     }
-
     /**
      * Show the form for editing the specified resource.
      */
@@ -108,11 +118,11 @@ class BatcheDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Store $store, $batche_id, Request $request)
+    public function update(Store $store, $batch_id, Request $request)
     {
-        // Implementa la lógica para actualizar un batcheo existente
+        // Implementa la lógica para actualizar un batcho existente
         // Esto podría implicar validar los datos de la solicitud,
-        // actualizar el batcheo en la base de datos y devolver el batcheo actualizado.
+        // actualizar el batcho en la base de datos y devolver el batcho actualizado.
         try {
             Log::info('updatex');
             Log::info($request->all());
@@ -120,24 +130,24 @@ class BatcheDashboardController extends Controller
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
                 'total' => 'nullable|numeric',
-                'quantity_approved' => 'nullable|numeric',
+                'quantity_total' => 'nullable|numeric',
                 'quantity_waste' => 'nullable|numeric',
                 'production_cost' => 'nullable|numeric',
             ]);
 
             $validatedData['store_id'] = $store->id;
 
-            $batche = Batche::updateOrCreate(
-                ['id' => $batche_id],  // El campo 'id' indica si se actualiza o crea
+            $batch = Batch::updateOrCreate(
+                ['id' => $batch_id],  // El campo 'id' indica si se actualiza o crea
 
                 $validatedData
             );
 
-            return responseOk($batche, "Datos guardados correctamente update");
+            return responseOk($batch, "Datos guardados correctamente update");
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
-            return responseError("Error al guardar los datos del batcheo desde batche Private controller - > update", $th);
+            return responseError("Error al guardar los datos del batcho desde batch Private controller - > update", $th);
         }
     }
 

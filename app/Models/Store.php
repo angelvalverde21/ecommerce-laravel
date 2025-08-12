@@ -26,7 +26,12 @@ class Store extends Model
     }
     public function batches()
     {
-        return $this->hasMany(Batche::class);
+        return $this->hasMany(Batch::class);
+    }
+
+    public function sections()
+    {
+        return $this->hasMany(Section::class);
     }
 
     public function getRouteKeyName()

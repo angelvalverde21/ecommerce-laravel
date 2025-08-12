@@ -2,10 +2,11 @@
 
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
-use App\Http\Controllers\Api\Dashboard\BatcheDashboardController;
+use App\Http\Controllers\Api\Dashboard\BatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
+use App\Http\Controllers\Api\Dashboard\SectionDashboardController;
 use App\Http\Controllers\Api\Dashboard\SupplierDashboardController;
 use App\Http\Controllers\Api\Dashboard\UnitDashboardController;
 use Illuminate\Support\Facades\Route;
@@ -76,14 +77,14 @@ Route::prefix('v1/dashboard/{store}')->group(function () {
 
     Route::prefix('batches')->group(function () {
     
-        Route::get('/', [BatcheDashboardController::class, 'index']); //Listar
-        Route::post('/', [BatcheDashboardController::class, 'store']); //create
+        Route::get('/', [BatchDashboardController::class, 'index']); //Listar
+        Route::post('/', [BatchDashboardController::class, 'store']); //create
     
         Route::prefix('{brand_id}')->group(function () {
     
-            Route::get('/', [BatcheDashboardController::class, 'show']); //show o mostrar por id
-            Route::put('/', [BatcheDashboardController::class, 'update']); //actualizar
-            Route::delete('/', [BatcheDashboardController::class, 'destroy']); //borrar
+            Route::get('/', [BatchDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [BatchDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [BatchDashboardController::class, 'destroy']); //borrar
     
         });
     
@@ -104,6 +105,20 @@ Route::prefix('v1/dashboard/{store}')->group(function () {
     
     });
 
+    Route::prefix('sections')->group(function () {
+    
+        Route::get('/', [SectionDashboardController::class, 'index']); //Listar
+        Route::post('/', [SectionDashboardController::class, 'store']); //create
+    
+        Route::prefix('{brand_id}')->group(function () {
+    
+            Route::get('/', [SectionDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [SectionDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [SectionDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
+    });
 
 });
 

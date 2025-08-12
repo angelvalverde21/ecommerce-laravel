@@ -20,13 +20,13 @@ return new class extends Migration
             $table->decimal('price', 8, 2)->nullable();
             $table->decimal('total', 8, 2)->nullable();
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
-            $table->foreignId('store_id')->constrained()->onDelete('cascade');
+            // $table->foreignId('store_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             // Nueva relación con sections
             $table->foreignId('section_id')->nullable()->constrained()->onDelete('set null');
 
-            $table->morphs('purchaseable');
-            $table->unique(['purchaseable_type', 'purchaseable_id']);
+            $table->morphs('purchaseable'); //ya agrega el index
+            // $table->index(['purchaseable_type', 'purchaseable_id']);
 
             $table->timestamps();
         });

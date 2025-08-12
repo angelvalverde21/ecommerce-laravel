@@ -12,6 +12,17 @@ class Purchase extends Model
 
     protected $guarded = ['id', 'created_at'];
 
+    public function purchaseable()
+    {
+        return $this->morphTo();
+    }
+
+    public function section()
+{
+    return $this->belongsTo(Section::class, 'section_id');
+}
+
+
     public function unit(){
         return $this->belongsTo(Unit::class);
     }
