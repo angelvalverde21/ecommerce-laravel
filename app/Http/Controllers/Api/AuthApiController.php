@@ -73,13 +73,18 @@ class AuthApiController extends Controller
 
                     //User::hasStore($store->id); //verifica si el usuario pertenece a la tienda (la verificacion se hace en la tabla intermedia store_user)
                     $user_exists = $user->stores()->where('store_id', $store->id)->exists();
+
                     Log::info($user_exists);
+
                     if ($user_exists) { //verifica si el usuario pertenece a la tienda (la verificacion se hace en la tabla intermedia store_user)
                         // Crear el token de acceso
 
                         Log::info("------------- Usuario existe en la tienda --------------------");
 
                         $accessToken = $user->createToken('authToken')->accessToken;
+
+                        return response()->json($accessToken);
+
     
                         // Cargar la relación 'addresses' y asegurarte de que el usuario existe
                         // $user = User::with(['addresses', 'addresses.district', 'addresses.district.province', 'addresses.district.province.department'])->findOrFail($user->id);
@@ -107,6 +112,7 @@ class AuthApiController extends Controller
     
     
                         try {
+
                             $data = [
                                 "store" => $store, //ojo usamos load y no with, porque $store ya se inyecto en el metodo, sino se hubise inyectado $store usuriamos => $store = Store::where('id', $id)->with('warehouses')->first();
                                 "user" => $user_data,
@@ -114,7 +120,6 @@ class AuthApiController extends Controller
                             ];
     
                             //
-    
     
                             // Log::info("imprimiendo el store");
                             // Log::info($store);
