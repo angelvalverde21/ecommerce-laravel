@@ -83,7 +83,7 @@ class AuthApiController extends Controller
 
                         $accessToken = $user->createToken('authToken')->accessToken;
 
-                        return response()->json($accessToken);
+                        // return response()->json($accessToken);
 
     
                         // Cargar la relación 'addresses' y asegurarte de que el usuario existe
