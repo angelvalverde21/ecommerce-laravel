@@ -93,13 +93,23 @@ class BatchDashboardController extends Controller
     {
         // $batch = $store->batches()->with(['section.childrens.purchases'])->find($batch_id);
 
+        // $batch = $store->batches()
+        //     ->with(['section.childrens.purchases' => function ($query) {
+        //         $query->with(['unit', 'supplier']);
+        //     }])
+        //     ->find($batch_id);
+
+        // Log::info($batch->toSql());
+
         $batch = $store->batches()
-            ->with(['section.childrens.purchases' => function ($query) {
-                $query->with(['unit', 'supplier']);
+            ->with(['section.childrens' => function ($q) use ($batch_id) {
+                $q->with(['purchases' => function ($query) use ($batch_id) {
+                    $query->where('purchaseable_type', \App\Models\Batch::class)
+                        ->where('purchaseable_id', $batch_id)
+                        ->with(['unit', 'supplier']);
+                }]);
             }])
             ->find($batch_id);
-
-        Log::info($batch->toSql());
 
         if (!$batch) {
             return responseError([], "Error al obtener el batcho x");
@@ -130,7 +140,7 @@ class BatchDashboardController extends Controller
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
                 'total' => 'nullable|numeric',
-                'quantity_total' => 'nullable|numeric',
+                'quantity_approved' => 'nullable|numeric',
                 'quantity_waste' => 'nullable|numeric',
                 'production_cost' => 'nullable|numeric',
             ]);

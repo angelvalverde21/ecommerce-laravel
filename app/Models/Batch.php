@@ -22,11 +22,4 @@ class Batch extends Model
         return $this->morphMany(Purchase::class, 'purchaseable');
     }
 
-    public function childrenSectionsPurchases()
-    {
-        // Obtener los ids de los childrens en tiempo de ejecución (NO funciona con eager loading directo)
-        $childrenIds = $this->section->childrens->pluck('id');
-
-        return Purchase::whereIn('section_id', $childrenIds);
-    }
 }

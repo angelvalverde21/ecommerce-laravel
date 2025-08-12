@@ -171,6 +171,9 @@ class PurchaseDashboardController extends Controller
 
                 $validatedData
             );
+
+            $purchase->load(['unit', 'supplier']);
+            
             return responseOk($purchase, "Datos guardados correctamente update");
         } catch (\Throwable $th) {
             //throw $th;
