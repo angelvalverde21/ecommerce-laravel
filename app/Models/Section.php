@@ -27,10 +27,4 @@ class Section extends Model
         return $this->hasMany(Purchase::class, 'section_id');
     }
 
-    public function purchasesForBatch($batchId)
-    {
-        return $this->morphMany(Purchase::class, 'purchaseable')
-            ->where('purchaseable_type', Batch::class)
-            ->where('purchaseable_id', $batchId);
-    }
 }

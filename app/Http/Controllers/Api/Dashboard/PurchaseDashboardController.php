@@ -121,8 +121,7 @@ class PurchaseDashboardController extends Controller
     public function show(Store $store, $purchase_id)
     {
 
-
-        $purchase = Purchase::find($purchase_id);
+        $purchase = Purchase::withCount('images')->find($purchase_id);
 
         if (!$purchase) {
             return responseError([], "Error al obtener el purchaseo x");

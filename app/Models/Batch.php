@@ -22,4 +22,14 @@ class Batch extends Model
         return $this->morphMany(Purchase::class, 'purchaseable');
     }
 
+    // public function sections()
+    // {
+    //     return $this->morphMany(Image::class, 'sectionable')->orderBy('id', 'DESC');;
+    // }
+
+
+    // public function groups(){
+    //     return $this->morphMany(Group::class, 'groupable');
+    // }
+
 }

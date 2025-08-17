@@ -76,6 +76,7 @@ class BatchDashboardController extends Controller
             DB::commit();
 
             return responseOk($batch, "se agrego correctamente el batch en create");
+            
         } catch (\Throwable $th) {
 
             DB::rollback();
@@ -139,8 +140,7 @@ class BatchDashboardController extends Controller
 
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
-                'total' => 'nullable|numeric',
-                'quantity_approved' => 'nullable|numeric',
+                'quantity_total' => 'nullable|numeric',
                 'quantity_waste' => 'nullable|numeric',
                 'production_cost' => 'nullable|numeric',
             ]);

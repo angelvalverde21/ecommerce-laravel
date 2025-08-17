@@ -15,7 +15,7 @@ return new class extends Migration
 
             $table->id();
 
-            $table->foreignId('store_id')->constrained()->cascadeOnDelete();
+            // $table->foreignId('store_id')->constrained()->cascadeOnDelete();
 
             // Referencia al padre (nullable, porque las secciones raíz no tienen padre)
             $table->foreignId('parent_id')->nullable()->constrained('sections')->cascadeOnDelete();
@@ -24,6 +24,8 @@ return new class extends Migration
             $table->string('slug');
 
             $table->unsignedInteger('order')->default(0);
+
+            $table->morphs('sectionable');
 
             $table->timestamps();
 

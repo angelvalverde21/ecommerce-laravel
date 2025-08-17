@@ -24,6 +24,7 @@ class Store extends Model
     {
         return $this->hasMany(Purchase::class);
     }
+    
     public function batches()
     {
         return $this->hasMany(Batch::class);

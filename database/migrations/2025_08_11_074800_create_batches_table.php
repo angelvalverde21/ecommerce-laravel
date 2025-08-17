@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
 
             $table->string('name');
-            $table->integer('total')->default(0);
+            // $table->integer('total')->default(0);
             $table->integer('quantity_total')->default(0);
             $table->integer('quantity_waste')->default(0);
             $table->decimal('production_cost', 10, 2)->default(0.00); // Costo de producción

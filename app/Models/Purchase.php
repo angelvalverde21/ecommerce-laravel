@@ -18,16 +18,29 @@ class Purchase extends Model
     }
 
     public function section()
-{
-    return $this->belongsTo(Section::class, 'section_id');
-}
+    {
+        return $this->belongsTo(Section::class, 'section_id');
+    }
 
 
-    public function unit(){
+    public function unit()
+    {
         return $this->belongsTo(Unit::class);
     }
 
-    public function supplier(){
+    public function supplier()
+    {
         return $this->belongsTo(Supplier::class);
     }
+
+    public function images()
+    {
+        return $this->morphMany(Image::class, 'imageable')->orderBy('id', 'DESC');;
+    }
+
+    public function sections()
+    {
+        return $this->hasMany(Section::class);
+    }
+
 }
