@@ -21,7 +21,7 @@ return new class extends Migration
             $table->decimal('total', 8, 2)->nullable();
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('store_id')->constrained()->onDelete('set null');
+            $table->foreignId('store_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('section_id')->nullable()->constrained()->onDelete('set null');
             $table->morphs('purchaseable'); //ya agrega el index
 

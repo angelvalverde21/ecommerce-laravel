@@ -107,7 +107,8 @@ class BatchDashboardController extends Controller
                 $q->with(['purchases' => function ($query) use ($batch_id) {
                     $query->where('purchaseable_type', \App\Models\Batch::class)
                         ->where('purchaseable_id', $batch_id)
-                        ->with(['unit', 'supplier']);
+                        ->with(['unit', 'supplier'])
+                        ->withCount('images');
                 }]);
             }])
             ->find($batch_id);

@@ -3,6 +3,7 @@
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
 use App\Http\Controllers\Api\Dashboard\BatchDashboardController;
+use App\Http\Controllers\Api\Dashboard\DashboardController;
 use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
 use App\Http\Controllers\Api\Dashboard\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\ImagePurchaseController;
@@ -14,6 +15,8 @@ use App\Http\Controllers\Api\Dashboard\UnitDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/dashboard/{store}')->group(function () {
+
+    Route::get('/', [DashboardController::class, 'getDashboard']); //Listar
 
     Route::prefix('products')->group(function () {
 
