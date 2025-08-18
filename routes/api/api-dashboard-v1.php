@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\Dashboard\SupplierDashboardController;
 use App\Http\Controllers\Api\Dashboard\UnitDashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1/dashboard/{store}')->group(function () {
+Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
     Route::get('/', [DashboardController::class, 'getDashboard']); //Listar
 
