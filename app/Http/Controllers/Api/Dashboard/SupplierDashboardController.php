@@ -79,7 +79,6 @@ class SupplierDashboardController extends Controller
             DB::commit();
 
             return responseOk($supplier, "se agrego correctamente el supplier en create");
-
         } catch (\Throwable $th) {
 
             DB::rollback();
@@ -87,7 +86,6 @@ class SupplierDashboardController extends Controller
             Log::info($th);
 
             return responseError($th, "Ha sucedido un error interno al crear el suppliero store x");
-
         }
     }
 
@@ -100,7 +98,7 @@ class SupplierDashboardController extends Controller
 
         $supplier = $store->suppliers()->find($supplier_id);
 
-    if (!$supplier) {
+        if (!$supplier) {
             return responseError([], "Error al obtener el suppliero x");
         }
 
@@ -121,7 +119,7 @@ class SupplierDashboardController extends Controller
     public function update(Store $store, Request $request, string $supplier_id)
     {
         //
-                // Implementa la lógica para actualizar un suppliero existente
+        // Implementa la lógica para actualizar un suppliero existente
         // Esto podría implicar validar los datos de la solicitud,
         // actualizar el suppliero en la base de datos y devolver el suppliero actualizado.
         try {
@@ -158,5 +156,18 @@ class SupplierDashboardController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function search(Store $store, $search)
+    {
+        //
+        try {
+            Log::info('exito');
+            //selectFields esta en el modelo Product
+            return responseOk($store->suppliers()->search($search)->get(), "Elx listado de busqueda suppliers dashboard ha sido obtenido correctamente (dashboard)");
+        } catch (\Throwable $th) {
+            //throw $th;
+            Log::info($th);
+        }
     }
 }

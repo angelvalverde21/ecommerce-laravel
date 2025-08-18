@@ -51,6 +51,7 @@ Route::prefix('v1/dashboard/{store}')->group(function () {
 
         Route::get('/', [SupplierDashboardController::class, 'index']); //Listar
         Route::post('/', [SupplierDashboardController::class, 'store']); //create
+        Route::get('/search/{search}', [SupplierDashboardController::class, 'search']); //Listar
 
         Route::prefix('{supplier_id}')->group(function () {
 
