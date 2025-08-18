@@ -166,7 +166,7 @@ class SupplierDashboardController extends Controller
             //selectFields esta en el modelo Product
             return responseOk($store->suppliers()->search($search)->get(), "Elx listado de busqueda suppliers dashboard ha sido obtenido correctamente (dashboard)");
         } catch (\Throwable $th) {
-            //throw $th;
+            //throw $th;//
             Log::info($th);
         }
     }
