@@ -14,6 +14,7 @@ class Image extends Model
     protected $guarded = ['id', 'created_at'];
 
     const DIR_PURCHASE = "purchases";
+    const DIR_BATCH = "batches";
     const DIR_ROOT = 'images';
 
     protected $appends = [

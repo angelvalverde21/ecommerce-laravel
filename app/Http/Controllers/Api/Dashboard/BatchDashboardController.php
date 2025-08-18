@@ -20,7 +20,15 @@ class BatchDashboardController extends Controller
         try {
             Log::info('exito');
             //selectFields esta en el modelo batch
-            return responseOk($store->batches()->with('section.childrens')->orderBy('id', 'desc')->get(), "El listado de batchs ha sido obtenido correctamente (dashboard)");
+            return responseOk(
+                        $store->batches()
+                            ->with(['image','section.childrens'])
+                            ->withSum('purchases', 'total')
+                            ->orderBy('id', 'desc')
+                            ->get(), 
+                        "El listado de batchs ha sido obtenido correctamente (dashboard)"
+                    );
+                    
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
@@ -103,7 +111,7 @@ class BatchDashboardController extends Controller
         // Log::info($batch->toSql());
 
         $batch = $store->batches()
-            ->with(['section.childrens' => function ($q) use ($batch_id) {
+            ->with(['image','section.childrens' => function ($q) use ($batch_id) {
                 $q->with(['purchases' => function ($query) use ($batch_id) {
                     $query->where('purchaseable_type', \App\Models\Batch::class)
                         ->where('purchaseable_id', $batch_id)

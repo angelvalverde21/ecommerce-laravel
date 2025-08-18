@@ -5,6 +5,7 @@
 use App\Http\Controllers\Api\Dashboard\BatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\DashboardController;
 use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
+use App\Http\Controllers\Api\Dashboard\ImageBatchController;
 use App\Http\Controllers\Api\Dashboard\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\ImagePurchaseController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
@@ -90,6 +91,11 @@ Route::prefix('v1/dashboard/{store}')->group(function () {
             Route::get('/', [BatchDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [BatchDashboardController::class, 'update']); //actualizar
             Route::delete('/', [BatchDashboardController::class, 'destroy']); //borrar
+
+            Route::prefix('images')->group(function () {
+                Route::post('/', [ImageBatchController::class, 'store']); //create
+                Route::get('/', [ImageBatchController::class, 'index']); //show
+            });
 
         });
     });
