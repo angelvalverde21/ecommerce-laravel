@@ -5,7 +5,7 @@ use App\Http\Controllers\Api\public\StorePublicController;
 // use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Middleware\VerifyStore;
 
 
 Route::get('/cache', function () {
@@ -22,9 +22,14 @@ Route::get('/link', function () {
     Artisan::call('storage:link');
 });
 
-Route::prefix('v1/public/{store}')->group(function () {
+Route::prefix('v1/public')->group(function () {
 
-    Route::get('/', [StorePublicController::class, 'show']);
+    Route::post('/register', [StorePublicController::class, 'register']);
 
-    Route::post('/login', [AuthApiController::class, 'login']);
+    Route::prefix('{store}')->middleware([VerifyStore::class])->group(function () {
+
+        Route::get('/', [StorePublicController::class, 'show']);
+        Route::post('/login', [AuthApiController::class, 'login']);
+
+    });
 });

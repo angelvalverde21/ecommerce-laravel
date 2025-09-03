@@ -22,18 +22,7 @@ return new class extends Migration
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('store_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('section_id')->nullable()->constrained()->onDelete('set null');
             $table->morphs('purchaseable'); //ya agrega el index
-
-            // Nueva con purchases_type se hace asi porque la tabla es distinta no sigue la convencion para usar foreignId
-    
-            // $table->unsignedBigInteger('purchase_type_id');
-            // $table->foreign('purchase_type_id')->references('id')->on('purchase_type'); 
-
-            //-------
-            // $table->foreignId('store_id')->nullable()->constrained()->onDelete('set null');
-
-            // $table->index(['purchaseable_type', 'purchaseable_id']);
 
             $table->timestamps();
         });

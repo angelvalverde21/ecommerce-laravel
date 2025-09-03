@@ -9,4 +9,10 @@ class Size extends Model
 {
     /** @use HasFactory<\Database\Factories\SizeFactory> */
     use HasFactory;
+
+    protected $guarded = ['id', 'created_at'];
+
+    public function product(){
+        return $this->belongsTo(Product::class);
+    }
 }

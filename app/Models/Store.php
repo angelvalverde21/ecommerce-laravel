@@ -16,6 +16,12 @@ class Store extends Model
     {
         return $this->hasMany(Product::class);
     }
+
+    public function categories()
+    {
+        return $this->hasMany(Category::class);
+    }
+
     public function suppliers()
     {
         return $this->hasMany(Supplier::class);
@@ -23,16 +29,6 @@ class Store extends Model
     public function purchases()
     {
         return $this->hasMany(Purchase::class);
-    }
-    
-    public function batches()
-    {
-        return $this->hasMany(Batch::class);
-    }
-
-    public function sections()
-    {
-        return $this->hasMany(Section::class);
     }
 
     public function getRouteKeyName()

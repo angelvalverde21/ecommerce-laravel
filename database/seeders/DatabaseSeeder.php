@@ -15,13 +15,13 @@ class DatabaseSeeder extends Seeder
     {
  
         $this->call(IdentitySeeder::class);
-        $this->call(UserSeeder::class);
         $this->call(UnitSeeder::class);
+        
+        $this->call(UserSeeder::class);
         $this->call(StoreSeeder::class);
         $this->call(StoreUserSeeder::class);
-        $this->call(SectionSeeder::class);
+
         $this->call(SupplierSeeder::class);
-        $this->call(BatchSeeder::class);
         $this->call(PurchaseSeeder::class);
         $this->call(DepartmentSeeder::class);
         $this->call(ProvinceSeeder::class);

@@ -10,5 +10,7 @@ class StoreUser extends Model
     /** @use HasFactory<\Database\Factories\StoreUserFactory> */
     use HasFactory;
 
+    protected $guarded = ['id', 'created_at'];
+
     protected $table = 'store_user';
 }

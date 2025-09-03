@@ -1,9 +1,10 @@
 <?php
 
-use App\Http\Middleware\ForceJsonUnauthenticated;
+// use App\Http\Middleware\ForceJsonUnauthenticated;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+// use App\Http\Middleware\VerifyStore;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // $middleware->append(ForceJsonUnauthenticated::class);
         //
+        // $middleware->append(VerifyStore::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

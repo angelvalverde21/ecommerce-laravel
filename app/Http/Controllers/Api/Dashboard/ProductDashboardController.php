@@ -30,7 +30,6 @@ class ProductDashboardController extends Controller
         }
     }
 
-
     public function search(Store $store, $search)
     {
         //
@@ -40,7 +39,7 @@ class ProductDashboardController extends Controller
 
             $search = pluralToSingular($search);
 
-            $products = $store->products()->withSkusQuantity()->search($search)->limit(10)->get();
+            $products = $store->products()->search($search)->limit(10)->get();
 
             Log::info($products);
 
@@ -59,7 +58,7 @@ class ProductDashboardController extends Controller
     {
         //
 
-        $product = $store->products()->find($product_id);
+        $product = $store->products()->with(['category', 'sizes'])->find($product_id);
 
         if (!$product) {
             return responseError([], "Error al obtener el producto x");
@@ -93,11 +92,8 @@ class ProductDashboardController extends Controller
                     'name' => $resp['name'],
                     'slug' => Str::slug($resp['name']),
                     'body' => $resp['body'],
-                    'sku' => $resp['sku'],
-                    'barcode' => $resp['barcode'],
-                    'extract' => '',
-                    // 'price' => $resp['price'],
-                    // 'unit_id' => $resp['unit_id'],
+                    'price' => $resp['price'],
+                    'category_id' => $resp['category_id'],
                     'user_id' => Auth::id(),
                     'store_id' => $store->id,
                     'status' => 1,
@@ -133,12 +129,8 @@ class ProductDashboardController extends Controller
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
                 'body' => 'nullable|string',
-                'slug' => 'nullable|string',
-                'tags' => 'nullable|string',
-                'body' => 'nullable|string',
                 'price' => 'required|numeric|min:0',
-                'over_sale' => '',
-                'sell_size_unique' => '',
+                'category_id' => 'required',
             ]);
 
             // Usa el operador de fusión de null (??) para manejar el caso cuando 'slug' es nulo
