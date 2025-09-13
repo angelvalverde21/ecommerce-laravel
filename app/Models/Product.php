@@ -56,4 +56,8 @@ class Product extends Model
         return $this->hasMany(Size::class)->orderBy('sort_order', 'ASC');
     }
 
+    public function attributes(){
+        return $this->hasMany(Attribute::class);
+    }
+
 }

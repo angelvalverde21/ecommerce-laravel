@@ -2,6 +2,7 @@
 
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
+use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
 use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
 use App\Http\Controllers\Api\Dashboard\DashboardController;
 use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
@@ -46,6 +47,21 @@ Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function 
                     Route::get('/', [SizeDashboardController::class, 'show']); //show o mostrar por id
                     Route::put('/', [SizeDashboardController::class, 'update']); //actualizar
                     Route::delete('/', [SizeDashboardController::class, 'destroy']); //borrar
+            
+                });
+            
+            });
+
+            Route::prefix('attributes')->group(function () {
+            
+                Route::get('/', [AttributeDashboardController::class, 'index']); //Listar
+                Route::post('/', [AttributeDashboardController::class, 'store']); //create
+            
+                Route::prefix('{attribute_id}')->group(function () {
+            
+                    Route::get('/', [AttributeDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [AttributeDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [AttributeDashboardController::class, 'destroy']); //borrar
             
                 });
             

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attribute;
 use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Http\Request;
@@ -58,12 +59,12 @@ class ProductDashboardController extends Controller
     {
         //
 
-        $product = $store->products()->with(['category', 'sizes'])->find($product_id);
+        $product = $store->products()->with(['category', 'attributes'])->find($product_id);
 
         if (!$product) {
             return responseError([], "Error al obtener el producto x");
         }
-        
+
         return responseOk($product, "Datos obtenidos con exito del producto");
 
 
@@ -100,20 +101,59 @@ class ProductDashboardController extends Controller
                 ]
             );
 
+            //creamos los attributes
+
+            Attribute::insert(
+                [
+                    [
+                        'product_id' => $product->id,
+                        'name' => 'Color',
+                        'scope' => 'product',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'product_id' => $product->id,
+                        'name' => 'Talla',
+                        'scope' => 'variant',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'product_id' => $product->id,
+                        'name' => 'Marca',
+                        'scope' => 'product',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'product_id' => $product->id,
+                        'name' => 'Modelo',
+                        'scope' => 'product',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'product_id' => $product->id,
+                        'name' => 'Material',
+                        'scope' => 'product',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]
+                ]
+            );
 
             // return redirect()->route('erp.products.edit', ['store' => $this->store, 'product' => $product]);
 
             DB::commit();
 
             return responseOk($product, "se agrego correctamente el product en create");
-
         } catch (\Throwable $th) {
 
             DB::rollback();
             Log::info($th);
 
             return responseError($th, "Ha sucedido un error interno al crear el producto store x");
-
         }
     }
 
