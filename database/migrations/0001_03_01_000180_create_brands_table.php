@@ -11,11 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('attribute_values', function (Blueprint $table) {
+        Schema::create('brands', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('attribute_id')->constrained()->onDelete('cascade');
-            $table->string('value');
-            $table->unique(['attribute_id', 'value']);
+            $table->string('name');
+            $table->foreignId('store_id')->constrained()->onDelete('cascade');
+            $table->string('slug');
+            $table->boolean('status')->default(true)->comment('1 activo 0 archivado'); //desde -128 a 127
             $table->timestamps();
         });
     }
@@ -25,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('attribute_values');
+        Schema::dropIfExists('brands');
     }
 };

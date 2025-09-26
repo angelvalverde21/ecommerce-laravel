@@ -59,7 +59,7 @@ class ProductDashboardController extends Controller
     {
         //
 
-        $product = $store->products()->with(['category', 'attributes'])->find($product_id);
+        $product = $store->products()->with(['category', 'colors', 'sizes'])->find($product_id);
 
         if (!$product) {
             return responseError([], "Error al obtener el producto x");
@@ -93,6 +93,8 @@ class ProductDashboardController extends Controller
                     'name' => $resp['name'],
                     'slug' => Str::slug($resp['name']),
                     'body' => $resp['body'],
+                    'brand_id' => $resp['brand_id'],
+                    'model' => $resp['model'],
                     'price' => $resp['price'],
                     'category_id' => $resp['category_id'],
                     'user_id' => Auth::id(),
@@ -166,20 +168,32 @@ class ProductDashboardController extends Controller
             Log::info('updatex');
             Log::info($request->all());
 
-            $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
-                'body' => 'nullable|string',
-                'price' => 'required|numeric|min:0',
-                'category_id' => 'required',
+
+            $validated = $request->validate([
+                'name'        => 'required|string|max:255',
+                'body'        => 'nullable|string',
+                'brand_id'    => 'required|exists:brands,id',
+                'model'       => 'nullable|string|max:255',
+                'price'       => 'required|numeric|min:0',
+                'category_id' => 'required|exists:categories,id',
+                'status'      => 'nullable|in:0,1', // opcional: 0=inactivo, 1=activo
             ]);
 
-            // Usa el operador de fusión de null (??) para manejar el caso cuando 'slug' es nulo
-            $validatedData['slug'] = $validatedData['slug'] ?? Str::slug($validatedData['name']);
+            $product = Product::findOrFail($product_id);
 
-            $product = Product::updateOrCreate(
-                ['id' => $product_id],  // El campo 'id' indica si se actualiza o crea
-                $validatedData
-            );
+            // 🔹 Actualizar producto
+            $product->update([
+                'name'        => $validated['name'],
+                'slug'        => $validated['slug'] ?? Str::slug($validated['name']),
+                'body'        => $validated['body'] ?? $product->body,
+                'brand_id'    => $validated['brand_id'],
+                'model'       => $validated['model'] ?? $product->model,
+                'price'       => $validated['price'],
+                'category_id' => $validated['category_id'],
+                'user_id'     => Auth::id(), // se actualiza con el usuario logueado
+                'status'      => $validated['status'] ?? $product->status,
+            ]);
+
             return responseOk($product, "Datos guardados correctamente update");
         } catch (\Throwable $th) {
             //throw $th;

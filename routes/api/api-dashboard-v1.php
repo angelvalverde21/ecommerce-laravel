@@ -3,6 +3,7 @@
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
 use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
+use App\Http\Controllers\Api\Dashboard\BrandDashboardController;
 use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
 use App\Http\Controllers\Api\Dashboard\DashboardController;
 use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
 use App\Http\Controllers\Api\Dashboard\SupplierDashboardController;
 use App\Http\Controllers\Api\Dashboard\UnitDashboardController;
+use App\Http\Controllers\AttributeValueDashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
@@ -67,7 +69,37 @@ Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function 
             
             });
 
+            Route::prefix('attribute-values')->group(function () {
+            
+                Route::get('/', [AttributeValueDashboardController::class, 'index']); //Listar
+                Route::post('/', [AttributeValueDashboardController::class, 'store']); //create
+            
+                Route::prefix('{brand_id}')->group(function () {
+            
+                    Route::get('/', [AttributeValueDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [AttributeValueDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [AttributeValueDashboardController::class, 'destroy']); //borrar
+            
+                });
+            
+            });
+
         });
+    });
+
+    Route::prefix('brands')->group(function () {
+    
+        Route::get('/', [BrandDashboardController::class, 'index']); //Listar
+        Route::post('/', [BrandDashboardController::class, 'store']); //create
+    
+        Route::prefix('{brand_id}')->group(function () {
+    
+            Route::get('/', [BrandDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [BrandDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [BrandDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 
     Route::prefix('categories')->group(function () {

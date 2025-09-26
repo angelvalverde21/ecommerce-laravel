@@ -14,10 +14,7 @@ class Product extends Model
 
     protected $guarded = ['id', 'created_at'];
 
-    CONST ELIMINADO = 0;
-    CONST ACTIVO = 1;
-    CONST ARCHIVADO = 2;
-    CONST BORRADOR = 3;
+
     
     public function scopeSearch(Builder $query, $term)
     {
@@ -54,6 +51,10 @@ class Product extends Model
 
     public function sizes(){
         return $this->hasMany(Size::class)->orderBy('sort_order', 'ASC');
+    }
+
+    public function colors(){
+        return $this->hasMany(Color::class)->orderBy('sort_order', 'ASC');
     }
 
     public function attributes(){

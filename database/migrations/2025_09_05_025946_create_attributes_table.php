@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->string('name');
-            $table->string('scope');
+            $table->string('scope')->comment("tiene basicamente dos opciones 'product' y 'variant', si la opcion es este ultimo entonces se usa para hacer combinaciones");
             $table->timestamps();
         });
     }

@@ -1,14 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Api\Dashboard\Images;
+namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Image;
 use App\Models\Store;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
-class ImageDashboardController extends Controller
+class ColorDashboardController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -37,7 +35,7 @@ class ImageDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Store $store)
     {
         //
     }
@@ -45,7 +43,7 @@ class ImageDashboardController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Store $store)
     {
         //
     }
@@ -53,7 +51,7 @@ class ImageDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Store $store)
     {
         //
     }
@@ -61,20 +59,8 @@ class ImageDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Store $store, $image_id)
+    public function destroy(Store $store)
     {
-        try {
-            $image = Image::findOrFail($image_id);
-
-            // $this->authorize('delete', $image); // Usa la policy
-
-            $image->delete();
-
-            return responseOk($image, "Imagen eliminada correctamente (destroy)");
-            
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return responseError($th, "Error al eliminar la imagen (destroy)");
-        }
+        //
     }
 }

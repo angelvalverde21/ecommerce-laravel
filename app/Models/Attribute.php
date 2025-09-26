@@ -9,4 +9,9 @@ class Attribute extends Model
 {
     /** @use HasFactory<\Database\Factories\AttributeFactory> */
     use HasFactory;
+
+    public function values(){
+        return $this->hasMany(AttributeValue::class, 'attribute_id');
+    }
+
 }

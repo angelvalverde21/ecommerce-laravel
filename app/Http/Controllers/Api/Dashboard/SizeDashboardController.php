@@ -14,9 +14,29 @@ class SizeDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Store $store)
+    public function index(Store $store, $product_id)
     {
         //
+
+        try {
+        
+            DB::beginTransaction();
+        
+            //Aqui agregar el codigo
+
+            $sizes = Size::where('product_id', $product_id)->orderBy('sort_order')->get();
+        
+            DB::commit();
+        
+            return responseOk($sizes, "Se ha procesado correctamente las tallas");
+        
+        } catch (\Throwable $th) {
+        
+            DB::rollback();
+        
+            return responseError($th, "Error recibir las tallas.... ");
+        
+        }
     }
 
     /**
@@ -41,11 +61,13 @@ class SizeDashboardController extends Controller
             $size = Size::create([
                 'name' => $request->name,
                 'product_id' => $product_id,
+                'sort_order' => 1,
             ]);
 
             DB::commit();
 
             return responseOk($size, "se agrego correctamente la talla");
+
         } catch (\Illuminate\Database\QueryException $th) {
 
             DB::rollback();
