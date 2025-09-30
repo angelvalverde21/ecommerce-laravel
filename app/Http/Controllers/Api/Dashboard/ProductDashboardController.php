@@ -24,7 +24,7 @@ class ProductDashboardController extends Controller
         try {
             Log::info('exito');
             //selectFields esta en el modelo Product
-            return responseOk($store->products, "El listado de productos private ha sido obtenido correctamente (dashboard)");
+            return responseOk($store->products()->with('category')->get(), "El listado de productos private ha sido obtenido correctamente (dashboard)");
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
@@ -52,7 +52,6 @@ class ProductDashboardController extends Controller
 
         // $products = $store->products;
 
-
     }
 
     public function show(Store $store, $product_id)
@@ -66,7 +65,6 @@ class ProductDashboardController extends Controller
         }
 
         return responseOk($product, "Datos obtenidos con exito del producto");
-
 
         // return $query;
     }
@@ -105,45 +103,45 @@ class ProductDashboardController extends Controller
 
             //creamos los attributes
 
-            Attribute::insert(
-                [
-                    [
-                        'product_id' => $product->id,
-                        'name' => 'Color',
-                        'scope' => 'product',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ],
-                    [
-                        'product_id' => $product->id,
-                        'name' => 'Talla',
-                        'scope' => 'variant',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ],
-                    [
-                        'product_id' => $product->id,
-                        'name' => 'Marca',
-                        'scope' => 'product',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ],
-                    [
-                        'product_id' => $product->id,
-                        'name' => 'Modelo',
-                        'scope' => 'product',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ],
-                    [
-                        'product_id' => $product->id,
-                        'name' => 'Material',
-                        'scope' => 'product',
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]
-                ]
-            );
+            // Attribute::insert(
+            //     [
+            //         [
+            //             'product_id' => $product->id,
+            //             'name' => 'Color',
+            //             'scope' => 'product',
+            //             'created_at' => now(),
+            //             'updated_at' => now(),
+            //         ],
+            //         [
+            //             'product_id' => $product->id,
+            //             'name' => 'Talla',
+            //             'scope' => 'variant',
+            //             'created_at' => now(),
+            //             'updated_at' => now(),
+            //         ],
+            //         [
+            //             'product_id' => $product->id,
+            //             'name' => 'Marca',
+            //             'scope' => 'product',
+            //             'created_at' => now(),
+            //             'updated_at' => now(),
+            //         ],
+            //         [
+            //             'product_id' => $product->id,
+            //             'name' => 'Modelo',
+            //             'scope' => 'product',
+            //             'created_at' => now(),
+            //             'updated_at' => now(),
+            //         ],
+            //         [
+            //             'product_id' => $product->id,
+            //             'name' => 'Material',
+            //             'scope' => 'product',
+            //             'created_at' => now(),
+            //             'updated_at' => now(),
+            //         ]
+            //     ]
+            // );
 
             // return redirect()->route('erp.products.edit', ['store' => $this->store, 'product' => $product]);
 

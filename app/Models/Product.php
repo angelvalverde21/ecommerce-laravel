@@ -49,6 +49,10 @@ class Product extends Model
         return $this->morphMany(Image::class, 'imageable');
     }
 
+    public function image(){
+        return $this->morphMany(Image::class, 'imageable');
+    }
+
     public function sizes(){
         return $this->hasMany(Size::class)->orderBy('sort_order', 'ASC');
     }

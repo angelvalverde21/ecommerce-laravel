@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('tags')->nullable();
             $table->string('slug');
             $table->text('body')->nullable();
-
+            $table->unsignedInteger('quantity')->default(0);
             $table->decimal('price', 8, 2)->nullable();
 
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade'); //cascade quiere decir que elimina a los hijos y no al revez
