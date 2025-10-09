@@ -12,17 +12,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('images', function (Blueprint $table) {
+
             $table->id();
 
-            $table->string('name'); //guarda el nombre original del archivo
-            $table->string('title')->nullable();// titulo de la imagen (opcional)
-            $table->string('thumbnail');
-            $table->string('medium');
-            $table->string('large');
+            $table->string('alt')->nullable();
+            $table->integer('position')->default(0);
 
-            $table->morphs('imageable');
+            // relación polimórfica
+            $table->morphs('imageable'); // crea imageable_id (bigint) + imageable_type (string)
+
+            $table->string('admin_graphql_api_id')->nullable();
+            $table->integer('width')->nullable();
+            $table->integer('height')->nullable();
+            $table->text('src');
 
             $table->timestamps();
+            
         });
     }
 

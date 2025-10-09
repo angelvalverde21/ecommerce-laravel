@@ -16,30 +16,17 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             
             $table->id();
-
-            $table->tinyInteger('status')->default(Status::BORRADOR)->comment('Status::PUBLICADO = 1, Status::BORRADOR = 3, Status::ELIMINADO = 0, Status::ARCHIVADO = 2]'); //desde -128 a 127
-            
-            $table->string('name')->nullable();
+            $table->string('title');
+            $table->longText('body_html')->nullable();
+            $table->string('vendor')->nullable();
+            $table->string('product_type')->nullable();
+            $table->string('handle')->unique();
+            $table->timestamp('published_at')->nullable();
+            $table->string('template_suffix')->nullable();
+            $table->string('published_scope')->nullable();
             $table->string('tags')->nullable();
-            $table->string('slug');
-            $table->text('body')->nullable();
-            $table->unsignedInteger('quantity')->default(0);
-            $table->decimal('price', 8, 2)->nullable();
-
-            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade'); //cascade quiere decir que elimina a los hijos y no al revez
-            //$table->foreignId('owner_id')->nullable()->constrained('users') // aquí le dices a qué tabla apunta
-            //->onDelete('cascade');
-
-            $table->foreignId('brand_id')->nullable()->constrained()->onDelete('cascade');
-
-            $table->string('model')->nullable();
-
-            $table->foreignId('store_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('category_id')->nullable()->constrained()->onDelete('cascade');
-
-            $table->index('name'); //para las busquedas mas rapidas
-
-            $table->unique(['slug', 'store_id']);
+            $table->string('status')->default('draft');
+            $table->string('admin_graphql_api_id')->nullable();
 
             $table->timestamps();
         });
