@@ -55,23 +55,27 @@ class ReportShopifyController extends Controller
     public function topProducts(Request $request)
     {
 
-        $startDate = $request->query('start_date', now()->subMonth(3)->toDateString());
-        $endDate = $request->query('end_date', now()->toDateString());
+        // Obtener fechas desde la query o usar valores por defecto
+        $startDate = $request->query('start_date', now()->subMonths(3)->toDateString());
+        $endDate   = $request->query('end_date', now()->toDateString());
 
-        // Clave única por rango de fechas
-        $cacheKey = "top_products_{$startDate}_{$endDate}";
+        // Crear una clave de caché única basada en el rango de fechas
+        $cacheKey = sprintf('top_products_%s_%s', $startDate, $endDate);
 
-        // Guarda o recupera del cache por 1 hora (3600 segundos)
-        $products = Cache::remember($cacheKey, now()->addHours(168), function () use ($startDate, $endDate) {
-            return $this->shopifyService->getTopProductsBetween($startDate, $endDate);
-        });
+        // Recuperar del caché o generar y guardar por 7 días (168 horas)
+        $products = Cache::remember(
+            $cacheKey,
+            now()->addDays(7),
+            fn() => $this->shopifyService->getTopProductsBetween($startDate, $endDate)
+        );
 
+        // Construir respuesta JSON
         return response()->json([
-            'status' => 'success',
-            'start_date' => $startDate,
-            'end_date' => $endDate,
+            'status'         => 'success',
+            'start_date'     => $startDate,
+            'end_date'       => $endDate,
             'total_products' => count($products),
-            'top_products' => $products,
+            'top_products'   => $products,
         ]);
     }
 

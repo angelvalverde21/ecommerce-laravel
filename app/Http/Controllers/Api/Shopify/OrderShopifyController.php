@@ -3,22 +3,30 @@
 namespace App\Http\Controllers\Api\Shopify;
 
 use App\Http\Controllers\Controller;
-use App\Services\ShopifyService;
+use App\Services\Shopify\ShopifyOrderService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class OrderShopifyController extends Controller
 {
 
-    protected $shopify;
+    protected $shopifyOrderService;
 
-    public function __construct(ShopifyService $shopify)
+    public function __construct(ShopifyOrderService $shopifyOrderService)
     {
-        $this->shopify = $shopify;
+        $this->shopifyOrderService = $shopifyOrderService;
     }
 
     public function index()
     {
-        $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
+
+        $orders  = Cache::remember(
+            "orders_cache_",
+            now()->addHour(1),
+            fn() => $this->shopifyOrderService->getOrders(20)
+        );
+
+        // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
         return response()->json($orders);
     }
 

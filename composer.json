@@ -33,7 +33,8 @@
         },
         "files": [
             "app/Helpers/Helpers.php",
-            "app/Helpers/Api/HelpersApi.php"
+            "app/Helpers/Api/HelpersApi.php",
+            "app/Helpers/HelpersShopify.php"
         ]
     },
     "autoload-dev": {
