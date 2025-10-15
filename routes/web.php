@@ -15,4 +15,5 @@ Route::get('/cache', function () {
 
 Route::get('/link', function () {
     Artisan::call('storage:link');
+    return "Link Geneado";
 });
