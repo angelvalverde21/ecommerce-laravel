@@ -230,7 +230,7 @@ class ShopifyReportService
         'query' => $formattedQuery,
       ]);
 
-      $json = responseShopify($formattedQuery);
+      $json = $response->json();
 
       // Log::info($json);
 
