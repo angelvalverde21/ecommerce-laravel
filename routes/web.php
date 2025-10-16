@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/cache', function () {
@@ -15,10 +16,9 @@ Route::get('/cache', function () {
 });
 
 Route::get('/link', function () {
-    $exitCode = Artisan::call('storage:link');
-    return [
-        'public_path' => public_path('storage'),
-        'storage_path' => storage_path('app/public'),
-        'output' => Artisan::output(),
-    ];
-});
+    // Artisan::call('storage:link');
+    // Artisan::call('storage:link');
+    File::link(
+        storage_path('app/public'), public_path('storage')
+    );
+ });
