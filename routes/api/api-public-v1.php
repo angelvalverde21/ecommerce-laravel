@@ -26,6 +26,10 @@ Route::prefix('v1/public')->group(function () {
 
     Route::post('/register', [StorePublicController::class, 'register']);
 
-    Route::get('/', [StorePublicController::class, 'show']);
-    Route::post('/login', [AuthApiController::class, 'login']);
+    Route::prefix('{store}')->middleware([VerifyStore::class])->group(function () {
+
+        Route::get('/', [StorePublicController::class, 'show']);
+        Route::post('/login', [AuthApiController::class, 'login']);
+
+    });
 });
