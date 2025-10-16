@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
+use function Illuminate\Log\log;
+
 class AuthApiController extends Controller
 {
 
@@ -124,6 +126,7 @@ class AuthApiController extends Controller
 
                 }
             } catch (\Throwable $th) {
+                Log::info($th);
                 return responseError($th, "Ha fallado la obtencion del token");
             }
 
