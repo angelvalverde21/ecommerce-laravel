@@ -14,6 +14,10 @@ Route::get('/cache', function () {
 });
 
 Route::get('/link', function () {
-    Artisan::call('storage:link');
-    return "Link Geneado";
+    $exitCode = Artisan::call('storage:link');
+    return [
+        'public_path' => public_path('storage'),
+        'storage_path' => storage_path('app/public'),
+        'output' => Artisan::output(),
+    ];
 });
