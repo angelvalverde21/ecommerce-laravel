@@ -56,11 +56,11 @@ class ReportShopifyController extends Controller
     {
 
         // Obtener fechas desde la query o usar valores por defecto
-        $startDate = $request->query('start_date', now()->subMonths(3)->toDateString());
+        $startDate = $request->query('start_date', now()->subMonths(5)->toDateString());
         $endDate   = $request->query('end_date', now()->toDateString());
 
         // Crear una clave de caché única basada en el rango de fechas
-        $cacheKey = sprintf('top_products_%s_%s', $startDate, $endDate);
+        $cacheKey = sprintf('top_products_%s_%s__a', $startDate, $endDate);
 
         // Recuperar del caché o generar y guardar por 7 días (168 horas)
         $products = Cache::remember(

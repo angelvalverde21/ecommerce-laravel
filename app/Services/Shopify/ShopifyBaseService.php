@@ -106,6 +106,8 @@ abstract class ShopifyBaseService
         // Filtro de búsqueda Shopify con AND explícitos
         $queryFilter = 'financial_status:paid AND cancelled_at:null AND created_at:>=' . $startDate . ' AND created_at:<=' . $endDate;
 
+        Log::info($queryFilter);
+
         // Query GraphQL como string plano (sin heredoc)
         $query = '
                 {

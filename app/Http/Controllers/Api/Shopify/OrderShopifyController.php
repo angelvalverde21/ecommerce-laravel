@@ -21,9 +21,9 @@ class OrderShopifyController extends Controller
     {
 
         $orders  = Cache::remember(
-            "orders_cache_",
+            "orders_cache__",
             now()->addHour(1),
-            fn() => $this->shopifyOrderService->getOrders(20)
+            fn() => $this->shopifyOrderService->getOrders(50)
         );
 
         // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
