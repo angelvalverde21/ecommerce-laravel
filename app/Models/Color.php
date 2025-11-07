@@ -13,6 +13,6 @@ class Color extends Model
     protected $guarded = ['id', 'created_at'];
 
     public function sizes(){
-        return $this->hasMany(Size::class);
+        return $this->belongsToMany(Size::class);
     }
 }

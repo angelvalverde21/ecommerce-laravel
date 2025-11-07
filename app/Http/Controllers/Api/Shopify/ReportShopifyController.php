@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Api\Shopify;
 
 use App\Http\Controllers\Controller;
+use App\Models\Store;
+use App\Services\Shopify\Report\ShopifyOrderReportService;
 use App\Services\ShopifyReportService;
+use App\Services\Shopify\ShopifyOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class ReportShopifyController extends Controller
 {
@@ -13,7 +17,11 @@ class ReportShopifyController extends Controller
      * Display a listing of the resource.
      */
 
-    public function __construct(protected ShopifyReportService $shopifyService) {}
+    public function __construct(
+        protected ShopifyReportService $shopifyService,
+        protected ShopifyOrderService $shopifyOrderService,
+        protected ShopifyOrderReportService $shopifyOrderReportService,
+    ) {}
 
     // public function topProducts(Request $request)
     // {
@@ -52,6 +60,16 @@ class ReportShopifyController extends Controller
         ]);
     }
 
+    public function monthAll(Store $store, Request $request)
+    {
+        // 🔹 Genera o toma el reporte desde cache
+        $report = $this->shopifyOrderReportService->getSalesReport();
+
+        return response()->json($report);
+    }
+
+    public function salesReport(Store $store) {}
+
     public function topProducts(Request $request)
     {
 
@@ -60,7 +78,7 @@ class ReportShopifyController extends Controller
         $endDate   = $request->query('end_date', now()->toDateString());
 
         // Crear una clave de caché única basada en el rango de fechas
-        $cacheKey = sprintf('top_products_%s_%s__a', $startDate, $endDate);
+        $cacheKey = sprintf('top_products_%s_%s_', $startDate, $endDate);
 
         // Recuperar del caché o generar y guardar por 7 días (168 horas)
         $products = Cache::remember(
@@ -79,7 +97,7 @@ class ReportShopifyController extends Controller
         ]);
     }
 
-    public function dailyOrders(Request $request, $days = 14)
+    public function dailyOrders(Store $store, $days = 14)
     {
         $report = $this->shopifyService->getDailyOrdersReport($days);
 

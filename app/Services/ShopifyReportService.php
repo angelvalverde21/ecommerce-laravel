@@ -184,7 +184,7 @@ class ShopifyReportService
               orders(
                 first: 50,
                 sortKey: CREATED_AT,
-                query: "financial_status:paid cancelled_at:null created_at:>={$startDate} created_at:<={$endDate}",
+                query: "financial_status:paid cancelled_at:null fulfillment_status:unfulfilled created_at:>={$startDate} created_at:<={$endDate}",
                 after: %s
               ) {
                 {$this->pageInfo}
@@ -206,6 +206,7 @@ class ShopifyReportService
                             image { url }
                             product { 
                             title
+                            createdAt
                             featuredImage {
                               url
                             }
@@ -275,6 +276,7 @@ class ShopifyReportService
     $products = collect();
 
     foreach ($orders as $order) {
+
       foreach ($order['items'] as $item) {
         $key = $item['title'] . ' - ' . ($item['variant'] ?? 'N/A');
 
@@ -379,4 +381,6 @@ class ShopifyReportService
 
     return $period;
   }
+
+
 }

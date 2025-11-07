@@ -3,17 +3,40 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Color;
+use App\Models\ColorSize;
+use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ColorDashboardController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Store $store, $product_id)
     {
         //
+
+        try {
+
+            DB::beginTransaction();
+
+            //Aqui agregar el codigo
+
+            $colors = Color::where('product_id', $product_id)->orderBy('sort_order')->get();
+
+            DB::commit();
+
+            return responseOk($colors, "Se ha procesado correctamente las tallas");
+        } catch (\Throwable $th) {
+
+            DB::rollback();
+
+            return responseError($th, "Error recibir las tallas.... ");
+        }
     }
 
     /**
@@ -27,9 +50,50 @@ class ColorDashboardController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Store $store, $product_id, Request $request)
     {
-        //
+
+        try {
+
+            DB::beginTransaction();
+
+            $color = Color::create([
+                'name' => $request->name,
+                'product_id' => $product_id,
+                'sort_order' => 1,
+                'status' => 1,
+                'quantity' => 0
+            ]);
+
+            $product = Product::with(['category', 'colors'])->findOrFail($product_id);
+
+            if ($product->category->is_size && $product->sizes->isNotEmpty()) {
+
+                $data = $product->sizes->map(fn($size) => [
+                    'color_id' => $color->id,
+                    'size_id' => $size->id,
+                    'quantity' => 0,
+                ])->toArray();
+
+                ColorSize::insert($data);
+            }
+
+            DB::commit();
+
+            return responseOk($color, "se agrego correctamente el color");
+
+        } catch (\Illuminate\Database\QueryException $th) {
+
+            DB::rollback();
+
+            Log::info($th);
+
+            if ($th->errorInfo[1] == 1062) {
+                return responseError([], "El color ya existe", 409);
+            }
+
+            return responseError([], "Ha ocurrido un error la ingresar el nuevo color");
+        }
     }
 
     /**
@@ -59,8 +123,56 @@ class ColorDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Store $store)
+    public function destroy(Store $store, $product_id, $color_id)
     {
-        //
+        try {
+            $color = Color::findOrFail($color_id);
+
+            // $this->authorize('delete', $color); // Usa la policy
+
+            $color->delete();
+
+            return responseOk($color, "color eliminado correctamente (destroy)");
+        } catch (\Throwable $th) {
+            Log::error($th);
+            return responseError($th, "Error al eliminar el color (destroy)");
+        }
+    }
+
+    public function sort(Store $store, $product_id, Request $request)
+    {
+
+        try {
+
+            DB::beginTransaction();
+
+            //
+            $colors = $request->all(); // array con id y sort_order
+
+            Log::info($colors);
+
+            $order = 0;
+
+            foreach ($colors as $color) {
+                DB::table('colors')
+                    ->where('id', $color['id'])
+                    ->update(['sort_order' => $order++]);
+            }
+
+
+
+            //Ojjo hace multiples consultas pero es poco
+
+            DB::commit();
+
+            return responseOk($colors, "Colors ordenadas correctamente");
+        } catch (\Throwable $th) {
+
+            DB::rollback();
+
+            Log::info($th);
+
+            return responseError($th, "Error al ordenar las Colors");
+        }
     }
 }

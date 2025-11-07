@@ -15,6 +15,22 @@ use Illuminate\Support\Str;
 class ProductDashboardController extends Controller
 {
     //
+
+    public function setup(Store $store)
+    {
+        // Implementa la lógica para recuperar y devolver productos para el panel de control
+        // Esto podría implicar consultar la base de datos por productos relacionados con la tienda
+        // y devolverlos en un formato paginado o como una colección.
+
+        try {
+            Log::info('exito');
+            //selectFields esta en el modelo Product
+            return responseOk($store->with(['categories', 'brands'])->get(), "La informacion de la tienda ha sido obtenida satisfactoriamente");
+        } catch (\Throwable $th) {
+            //throw $th;
+            Log::info($th);
+        }
+    }
     public function index(Store $store, Request $request)
     {
         // Implementa la lógica para recuperar y devolver productos para el panel de control
@@ -58,10 +74,10 @@ class ProductDashboardController extends Controller
     {
         //
 
-        $product = $store->products()->with(['category', 'colors', 'sizes'])->find($product_id);
+        $product = $store->products()->with(['category', 'colors.sizes', 'sizes'])->find($product_id);
 
         if (!$product) {
-            return responseError([], "Error al obtener el producto x");
+            return responseError([], "Error al obtener el producto x", 404);
         }
 
         return responseOk($product, "Datos obtenidos con exito del producto");

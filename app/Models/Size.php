@@ -15,4 +15,8 @@ class Size extends Model
     public function product(){
         return $this->belongsTo(Product::class);
     }
+
+    public function colors(){
+        return $this->belongsToMany(Color::class);
+    }
 }

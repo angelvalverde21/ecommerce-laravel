@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\ColorSize;
+use App\Models\Product;
 use App\Models\Size;
 use App\Models\Store;
 use Illuminate\Http\Request;
@@ -19,23 +21,21 @@ class SizeDashboardController extends Controller
         //
 
         try {
-        
+
             DB::beginTransaction();
-        
+
             //Aqui agregar el codigo
 
             $sizes = Size::where('product_id', $product_id)->orderBy('sort_order')->get();
-        
+
             DB::commit();
-        
+
             return responseOk($sizes, "Se ha procesado correctamente las tallas");
-        
         } catch (\Throwable $th) {
-        
+
             DB::rollback();
-        
+
             return responseError($th, "Error recibir las tallas.... ");
-        
         }
     }
 
@@ -63,6 +63,19 @@ class SizeDashboardController extends Controller
                 'product_id' => $product_id,
                 'sort_order' => 1,
             ]);
+
+            $product = Product::with(['category', 'colors'])->findOrFail($product_id);
+
+            if ($product->category->is_color && $product->colors->isNotEmpty()) {
+
+                $data = $product->colors->map(fn($color) => [
+                    'color_id' => $color->id,
+                    'size_id' => $size->id,
+                    'quantity' => 0,
+                ])->toArray();
+
+                ColorSize::insert($data);
+            }
 
             DB::commit();
 
@@ -138,21 +151,20 @@ class SizeDashboardController extends Controller
             Log::info($sizes);
 
             $order = 0;
-            
+
             foreach ($sizes as $size) {
                 DB::table('sizes')
-                ->where('id', $size['id'])
-                ->update(['sort_order' => $order++]);
+                    ->where('id', $size['id'])
+                    ->update(['sort_order' => $order++]);
             }
-            
-            
+
+
 
             //Ojjo hace multiples consultas pero es poco
 
             DB::commit();
 
             return responseOk($sizes, "Tallas ordenadas correctamente");
-
         } catch (\Throwable $th) {
 
             DB::rollback();

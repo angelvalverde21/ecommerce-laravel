@@ -30,6 +30,10 @@ class Store extends Model
     {
         return $this->hasMany(Purchase::class);
     }
+    public function brands()
+    {
+        return $this->hasMany(Brand::class);
+    }
 
     public function getRouteKeyName()
     {

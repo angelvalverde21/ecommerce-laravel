@@ -4,6 +4,7 @@ namespace App\Services\Shopify;
 
 use App\Helpers\GraphQLResponseHelper;
 use App\Services\Shopify\ShopifyBaseService;
+use Illuminate\Support\Facades\Log;
 
 class ShopifyOrderService extends ShopifyBaseService
 {
@@ -11,7 +12,7 @@ class ShopifyOrderService extends ShopifyBaseService
     public function getOrderByName(string $orderName)
     {
 
-        $fields = $this->buildOrderQuery();
+        $fields = $this->orderQuery(['withItem' => false, 'withCustomer' => false]);
 
         $query = <<<GQL
         {
@@ -36,7 +37,7 @@ class ShopifyOrderService extends ShopifyBaseService
 
         while ($hasNextPage) {
 
-            $query = $this->buildOrdersQuery(50, null, $startDate, $endDate);
+            $query = $this->ordersQuery(50, null, $startDate, $endDate);
 
             $json = $this->graphql($query)->json();
             if (!isset($json['data']['orders']['edges'])) break;
@@ -76,35 +77,14 @@ class ShopifyOrderService extends ShopifyBaseService
         ];
     }
 
-    public function getOrders($limit = 10, $cursor = null)
+    //orders
+    public function getOrders($limit = 5, $cursor = null)
     {
 
-        // Construimos la parte dinámica para paginación
-        
-        // $query = "
-        //       {
-        //         orders(first: {$limit}, sortKey: CREATED_AT, reverse: true{$afterClause}) {
-        //           edges {
-        //             cursor
-        //             node {
-        //                 {$this->buildOrderQuery()}
-        //             }
-        //           }
-        //           pageInfo {
-        //             hasNextPage
-        //             endCursor
-        //           }
-        //         }
-        //       }";
+        $response = $this->graphql($this->ordersQuery($limit, $cursor));
 
-        // $response = Http::withHeaders([
-        //     'X-Shopify-Access-Token' => $this->token,
-        //     'Content-Type' => 'application/json',
-        // ])->post($this->baseUrl, [
-        //     'query' => $query
-        // ]);
-
-        $response = $this->graphql($this->buildOrdersQuery($limit, $cursor));
+        Log::info($response);
+        Log::info("ok");
 
         if ($response->failed()) {
             return ['error' => 'No se pudieron obtener las órdenes'];
@@ -122,6 +102,8 @@ class ShopifyOrderService extends ShopifyBaseService
             'lastCursor' => $result['lastCursor'],
         ];
 
-        return $orders;
+        // return $orders;
+
     }
+
 }

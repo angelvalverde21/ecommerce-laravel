@@ -1,33 +1,19 @@
 <?php
 
-namespace App\Http\Controllers\Api\Shopify;
+namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Services\Shopify\ShopifyOrderService;
+use App\Models\Store;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
-class OrderShopifyController extends Controller
+class StoreDashboardController extends Controller
 {
-
-    protected $shopifyOrderService;
-
-    public function __construct(ShopifyOrderService $shopifyOrderService)
-    {
-        $this->shopifyOrderService = $shopifyOrderService;
-    }
-
+    /**
+     * Display a listing of the resource.
+     */
     public function index()
     {
-
-        $orders  = Cache::remember(
-            "orders_cache_",
-            now()->addHour(1),
-            fn() => $this->shopifyOrderService->getOrders(50, ['withItem' => true, 'withCustomer' => true])
-        );
-
-        // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
-        return response()->json($orders);
+        //
     }
 
     /**
@@ -49,9 +35,16 @@ class OrderShopifyController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Store $store)
     {
-        //
+        try {
+            // Log::info('exito');
+            //selectFields esta en el modelo Product
+            return responseOk($store->with(['categories', 'brands'])->first(), "La informacion de la tienda ha sido obtenida satisfactoriamente");
+        } catch (\Throwable $th) {
+            //throw $th;
+            // Log::info($th);
+        }
     }
 
     /**

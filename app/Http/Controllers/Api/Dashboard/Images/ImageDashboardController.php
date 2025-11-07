@@ -13,9 +13,22 @@ class ImageDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Store $store, $product_id)
     {
         //
+        try {
+
+            $images = $store->products()->find($product_id)->images()->get();
+        
+            return responseOk($images, "Se ha procesado correctamente");
+        
+        } catch (\Throwable $th) {
+        
+            Log::error($th);
+        
+            return responseError($th, "Error al eliminar.... ");
+        
+        }
     }
 
     /**

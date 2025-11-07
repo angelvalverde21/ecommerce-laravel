@@ -23,7 +23,6 @@ class StoreSeeder extends Seeder
                 "slug" => "ara",
                 "identity_id" => "2", //2 es RUC
                 "document_number" => "20478907009",
-
             ],
         ]);
     }
