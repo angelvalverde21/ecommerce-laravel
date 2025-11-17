@@ -36,3 +36,10 @@ Route::get('/link', function () {
         storage_path('app/public'), public_path('storage')
     );
  });
+
+ Route::get('/clear', function () {
+    Artisan::call('config:clear');
+    Artisan::call('route:clear');
+    Artisan::call('config:cache');
+    return 'cleared';
+});
