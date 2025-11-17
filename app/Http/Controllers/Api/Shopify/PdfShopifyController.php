@@ -68,11 +68,25 @@ class PdfShopifyController extends Controller
         //return $pdf-> download ('prueba.pdf');
 
         // Verificar si hay salida extra
-        if (ob_get_length()) {
-            $extra = ob_get_contents();
-            Log::info('Bytes extra antes del PDF: ' . bin2hex(substr($extra, 0, 100)));
-            ob_end_clean();
+
+        // --- Detectar bytes extra antes del PDF ---
+        $extraBytes = ob_get_contents();
+
+        if ($extraBytes && strlen($extraBytes) > 0) {
+            // Tomamos los primeros 100 bytes para mostrar
+            $snippet = substr($extraBytes, 0, 100);
+
+            // Convertimos a hexadecimal para ver caracteres invisibles
+            $hexSnippet = bin2hex($snippet);
+
+            // También a string legible (puede contener basura)
+            $strSnippet = preg_replace('/[\x00-\x1F\x7F]/', '.', $snippet);
+
+            Log::warning("Se detectaron bytes extra antes del PDF. Primeros 100 bytes:\nHEX: $hexSnippet\nSTR: $strSnippet");
+        } else {
+            Log::info("✅ No se detectaron bytes extra antes del PDF. El buffer está limpio.");
         }
+
 
         return $pdf->stream(time() . '-voucher-' . $order_id . '.pdf');
 
