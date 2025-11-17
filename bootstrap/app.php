@@ -4,6 +4,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\HandleCors;
 // use App\Http\Middleware\VerifyStore;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // $middleware->append(ForceJsonUnauthenticated::class);
         //
         // $middleware->append(VerifyStore::class);
+        $middleware->prepend(HandleCors::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
