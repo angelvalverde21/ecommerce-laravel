@@ -54,18 +54,25 @@ class PdfShopifyController extends Controller
             $courier = $courier === "confianza" ? "Courier de confianza" : $courier;
 
             Log::info($courier); // "olva courier"
-        }else{
+        } else {
             $courier = "";
         }
 
 
 
         //return view('livewire.erp.orders.pdf.voucher', compact('order'));
-        
+
 
         $pdf = $pdf->loadview('pdf.voucher', compact(['order', 'courier']));
         //return view('livewire.erp.orders.pdf.voucher', compact('order'));
         //return $pdf-> download ('prueba.pdf');
+
+        // Verificar si hay salida extra
+        if (ob_get_length()) {
+            $extra = ob_get_contents();
+            Log::info('Bytes extra antes del PDF: ' . bin2hex(substr($extra, 0, 100)));
+            ob_end_clean();
+        }
 
         return $pdf->stream(time() . '-voucher-' . $order_id . '.pdf');
 
