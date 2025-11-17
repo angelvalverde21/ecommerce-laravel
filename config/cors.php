@@ -24,6 +24,7 @@ return [
         'http://localhost:4300',
         'http://3b.pe',
         'https://3b.pe',
+        'https://api.3b.pe',
         'http://www.3b.pe',
         'https://www.3b.pe',
         'http://luvadi.pe',

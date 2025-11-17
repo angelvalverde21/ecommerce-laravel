@@ -18,7 +18,7 @@ Route::get('/optimize', function () {
 
     Artisan::call('optimize:clear');
 
-    return "Cacheado!x";
+    return "optimize";
 });
 
 Route::get('/link', function () {
