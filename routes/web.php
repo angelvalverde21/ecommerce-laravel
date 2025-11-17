@@ -14,6 +14,12 @@ Route::get('/cache', function () {
 
     return "Cacheado!x";
 });
+Route::get('/optimize', function () {
+
+    Artisan::call('optimize:clear');
+
+    return "Cacheado!x";
+});
 
 Route::get('/link', function () {
     // Artisan::call('storage:link');
