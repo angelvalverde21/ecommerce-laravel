@@ -67,6 +67,9 @@ class PdfShopifyController extends Controller
         //return $pdf-> download ('prueba.pdf');
 
         return $pdf->stream(time() . '-voucher-' . $order_id . '.pdf');
+
+        exit();
+
     }
 
     public function packing(Store $store, $order_id)
