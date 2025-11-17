@@ -49,7 +49,7 @@ class ShopifyOrderReportService extends ShopifyBaseService
         while ($hasNextPage) {
 
             $after = $endCursor ? "\"{$endCursor}\"" : 'null';
-            $query = $this->ordersQuery(50, $endCursor, $startDate, $endDate);
+            $query = $this->ordersQuery(50, $endCursor, $startDate, $endDate, []);
 
             $json = $this->graphql($query)->json();
             if (!isset($json['data']['orders']['edges'])) break;
@@ -68,32 +68,33 @@ class ShopifyOrderReportService extends ShopifyBaseService
         return $orders;
     }
 
-    protected function mapOrder(array $order): array
-    {
-        return [
-            'id' => $order['id'],
-            'name' => $order['name'],
-            'date' => $order['createdAt'],
-            'total' => $order['totalPriceSet']['shopMoney']['amount'],
-            'currency' => $order['totalPriceSet']['shopMoney']['currencyCode'],
-            'items' => collect($order['lineItems']['edges'])->map(function ($edge) {
-                $item = $edge['node'];
-                return [
-                    'title' => $item['variant']['product']['title'] ?? $item['name'],
-                    'variant' => $item['variant']['title'] ?? null,
-                    'price' => $item['variant']['price'] ?? null,
-                    'quantity' => $item['quantity'],
-                    'image' => $item['variant']['product']['featuredImage']['url'] ?? null,
-                ];
-            })->toArray(),
-        ];
-    }
+    // protected function mapOrder(array $order): array
+    // {
+    //     return [
+    //         'id' => $order['id'],
+    //         'name' => $order['name'],
+    //         'date' => $order['createdAt'],
+    //         'total' => $order['totalPriceSet']['shopMoney']['amount'],
+    //         'currency' => $order['totalPriceSet']['shopMoney']['currencyCode'],
+    //         'items' => collect($order['lineItems']['edges'])->map(function ($edge) {
+    //             $item = $edge['node'];
+    //             return [
+    //                 'title' => $item['variant']['product']['title'] ?? $item['name'],
+    //                 'variant' => $item['variant']['title'] ?? null,
+    //                 'price' => $item['variant']['price'] ?? null,
+    //                 'quantity' => $item['quantity'],
+    //                 'image' => $item['variant']['product']['featuredImage']['url'] ?? null,
+    //             ];
+    //         })->toArray(),
+    //     ];
+    // }
 
     public function getOrdersAll()
     {
         $cacheKey = "shopify_orders_all";
 
         return Cache::remember($cacheKey, now()->addDay(), function () {
+
             $limit = 100;
             $cursor = null;
             $allOrders = [];
@@ -137,29 +138,39 @@ class ShopifyOrderReportService extends ShopifyBaseService
         $cacheKey = "shopify_orders_all";
         $cachedData = Cache::get($cacheKey);
 
-        if (!$cachedData || empty($cachedData['orders'])) {
+        // 🔹 Si no hay caché, sincroniza todas las órdenes
+        if (!$cachedData || empty($cachedData)) {
             Log::info("Cache no encontrado. Sincronizando órdenes de Shopify...");
-            $cachedData = $this->getOrdersAll();
+            $cachedData = $this->shopifyOrderService->getAllOrders();
+
+            // Guardar en caché por 1 hora (ajústalo si deseas)
+            Cache::put($cacheKey, $cachedData, now()->addHour());
         }
 
-        if (isset($cachedData['error']) || empty($cachedData['orders'])) {
+        // 🔹 Validar que haya datos válidos
+        if (isset($cachedData['error']) || empty($cachedData)) {
             return ['error' => 'No se pudieron obtener las órdenes desde Shopify.'];
         }
 
-        $orders = $cachedData['orders'];
+        // 🔹 Si ya vienen mapeadas, usamos directamente
+        $orders = $cachedData;
+
         $report = [
             'total_sales' => 0,
-            'years' => []
+            'years' => [],
         ];
 
         foreach ($orders as $order) {
-            $date = Carbon::parse($order['createdAt']);
+            $date = Carbon::parse($order['created_at']);
             $year = $date->format('Y');
             $month = $date->format('m');
-            $amount = floatval($order['totalPriceSet']['shopMoney']['amount'] ?? 0);
+            $amount = floatval($order['total'] ?? 0);
 
             if (!isset($report['years'][$year])) {
-                $report['years'][$year] = ['total' => 0, 'months' => []];
+                $report['years'][$year] = [
+                    'total' => 0,
+                    'months' => [],
+                ];
             }
 
             if (!isset($report['years'][$year]['months'][$month])) {

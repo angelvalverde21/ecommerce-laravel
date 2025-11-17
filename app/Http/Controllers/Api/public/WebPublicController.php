@@ -1,15 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Api\Shopify;
+namespace App\Http\Controllers\Api\public;
 
 use App\Http\Controllers\Controller;
+use App\Models\Store;
 use App\Services\Shopify\ShopifyOrderService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
-class OrderShopifyController extends Controller
+class WebPublicController extends Controller
 {
-
+    /**
+     * Display a listing of the resource.
+     */
     protected $shopifyOrderService;
 
     public function __construct(ShopifyOrderService $shopifyOrderService)
@@ -17,19 +19,12 @@ class OrderShopifyController extends Controller
         $this->shopifyOrderService = $shopifyOrderService;
     }
 
-    public function index()
+    public function tracking(Store $store, $order_id)
     {
+        //
+        $order = $this->shopifyOrderService->getOrderByName($order_id);
 
-        // $orders  = Cache::remember(
-        //     "orders_cache__?_xxxp___",
-        //     now()->addHour(1),
-        //     fn() => $this->shopifyOrderService->getOrders(10)
-        // );
-
-        $orders = $this->shopifyOrderService->getOrders(50);
-
-        // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
-        return response()->json($orders);
+        return response()->json($order);
     }
 
     /**
@@ -51,7 +46,7 @@ class OrderShopifyController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Store $store)
     {
         //
     }
@@ -59,7 +54,7 @@ class OrderShopifyController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Store $store)
     {
         //
     }
@@ -67,7 +62,7 @@ class OrderShopifyController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Store $store)
     {
         //
     }
@@ -75,7 +70,7 @@ class OrderShopifyController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Store $store)
     {
         //
     }

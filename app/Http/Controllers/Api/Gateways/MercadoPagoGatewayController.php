@@ -1,35 +1,31 @@
 <?php
 
-namespace App\Http\Controllers\Api\Shopify;
+namespace App\Http\Controllers\Api\Gateways;
 
 use App\Http\Controllers\Controller;
-use App\Services\Shopify\ShopifyOrderService;
+use App\Services\MercadoPagoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 
-class OrderShopifyController extends Controller
+class MercadoPagoGatewayController extends Controller
 {
 
-    protected $shopifyOrderService;
+    protected $mpService;
 
-    public function __construct(ShopifyOrderService $shopifyOrderService)
+    public function __construct(MercadoPagoService $mpService)
     {
-        $this->shopifyOrderService = $shopifyOrderService;
+        $this->mpService = $mpService;
     }
 
+
+    /**
+     * Display a listing of the resource.
+     */
     public function index()
     {
+        //
+        $result = $this->mpService->transactions(20);
 
-        // $orders  = Cache::remember(
-        //     "orders_cache__?_xxxp___",
-        //     now()->addHour(1),
-        //     fn() => $this->shopifyOrderService->getOrders(10)
-        // );
-
-        $orders = $this->shopifyOrderService->getOrders(50);
-
-        // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
-        return response()->json($orders);
+        return response()->json($result);
     }
 
     /**
@@ -46,6 +42,12 @@ class OrderShopifyController extends Controller
     public function store(Request $request)
     {
         //
+        $monto = $request->input('amount', 10); // valor por defecto 100
+        $title = $request->input('title', 'Sorelle');
+
+        $link = $this->mpService->crearLinkPago($monto, $title);
+
+        return response()->json($link);
     }
 
     /**

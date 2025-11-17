@@ -12,7 +12,7 @@ class ShopifyOrderService extends ShopifyBaseService
     public function getOrderByName(string $orderName)
     {
 
-        $fields = $this->orderQuery(['withItem' => false, 'withCustomer' => false]);
+        $fields = $this->orderQuery(['shippingAddress', 'shippingLines']);
 
         $query = <<<GQL
         {
@@ -26,10 +26,32 @@ class ShopifyOrderService extends ShopifyBaseService
         }
         GQL;
 
-        return $this->graphql($query);
+
+        $response = $this->graphql($query);
+
+        // Log::info("hola");
+        // Log::info($response);
+
+        // if ($response->failed()) {
+        //     Log::error('Error al obtener la orden ' . $orderName, ['response' => $response]);
+        //     return ['error' => 'Error al obtener la orden '];
+        // }
+
+        // Log::info("Mundo");
+
+        $data = GraphQLResponseHelper::normalizeSingle(
+            $response,
+            'orders',
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines']
+        );
+
+        //  $data = GraphQLResponseHelper::normalizeSingle($this->graphql($query));
+
+        // Convertimos el array a objeto recursivamente
+        return json_decode(json_encode($data));
     }
 
-    public function getOrdersBetween($startDate, $endDate)
+    public function getOrdersBetweenx($startDate, $endDate, $limit = 25, $cursor = null)
     {
 
         $orders = [];
@@ -37,9 +59,10 @@ class ShopifyOrderService extends ShopifyBaseService
 
         while ($hasNextPage) {
 
-            $query = $this->ordersQuery(50, null, $startDate, $endDate);
+            $query = $this->ordersQuery($limit, $cursor, $startDate, $endDate, []);
 
             $json = $this->graphql($query)->json();
+
             if (!isset($json['data']['orders']['edges'])) break;
 
             foreach ($json['data']['orders']['edges'] as $edge) {
@@ -56,54 +79,123 @@ class ShopifyOrderService extends ShopifyBaseService
         return $orders;
     }
 
-    protected function mapOrder(array $order): array
-    {
-        return [
-            'id' => $order['id'],
-            'name' => $order['name'],
-            'date' => $order['createdAt'],
-            'total' => $order['totalPriceSet']['shopMoney']['amount'],
-            'currency' => $order['totalPriceSet']['shopMoney']['currencyCode'],
-            'items' => collect($order['lineItems']['edges'])->map(function ($edge) {
-                $item = $edge['node'];
-                return [
-                    'title' => $item['variant']['product']['title'] ?? $item['name'],
-                    'variant' => $item['variant']['title'] ?? null,
-                    'price' => $item['variant']['price'] ?? null,
-                    'quantity' => $item['quantity'],
-                    'image' => $item['variant']['product']['featuredImage']['url'] ?? null,
-                ];
-            })->toArray(),
-        ];
-    }
 
     //orders
-    public function getOrders($limit = 5, $cursor = null)
+    public function getOrders(
+        $limit,
+        $cursor = null,
+        $startDate = null,
+        $endDate = null,
+        $includes = ['customer','items', 'shippingAddress', 'shippingLines']
+    ) {
+        return $this->fetchOrders(
+            $this->ordersQuery($limit, $cursor, $startDate, $endDate, $includes)
+        );
+    }
+
+    public function getOrdersBetween($startDate, $endDate, $limit = 25, $cursor = null, $includes = [])
+    {
+        return $this->fetchOrders(
+            $this->ordersQuery($limit, $cursor, $startDate, $endDate, $includes)
+        );
+    }
+
+
+    public function getAllOrders()
+    {
+        $limit = 100; // 🔹 Shopify recomienda máximo 50
+        $cursor = null;
+        $hasNextPage = true;
+        $allOrders = [];
+
+        while ($hasNextPage) {
+            //Usa getOrders() internamente
+            $data = $this->getOrders($limit, $cursor, null, null, []); //array vacio para que no incluya nada
+
+            if (isset($data['error'])) {
+                Log::error('Error al obtener órdenes paginadas', ['cursor' => $cursor]);
+                break;
+            }
+
+            //Acumula los resultados
+            $orders = $data['orders'] ?? [];
+            $allOrders = array_merge($allOrders, $orders);
+
+            //Actualiza la paginación
+            $pageInfo = $data['pageInfo'] ?? [];
+            $hasNextPage = $pageInfo['hasNextPage'] ?? false;
+            $cursor = $data['lastCursor'] ?? null;
+
+            //Pausa de 0.5 segundos
+            usleep(500000);
+        }
+
+        // 🔹 Devuelve todas las órdenes (puedes devolver también pageInfo si lo prefieres)
+        return $allOrders;
+    }
+
+
+    public function getAllOrdersBetween($startDate = null, $endDate = null)
     {
 
-        $response = $this->graphql($this->ordersQuery($limit, $cursor));
+        $limit = 50; // 🔹 Máximo por página recomendado por Shopify
+        $cursor = null;
+        $hasNextPage = true;
+        $allOrders = [];
 
-        Log::info($response);
-        Log::info("ok");
+        while ($hasNextPage) {
+
+            $data = $this->getOrdersBetween($startDate, $endDate, $limit, $cursor);
+
+            if (isset($data['error'])) {
+                Log::error('Error al obtener órdenes paginadas', ['cursor' => $cursor]);
+                break;
+            }
+
+            $orders = $data['orders'] ?? [];
+            $allOrders = array_merge($allOrders, $orders);
+
+            // Actualizar paginación
+            $pageInfo = $data['pageInfo'] ?? [];
+            $hasNextPage = $pageInfo['hasNextPage'] ?? false;
+            $cursor = $data['lastCursor'] ?? null;
+
+            usleep(500000); // 0.5 segundos
+
+        }
+
+        // Log::info("Total de órdenes obtenidas: " . count($allOrders));
+
+        return $allOrders;
+    }
+
+    /**
+     * 🔹 Método reutilizable que ejecuta la consulta, maneja errores y normaliza la respuesta.
+     */
+    private function fetchOrders(string $query)
+    {
+        $response = $this->graphql($query);
 
         if ($response->failed()) {
+            Log::error('Error al obtener órdenes', ['response' => $response]);
             return ['error' => 'No se pudieron obtener las órdenes'];
         }
 
         $result = GraphQLResponseHelper::normalizeEntity(
             $response,
-            'orders',  // ← Cambias 'products' por 'orders'
-            ['lineItems', 'fulfillments', 'customer']  // ← Los campos anidados de órdenes
+            'orders',
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
         );
 
+        // Aplicar el mapeo solo una vez aquí
+        // $orders = collect($result['items'])
+        //     ->map(fn($order) => $this->mapOrder($order))
+        //     ->toArray();
+
         return [
-            'orders'   => $result['items'],
-            'pageInfo'   => $result['pageInfo'],
-            'lastCursor' => $result['lastCursor'],
+            'orders'     => json_decode(json_encode($result['items'])),
+            'pageInfo'   => $result['pageInfo'] ?? null,
+            'lastCursor' => $result['lastCursor'] ?? null,
         ];
-
-        // return $orders;
-
     }
-
 }

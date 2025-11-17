@@ -18,18 +18,21 @@ class VerifyStore
     public function handle(Request $request, Closure $next): Response
     {
 
+        Log::info($request);
+
+
         Log::info("VerifyStore");
 
         // Laravel ya resolvió {store} como modelo si usas type hint
-        $base_path = $request->route('store'); // obtiene {store} de la URL
-        Log::info($base_path);
+        $store = $request->route('store'); // obtiene {store} de la URL
+        // Log::info($base_path);
 
-        $store = Store::where('slug', $base_path)->first();
+        // $store = Store::where('slug', $base_path)->first();
 
         Log::info($store);
 
         if (!$store) {
-            return response()->json(['message' => 'La tienda "' . $base_path . '" no existe'], 404);
+            return response()->json(['message' => 'La tienda "' . $store . '" no existe'], 404);
         }
 
         // opcional: guardar en request si quieres acceder siempre con $request->get('store')

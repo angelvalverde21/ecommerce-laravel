@@ -60,15 +60,13 @@ class ReportShopifyController extends Controller
         ]);
     }
 
-    public function monthAll(Store $store, Request $request)
+    public function monthAll(Store $store)
     {
-        // 🔹 Genera o toma el reporte desde cache
+
         $report = $this->shopifyOrderReportService->getSalesReport();
 
         return response()->json($report);
     }
-
-    public function salesReport(Store $store) {}
 
     public function topProducts(Request $request)
     {

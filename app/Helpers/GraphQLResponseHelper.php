@@ -30,7 +30,7 @@ class GraphQLResponseHelper
         $items = collect($edges)->map(function ($edge) use ($nestedFields, $transformer) {
             $node = $edge['node'];
 
-            // Normalizar campos anidados
+            // Normalizar campos anidados (ej: variants, images)
             foreach ($nestedFields as $field) {
                 if (isset($node[$field]['edges'])) {
                     $node[$field] = collect($node[$field]['edges'])
@@ -52,13 +52,19 @@ class GraphQLResponseHelper
 
         // Obtener pageInfo
         $pageInfo = is_array($response)
-            ? data_get($response, "{$dataPath}.pageInfo")
-            : $response->json("{$dataPath}.pageInfo");
+            ? data_get($response, "{$dataPath}.pageInfo", [])
+            : $response->json("{$dataPath}.pageInfo") ?? [];
+
+        // Extraer info de paginación
+        $hasNextPage = $pageInfo['hasNextPage'] ?? false;
+        $endCursor   = $pageInfo['endCursor'] ?? null;
 
         return [
-            'items'      => $items,
-            'pageInfo'   => $pageInfo,
-            'lastCursor' => $items ? end($items)['cursor'] : null,
+            'items'       => $items,
+            'pageInfo'    => $pageInfo,
+            'hasNextPage' => $hasNextPage,
+            'cursor'      => $endCursor,
+            'lastCursor'  => $items ? end($items)['cursor'] : null,
         ];
     }
 
@@ -83,5 +89,36 @@ class GraphQLResponseHelper
             $nestedFields,
             $transformer
         );
+    }
+
+    /**** normalizador single */
+
+    /**
+     * Normaliza una respuesta GraphQL que contiene una sola orden (Shopify)
+     *
+     * @param mixed $response Array o respuesta HTTP (->json())
+     * @return array|null Orden normalizada o null si no existe
+     */
+    public static function normalizeSingle($response, string $entityName = 'orders', array $nestedFields = []): ?array
+    {
+        // Obtener nodo único (primer item de edges)
+        $node = is_array($response)
+            ? data_get($response, "data.{$entityName}.edges.0.node")
+            : $response->json("data.{$entityName}.edges.0.node");
+
+        if (!$node) {
+            return null;
+        }
+
+        // Aplanar campos tipo edges→node (ej. lineItems, shippingLines, fulfillments, events, etc.)
+        foreach ($nestedFields as $field) {
+            if (isset($node[$field]['edges'])) {
+                $node[$field] = collect($node[$field]['edges'])
+                    ->map(fn($edge) => $edge['node'])
+                    ->toArray();
+            }
+        }
+
+        return $node;
     }
 }

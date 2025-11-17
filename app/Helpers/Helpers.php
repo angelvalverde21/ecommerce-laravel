@@ -1,6 +1,7 @@
 
 <?php
 
+use Illuminate\Support\Str;
 
 function pluralToSingular($word) {
     if (preg_match('/(ces)$/', $word)) {
@@ -19,3 +20,21 @@ function pluralToSingular($word) {
 }
 
 
+if (! function_exists('match_courier')) {
+    function match_courier(string $text, $patterns): ?string
+    {
+
+        // Ordenamos para priorizar coincidencias más largas
+        usort($patterns, fn($a, $b) => strlen($b) <=> strlen($a));
+
+        $normalized = Str::lower($text);
+
+        foreach ($patterns as $pattern) {
+            if (Str::contains($normalized, Str::lower($pattern))) {
+                return $pattern;
+            }
+        }
+
+        return null;
+    }
+}

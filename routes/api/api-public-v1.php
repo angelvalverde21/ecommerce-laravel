@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\public\StorePublicController;
+use App\Http\Controllers\Api\public\WebPublicController;
 // use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,9 @@ Route::prefix('v1/public')->group(function () {
 
         Route::get('/', [StorePublicController::class, 'show']);
         Route::post('/login', [AuthApiController::class, 'login']);
+        
+        Route::get('/tracking/{order_id}', [WebPublicController::class, 'tracking']);
 
     });
+
 });
