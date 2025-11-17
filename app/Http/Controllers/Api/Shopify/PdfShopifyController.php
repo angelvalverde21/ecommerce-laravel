@@ -33,7 +33,7 @@ class PdfShopifyController extends Controller
 
 
         // Log::info($order);
-        Log::info(json_encode($order));
+        // Log::info(json_encode($order));
 
         $pdf = app('dompdf.wrapper');
 
