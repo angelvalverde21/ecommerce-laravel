@@ -21,6 +21,13 @@ Route::get('/optimize', function () {
 
     return "optimize";
 });
+Route::get('/config', function () {
+
+    Artisan::call('config:clear');
+    Artisan::call('config:cache');
+
+    return "config";
+});
 
 Route::get('/link', function () {
     // Artisan::call('storage:link');
