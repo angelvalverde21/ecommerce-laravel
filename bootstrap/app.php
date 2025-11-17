@@ -18,9 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // $middleware->append(ForceJsonUnauthenticated::class);
         //
         // $middleware->append(VerifyStore::class);
-        $middleware->getGlobalMiddleware([
-            HandleCors::class,
-        ]);
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
