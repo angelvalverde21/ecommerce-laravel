@@ -19,7 +19,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => [
+        'https://3b.pe',
+        'http://3b.pe',
+        'https://www.3b.pe',
+        'http://www.3b.pe',
+    ],
 
     'allowed_origins_patterns' => [],
 
