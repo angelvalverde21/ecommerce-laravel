@@ -15,11 +15,18 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => ['*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => [
+        'http://localhost:4200',
+        'http://localhost:4300',
+        'http://3b.pe',
+        'https://3b.pe',
+        'http://www.3b.pe',
+        'https://www.3b.pe',
+    ],
 
     'allowed_origins_patterns' => [],
 
@@ -32,3 +39,5 @@ return [
     'supports_credentials' => false,
 
 ];
+
+
