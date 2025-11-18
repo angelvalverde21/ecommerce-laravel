@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
 
@@ -12,6 +12,7 @@
         }
 
         body {
+            /* font-family: monospace; */
             font-size: 11pt;
             width: 75mm;
             /* Para impresora térmica de 58mm */
