@@ -23,7 +23,7 @@ use App\Http\Middleware\VerifyStore;
 //     Artisan::call('storage:link');
 // });
 
-Route::prefix('v1/public')->group(function () {
+Route::prefix('v1/public')->middleware('api')->group(function () {
 
     Route::post('/register', [StorePublicController::class, 'register']);
 

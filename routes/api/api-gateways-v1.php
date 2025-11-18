@@ -8,26 +8,26 @@ use Illuminate\Support\Facades\Route;
 
 // });
 
-Route::prefix('v1/dashboard/{store}/gateways')->middleware(['auth:api'])->group(function () {
+// Route::prefix('v1/dashboard/{store}/gateways')->middleware(['auth:api'])->group(function () {
 
-    Route::prefix('mercadopago')->group(function () {
+//     Route::prefix('mercadopago')->group(function () {
     
-        Route::prefix('payments')->group(function () {
+//         Route::prefix('payments')->group(function () {
         
-            Route::get('/', [PaymentMercadoPagoController::class, 'index']); //Listar
-            Route::post('/', [PaymentMercadoPagoController::class, 'store']); //create
+//             Route::get('/', [PaymentMercadoPagoController::class, 'index']); //Listar
+//             Route::post('/', [PaymentMercadoPagoController::class, 'store']); //create
         
-            Route::prefix('{payment_id}')->group(function () {
+//             Route::prefix('{payment_id}')->group(function () {
         
-                Route::get('/', [PaymentMercadoPagoController::class, 'show']); //show o mostrar por id
-                Route::put('/', [PaymentMercadoPagoController::class, 'update']); //actualizar
-                Route::delete('/', [PaymentMercadoPagoController::class, 'destroy']); //borrar
+//                 Route::get('/', [PaymentMercadoPagoController::class, 'show']); //show o mostrar por id
+//                 Route::put('/', [PaymentMercadoPagoController::class, 'update']); //actualizar
+//                 Route::delete('/', [PaymentMercadoPagoController::class, 'destroy']); //borrar
         
-            });
+//             });
         
-        });
+//         });
     
-    });
+//     });
 
-});
+// });
 

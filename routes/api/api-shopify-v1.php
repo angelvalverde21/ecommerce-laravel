@@ -7,8 +7,7 @@ use App\Http\Controllers\Api\Shopify\ProductShopifyController;
 use App\Http\Controllers\Api\Shopify\ReportShopifyController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1/shopify/{store}')->middleware(['api'])->group(function () {
-
+Route::prefix('v1/shopify/{store}')->middleware('api')->group(function () {
 
     Route::prefix('orders')->group(function () {
 

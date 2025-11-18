@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 // });
 
-Route::prefix('v1/stores/{store}')->group(function () {
+Route::prefix('v1/stores/{store}')->middleware('api')->group(function () {
 
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
     
