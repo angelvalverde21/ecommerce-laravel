@@ -88,7 +88,7 @@ class PdfShopifyController extends Controller
         }
 
 
-        return $pdf->download(time() . '-voucher-' . $order_id . '.pdf');
+        return $pdf->stream(time() . '-voucher-' . $order_id . '.pdf');
 
         // exit();
 
