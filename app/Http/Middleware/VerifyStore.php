@@ -32,7 +32,7 @@ class VerifyStore
         Log::info($store);
 
         if (!$store) {
-            // return response()->json(['message' => 'La tienda "' . $store . '" no existe'], 404);
+            return response()->json(['message' => 'La tienda "' . $store . '" no existe'], 404);
         }
 
         // opcional: guardar en request si quieres acceder siempre con $request->get('store')

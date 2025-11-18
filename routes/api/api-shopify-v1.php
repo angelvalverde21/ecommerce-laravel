@@ -7,16 +7,13 @@ use App\Http\Controllers\Api\Shopify\ProductShopifyController;
 use App\Http\Controllers\Api\Shopify\ReportShopifyController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1/shopify/{store}')->group(function () {
+Route::prefix('v1/shopify/{store}')->middleware(['auth:api'])->group(function () {
 
 
     Route::prefix('orders')->group(function () {
 
         Route::get('/', [OrderShopifyController::class, 'index']); //Listar
-        // Route::get('/paid', [OrderShopifyController::class, 'index']); //Listar
-        // Route::get('/unpaid', [OrderShopifyController::class, 'index']); //Listar
-        // Route::get('/archived', [OrderShopifyController::class, 'index']); //Listar
-        // Route::get('/cancell', [OrderShopifyController::class, 'index']); //Listar
+
         Route::post('/', [OrderShopifyController::class, 'store']); //create
 
         Route::prefix('{order_id}')->group(function () {
