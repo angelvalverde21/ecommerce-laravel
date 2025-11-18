@@ -1,18 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="es">
 <head>
-
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <style>
         @page {
             margin: 0mm;
         }
 
         body {
-            /* font-family: monospace; */
+            font-family: monospace;
             font-size: 11pt;
             width: 75mm;
             /* Para impresora térmica de 58mm */
@@ -51,13 +48,10 @@
             /* border: 1px solid #ccc; */
         }
     </style>
-
     <title>Ticket de envio</title>
-
 </head>
 
 <body>
-
     <div class="container">
         <h2 class="text-center" style="margin: 10px 0">
             Sorelle

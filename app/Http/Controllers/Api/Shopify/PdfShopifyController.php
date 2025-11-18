@@ -87,6 +87,7 @@ class PdfShopifyController extends Controller
             Log::info("✅ No se detectaron bytes extra antes del PDF. El buffer está limpio.");
         }
 
+        dd($pdf->output());
 
         return $pdf->stream(time() . '-voucher-' . $order_id . '.pdf');
 
