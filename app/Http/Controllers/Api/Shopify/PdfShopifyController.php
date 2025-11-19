@@ -60,27 +60,11 @@ class PdfShopifyController extends Controller
 
         //return view('livewire.erp.orders.pdf.voucher', compact('order'));
 
-        Log::info(json_encode($order));
-
 
         $pdf = $pdf->loadview('pdf.voucher', compact(['order', 'courier']));
 
 
         return $pdf->stream(time() . '-voucher-' . $order_id . '.pdf');
-
-        // exit();
-
-    }
-
-    public function test()
-    {
-
-        $pdf = app('dompdf.wrapper');
-
-        $pdf = $pdf->loadview('pdf.voucher');
-
-
-        return $pdf->stream(time() . '-voucher-.pdf');
 
         // exit();
 
@@ -102,6 +86,6 @@ class PdfShopifyController extends Controller
         // $order->Addstatus('preparando_envio', $current);
 
         //return $pdf-> download ('prueba.pdf');
-        return $pdf->download(time() . '-' . $order_id . '-packing.pdf');
+        return $pdf->stream(time() . '-' . $order_id . '-packing.pdf');
     }
 }
