@@ -25,6 +25,8 @@ class PdfShopifyController extends Controller
 
         // Log::info($order);
 
+        dd('inicio pdf');
+
         $order_id = str_replace("#", "", $order_id);
 
 
