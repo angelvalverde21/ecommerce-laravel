@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Shopify\PdfShopifyController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Route;
@@ -43,3 +44,5 @@ Route::get('/link', function () {
     Artisan::call('config:cache');
     return 'cleared';
 });
+
+Route::get('/pdf', [PdfShopifyController::class, 'test']); //Listar
