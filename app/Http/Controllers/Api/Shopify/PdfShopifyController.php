@@ -30,8 +30,6 @@ class PdfShopifyController extends Controller
 
         $order = $this->shopifyOrderService->getOrderByName($order_id);
 
-
-
         // Log::info($order);
         // Log::info(json_encode($order));
 
@@ -57,8 +55,6 @@ class PdfShopifyController extends Controller
         } else {
             $courier = "";
         }
-
-
 
         //return view('livewire.erp.orders.pdf.voucher', compact('order'));
 

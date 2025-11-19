@@ -15,4 +15,3 @@ Route::prefix('v1/stores/{store}')->middleware('api')->group(function () {
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
     
 });
-
