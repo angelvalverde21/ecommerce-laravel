@@ -59,11 +59,10 @@ class StorePublicController extends Controller
 
             // Verificar si ya existe la tienda
             if (Store::where('slug', $slug)->exists()) {
-                
+
                 return responseError("error", "La tienda " . $validatedData['store'] . " ya existe", 409);
 
                 DB::rollback();
-
             }
 
             // Inserción de datos
@@ -110,19 +109,16 @@ class StorePublicController extends Controller
             DB::commit();
 
             return responseOk($data, "El registro ha sido exitoso");
-
         } catch (\Illuminate\Database\QueryException $e) {
 
             DB::rollback();
 
             return responseError($e, "Error al crear la tienda " . $e->getMessage(), 400);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Devuelve los errores de validación
             return responseError($e, collect($e->errors())->flatten()->all(), 422);
 
             DB::rollback();
-
         } catch (\Exception $e) {
             // Otros errores inesperados
             return responseError($e,  'Ocurrió un error inesperado: ' . $e->getMessage()); //error 500
@@ -161,15 +157,24 @@ class StorePublicController extends Controller
     {
         //
 
-        Log::info($store);
-
         try {
-            $store = Store::where('slug', $store)->first();
-            return responseOk($store, "Se encontro la tienda");
+
+            $storeModel = Store::where('slug', $store)->first();
+
+            if (!$storeModel) {
+                // No existe tienda → NO ES EXCEPCIÓN, lo manejamos manualmente
+                Log::warning("Tienda no encontrada: $store");
+                return responseError(false, "No se encontró la tienda");
+            }
+
+            Log::info("Tienda encontrada:", ['store' => $storeModel]);
+
+            return responseOk($storeModel, "Se encontró la tienda: $store");
+
         } catch (\Throwable $th) {
-            //throw $th;
-            Log::info($th);
-            return responseError($th->getMessage(), "No se encontro la tienda");
+
+            Log::error('Error inesperado:', ['error' => $th->getMessage()]);
+            return responseError($th->getMessage(), "Error interno del servidor");
         }
     }
 

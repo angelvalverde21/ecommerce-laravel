@@ -20,11 +20,15 @@ class User extends Authenticatable implements OAuthenticatable
      *
      * @var list<string>
      */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+    // protected $fillable = [
+    //     'name',
+    //     'email',
+    //     'password',
+    // ];
+
+    protected $guarded = ['id', 'created_at'];
+
+    protected $guard_name = 'api';
 
     /**
      * The attributes that should be hidden for serialization.
@@ -49,7 +53,14 @@ class User extends Authenticatable implements OAuthenticatable
         ];
     }
 
-    public function stores(){
+    public function stores()
+    {
         return $this->belongsToMany(Store::class);
     }
+
+    public function employee()
+    {
+        return $this->hasOne(Employee::class);
+    }
+
 }

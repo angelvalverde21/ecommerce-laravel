@@ -33,7 +33,6 @@ Route::prefix('v1/shopify/{store}')->middleware('api')->group(function () {
         
     });
 
-
     Route::prefix('products')->group(function () {
 
         Route::get('/', [ProductShopifyController::class, 'index']); //Listar

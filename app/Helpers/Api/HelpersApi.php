@@ -1,6 +1,6 @@
 <?php
 
-function responseOk($data = null, $message = "Datos obtenidos con exito")
+function responseOk($data = null, $message = "Datos obtenidos con exito", $status = 200)
 {
 
     $array = [
@@ -20,5 +20,5 @@ function responseError($error = "", $message = "Error al obtener los datos", $st
         'success' => false,
         'error' => $error,
         'message' => $message,
-    ], 500);
+    ], $status);
 }

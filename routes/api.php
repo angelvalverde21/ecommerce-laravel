@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Route;
 //     Route::get('/', [ProductDashboardController::class, 'index']);
 // });
 
-require __DIR__ . '/api/api-shopify-v1.php';
-require __DIR__ . '/api/api-public-v1.php';
-require __DIR__ . '/api/api-dashboard-v1.php';
-require __DIR__ . '/api/api-stores-v1.php';
+require __DIR__ . '/api-v1/api-dashboard.php';
+require __DIR__ . '/api-v1/api-shopify.php';
+require __DIR__ . '/api-v1/api-public.php';
+require __DIR__ . '/api-v1/api-stores.php';
+require __DIR__ . '/api-v1/api-gateways.php';

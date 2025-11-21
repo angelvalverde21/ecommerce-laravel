@@ -5,14 +5,16 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Str;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
+        // Resetear caché
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 🔐 1. Permisos globales del ERP
+        // 1. PERMISOS en texto natural
         $permissions = [
             // Usuarios y roles
             'ver usuarios', 'crear usuarios', 'editar usuarios', 'eliminar usuarios', 'asignar roles',
@@ -44,54 +46,68 @@ class RolesAndPermissionsSeeder extends Seeder
             'ver configuración', 'editar configuración', 'gestionar backups',
         ];
 
+        // Crear permisos en snake_case
         foreach ($permissions as $name) {
-            Permission::firstOrCreate(['name' => $name, 'guard_name' => 'api']);
+            Permission::firstOrCreate([
+                'name' => Str::snake($name),
+                'guard_name' => 'api',
+            ]);
         }
 
-        // 👥 2. Roles del ERP y sus permisos específicos
+        // Obtener permisos del guard api
+        $apiPermissions = Permission::where('guard_name', 'api')->get();
+
+        // 2. ROLES (ya usando snake_case)
         $roles = [
-            'Administrador del sistema' => Permission::all(),
+            'master' => $apiPermissions,
+            'ceo' => $apiPermissions,
 
-            'CEO' => [
-                'ver reportes', 'exportar reportes', 'ver ventas',
-                'ver usuarios', 'ver inventario', 'ver configuración',
-            ],
-
-            'Control de calidad' => [
+            'control_de_calidad' => [
                 'ver productos', 'aprobar calidad', 'controlar producción',
             ],
 
-            'Producción' => [
+            'produccion' => [
                 'ver productos', 'controlar producción',
             ],
 
-            'Despacho' => [
+            'despacho' => [
                 'ver pedidos pendientes', 'marcar pedidos empaquetados', 'gestionar guías de envío',
             ],
 
-            'Ventas' => [
+            'ventas' => [
                 'ver productos', 'crear ventas', 'ver ventas', 'imprimir boletas',
             ],
 
-            'Inventario' => [
+            'inventario' => [
                 'ver inventario', 'actualizar stock', 'registrar entradas', 'registrar salidas',
             ],
 
-            'Creador de contenido' => [
+            'creador_de_contenido' => [
                 'crear publicaciones', 'editar publicaciones', 'eliminar publicaciones', 'ver campañas',
             ],
 
-            'Compras' => [
+            'compras' => [
                 'ver compras', 'registrar compras', 'editar compras', 'eliminar compras',
                 'ver proveedores', 'crear proveedores', 'editar proveedores', 'eliminar proveedores',
             ],
         ];
 
         foreach ($roles as $roleName => $perms) {
-            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'api']);
-            $role->givePermissionTo($perms);
+
+            // Crear rol en snake_case
+            $role = Role::firstOrCreate([
+                'name' => Str::snake($roleName),
+                'guard_name' => 'api',
+            ]);
+
+            // Convertir permisos del rol a snake_case
+            $snakePerms = collect($perms)->map(function ($p) {
+                return is_string($p) ? Str::snake($p) : $p;
+            });
+
+            $role->syncPermissions($snakePerms);
         }
 
-        $this->command->info('✅ Roles y permisos (incluyendo Compras) creados correctamente.');
+        $this->command->info('✅ Roles y permisos creados en snake_case (al estilo Shopify).');
     }
 }

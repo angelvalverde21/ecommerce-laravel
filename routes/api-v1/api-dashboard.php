@@ -5,10 +5,13 @@
 use App\Http\Controllers\Api\Dashboard\BrandDashboardController;
 use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
 use App\Http\Controllers\Api\Dashboard\ColorDashboardController;
+use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
+use App\Http\Controllers\Api\Dashboard\RoleDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
 use App\Http\Controllers\Api\Dashboard\StoreDashboardController;
+use App\Http\Controllers\Api\Dashboard\UserDashboardController;
 use Illuminate\Support\Facades\Route;
 
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
@@ -18,6 +21,51 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1/dashboard/{store}')->middleware('api')->group(function () {
 
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
+
+    Route::prefix('roles')->group(function () {
+    
+        Route::get('/', [RoleDashboardController::class, 'index']); //Listar
+        Route::post('/', [RoleDashboardController::class, 'store']); //create
+    
+        // Route::prefix('{role_id}')->group(function () {
+    
+        //     Route::get('/', [RoleDashboardController::class, 'show']); //show o mostrar por id
+        //     Route::put('/', [RoleDashboardController::class, 'update']); //actualizar
+        //     Route::delete('/', [RoleDashboardController::class, 'destroy']); //borrar
+    
+        // });
+    
+    });
+
+    Route::prefix('users')->group(function () {
+    
+        Route::get('/', [UserDashboardController::class, 'index']); //Listar
+        Route::post('/', [UserDashboardController::class, 'store']); //create
+    
+        Route::prefix('{user_id}')->group(function () {
+    
+            Route::get('/', [UserDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [UserDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [UserDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
+    });
+
+    Route::prefix('employees')->group(function () {
+    
+        Route::get('/', [EmployeeDashboardController::class, 'index']); //Listar
+        Route::post('/', [EmployeeDashboardController::class, 'store']); //create
+    
+        Route::prefix('{employee_id}')->group(function () {
+    
+            Route::get('/', [EmployeeDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [EmployeeDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [EmployeeDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
+    });
 
     Route::prefix('categories')->group(function () {
     

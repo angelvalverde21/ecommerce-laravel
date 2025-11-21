@@ -92,11 +92,11 @@ class AuthApiController extends Controller
                     // Cargar la relación 'addresses' y asegurarte de que el usuario existe
                     // $user = User::with(['addresses', 'addresses.district', 'addresses.district.province', 'addresses.district.province.department'])->findOrFail($user->id);
 
+                    $user_data['id'] = $user->id;
                     $user_data['name'] = $user->name;
                     $user_data['email'] = $user->email;
                     $user_data['phone'] = $user->phone;
-
-
+                    $user_data['roles'] = $user->getRoleNames();
 
                     try {
 
