@@ -2,6 +2,7 @@
 
 namespace App\Services\Shopify;
 
+use App\Helpers\GraphQLResponseHelper;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -45,9 +46,7 @@ abstract class ShopifyBaseService
     }
 
 
-    protected function tracking($order_id){
-
-    }
+    protected function tracking($order_id) {}
 
     protected function mapOrder(array $order): array
     {
@@ -310,5 +309,52 @@ abstract class ShopifyBaseService
                 }
             }
         ';
+    }
+
+    //==================================== NUEVOS METODOS  ====================================
+
+    protected function fetchAllEdges(
+        string $rootField, //el nombre del campo raiz ej: products, orders
+        callable $buildQuery, // función que construye el query
+        array $normalizeChildren = [] // campos hijos para normalizar
+    ): array {
+
+        $allEdges   = [];
+        $hasNextPage = true;
+        $endCursor   = null;
+
+        while ($hasNextPage) {
+
+            // Construir query por callback
+            $query = $buildQuery($endCursor);
+
+            // Ejecutar GraphQL
+            $json = $this->graphql($query)->json();
+
+            // Si no hay edges → terminar
+            if (empty($json['data'][$rootField]['edges'])) {
+                break;
+            }
+
+            // Acumular edges
+            foreach ($json['data'][$rootField]['edges'] as $edge) {
+                $allEdges[] = $edge;
+            }
+
+            // Paginación
+            $pageInfo = $json['data'][$rootField]['pageInfo'] ?? null;
+            $hasNextPage = $pageInfo['hasNextPage'] ?? false;
+            $endCursor = $pageInfo['endCursor'] ?? null;
+
+            // Esperar medio segundo por límites Shopify
+            usleep(500000);
+        }
+
+        // Normalizar estructura final
+        return GraphQLResponseHelper::normalizeEntity([
+            'data' => [
+                $rootField => ['edges' => $allEdges]
+            ]
+        ], $rootField, $normalizeChildren);
     }
 }

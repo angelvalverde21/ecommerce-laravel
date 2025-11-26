@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Api\Shopify;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Services\Shopify\Report\ShopifyOrderReportService;
-use App\Services\ShopifyReportService;
 use App\Services\Shopify\ShopifyOrderService;
+use App\Services\shopify\ShopifyReportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -33,32 +33,32 @@ class ReportShopifyController extends Controller
     //     return response()->json(['top_products' => $data]);
     // }
 
-    public function index(Request $request)
-    {
-        $startDate = $request->query('start_date', now()->subMonth()->toDateString());
-        $endDate = $request->query('end_date', now()->toDateString());
+    // public function index(Request $request)
+    // {
+    //     $startDate = $request->query('start_date', now()->subMonth()->toDateString());
+    //     $endDate = $request->query('end_date', now()->toDateString());
 
-        $orders = $this->shopifyService->getOrdersBetween($startDate, $endDate);
+    //     $orders = $this->shopifyService->getOrdersBetween($startDate, $endDate);
 
-        $formatted = collect($orders)->map(function ($order) {
-            return [
-                'order_id' => $order['id'],
-                'order_name' => $order['name'],
-                'date' => $order['date'],
-                'total' => $order['total'],
-                'currency' => $order['currency'],
-                'items' => $order['items'],
-            ];
-        });
+    //     $formatted = collect($orders)->map(function ($order) {
+    //         return [
+    //             'order_id' => $order['id'],
+    //             'order_name' => $order['name'],
+    //             'date' => $order['date'],
+    //             'total' => $order['total'],
+    //             'currency' => $order['currency'],
+    //             'items' => $order['items'],
+    //         ];
+    //     });
 
-        return response()->json([
-            'status' => 'success',
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'total_orders' => $formatted->count(),
-            'orders' => $formatted->values(),
-        ]);
-    }
+    //     return response()->json([
+    //         'status' => 'success',
+    //         'start_date' => $startDate,
+    //         'end_date' => $endDate,
+    //         'total_orders' => $formatted->count(),
+    //         'orders' => $formatted->values(),
+    //     ]);
+    // }
 
     public function monthAll(Store $store)
     {
@@ -101,51 +101,5 @@ class ReportShopifyController extends Controller
 
         return response()->json($report);
     }
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
 }

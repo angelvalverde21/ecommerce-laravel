@@ -6,15 +6,28 @@ use Illuminate\Support\Collection;
 
 class GraphQLResponseHelper
 {
+
+    //Normaliza una estructura GraphQL para una entidad específica
+    //data->orders->edges (plural)
+
+    public static function normalizeEntity(
+        $response,
+        string $entityName,
+        array $nestedFields = [],
+        ?callable $transformer = null
+    ): array {
+        return self::normalize(
+            $response,
+            "data.{$entityName}",
+            $nestedFields,
+            $transformer
+        );
+    }
+
     /**
      * Normaliza una respuesta GraphQL con estructura edges/nodes
      *
-     * @param mixed $response Response de HTTP client o array
-     * @param string $dataPath Ruta al campo principal (ej: 'data.products')
-     * @param array $nestedFields Campos anidados con estructura edges/nodes ['variants', 'images']
-     * @param callable|null $transformer Función adicional para transformar cada nodo
-     * @return array
-     */
+    */
     public static function normalize(
         $response,
         string $dataPath,
@@ -68,36 +81,12 @@ class GraphQLResponseHelper
         ];
     }
 
+
+
     /**
      * Versión simplificada para un solo nivel de anidación
-     *
-     * @param mixed $response
-     * @param string $entityName Nombre de la entidad (ej: 'products', 'orders')
-     * @param array $nestedFields
-     * @param callable|null $transformer
-     * @return array
-     */
-    public static function normalizeEntity(
-        $response,
-        string $entityName,
-        array $nestedFields = [],
-        ?callable $transformer = null
-    ): array {
-        return self::normalize(
-            $response,
-            "data.{$entityName}",
-            $nestedFields,
-            $transformer
-        );
-    }
-
-    /**** normalizador single */
-
-    /**
      * Normaliza una respuesta GraphQL que contiene una sola orden (Shopify)
-     *
-     * @param mixed $response Array o respuesta HTTP (->json())
-     * @return array|null Orden normalizada o null si no existe
+     * data->orders->edges[0] (singular)
      */
     public static function normalizeSingle($response, string $entityName = 'orders', array $nestedFields = []): ?array
     {
