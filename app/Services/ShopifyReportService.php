@@ -179,7 +179,7 @@ class ShopifyReportService
     $endCursor = null;
 
     while ($hasNextPage) {
-      $query = <<<GQL
+      $query = <<<GRAPHQL
             {
               orders(
                 first: 50,
@@ -219,7 +219,7 @@ class ShopifyReportService
                 }
               }
             }
-            GQL;
+            GRAPHQL;
 
       $after = $endCursor ? "\"{$endCursor}\"" : 'null';
       $formattedQuery = sprintf($query, $after);

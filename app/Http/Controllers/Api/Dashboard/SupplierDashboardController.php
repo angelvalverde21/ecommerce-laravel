@@ -4,32 +4,50 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
-use App\Models\Supplier;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-
-use function Illuminate\Log\log;
 
 class SupplierDashboardController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(Store $store)
+    public function index()
     {
-        // Implementa la lógica para recuperar y devolver productos para el panel de control
-        // Esto podría implicar consultar la base de datos por productos relacionados con la tienda
-        // y devolverlos en un formato paginado o como una colección.
+        try {
+            $suppliers = User::role('supplier')->get();
+
+            return responseOk($suppliers, 'Suppliers obtenidos correctamente');
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError($th, 'Ha ocurrido un error interno al obtener los suppliers');
+        }
+    }
+
+    public function search(Store $store, $search = "")
+    {
+
+        if (trim($search) === '') {
+            return $this->index();
+        }
 
         try {
-            Log::info('exito');
-            //selectFields esta en el modelo Product
-            return responseOk($store->suppliers, "El listado de suppliers dashboard ha sido obtenido correctamente (dashboard)");
+            $suppliers = User::role('supplier')
+                ->where(function ($query) use ($search) {
+                    $query->where('name', 'LIKE', '%' . $search . '%')
+                        ->orWhere('email', 'LIKE', '%' . $search . '%')
+                        ->orWhere('phone', 'LIKE', '%' . $search . '%')
+                        ->orWhere('document_number', 'LIKE', '%' . $search . '%');
+                })
+                ->limit(10)
+                ->get();
+
+            return responseOk($suppliers, 'Suppliers obtenidos correctamente (search)');
         } catch (\Throwable $th) {
-            //throw $th;
             Log::info($th);
+            return responseError($th, 'Ha ocurrido un error interno al buscar los suppliers');
         }
     }
 
@@ -44,71 +62,63 @@ class SupplierDashboardController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Store $store, Request $request) //create
+    public function store(Store $store, Request $request)
     {
-
-        $resp = $request->all();
-
-        Log::info('creando suppliero');
-
-        // $rules = $this->rules;
-
-        // $this->validate($rules);
-
         try {
-
+            $validated = $request->validate([
+                'name'            => 'required|string|max:255',
+                'email'           => 'required|email|unique:users,email',
+                'phone'           => 'nullable|string|max:20',
+                'document_number' => 'nullable|string|max:20',
+            ]);
 
             DB::beginTransaction();
 
+            $user = User::create([
+                'name'            => $validated['name'],
+                'email'           => $validated['email'],
+                'phone'           => $validated['phone'],
+                'document_number' => $validated['document_number'],
+                'identity_id'     => 1,
+                'password'        => bcrypt('123456'),
+            ]);
 
-            $supplier = Supplier::create(
-                [
-                    'name' => $resp['name'],
-                    'email' => $resp['email'],
-                    'address' => $resp['address'],
-                    'identity_id' => $resp['identity_id'] != null ? $resp['identity_id'] : null,
-                    'document_number' => $resp['document_number'] != null ?  $resp['document_number'] : null,
-                    'phone' => $resp['phone'],
-                    'store_id' => $store->id,
-                ]
-            );
-
-
-            // return redirect()->route('erp.suppliers.edit', ['store' => $this->store, 'supplier' => $supplier]);
+            $user->syncRoles(['supplier']);
 
             DB::commit();
 
-            return responseOk($supplier, "se agrego correctamente el supplier en create");
+            return responseOk($user->load('roles'), 'Supplier creado correctamente', 201);
         } catch (\Throwable $th) {
-
-            DB::rollback();
-
             Log::info($th);
+            DB::rollBack();
 
-            return responseError($th, "Ha sucedido un error interno al crear el suppliero store x");
+            return responseError($th, 'Error al crear el supplier');
         }
     }
-
 
     /**
      * Display the specified resource.
      */
     public function show(Store $store, $supplier_id)
     {
+        try {
+            $user = User::with(['roles'])->findOrFail($supplier_id);
 
-        $supplier = $store->suppliers()->find($supplier_id);
+            $rolesOnlyNames = $user->roles->pluck('name');
 
-        if (!$supplier) {
-            return responseError([], "Error al obtener el suppliero x");
+            unset($user->roles);
+            $user->setRelation('roles', $rolesOnlyNames);
+
+            return responseOk($user, 'Supplier obtenido correctamente');
+        } catch (\Throwable $th) {
+            return responseError($th, 'No se pudo obtener el supplier solicitado');
         }
-
-        return responseOk($supplier, "Datos obtenidos con exito del suppliero");
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Store $store)
     {
         //
     }
@@ -116,58 +126,54 @@ class SupplierDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Store $store, Request $request, string $supplier_id)
+    public function update(Request $request, Store $store, $supplier_id)
     {
-        //
-        // Implementa la lógica para actualizar un suppliero existente
-        // Esto podría implicar validar los datos de la solicitud,
-        // actualizar el suppliero en la base de datos y devolver el suppliero actualizado.
         try {
-            Log::info('updatex');
-            Log::info($request->all());
 
-            $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'nullable',
-                'address' => 'nullable',
-                'identity_id' => 'nullable',
-                'document_number' => 'nullable',
-                'phone' => 'nullable',
+            $user = User::findOrFail($supplier_id);
+
+            // ⭐ VALIDACIÓN FLEXIBLE (update parcial o completo)
+            $validated = $request->validate([
+                'name'            => 'sometimes|required|string|max:255',
+                'email'           => "sometimes|required|email|unique:users,email,$supplier_id",
+                'phone'           => 'sometimes|nullable|string|max:20',
+                'document_number' => 'sometimes|nullable|string|max:20',
+                'roles'           => 'sometimes|required|array|min:1',
+                'roles.*'         => 'string|exists:roles,name',
+                'status'          => 'sometimes|required|in:0,1',
             ]);
 
-            $validatedData['store_id'] = $store->id;
+            DB::beginTransaction();
 
-            $supplier = Supplier::updateOrCreate(
-                ['id' => $supplier_id],  // El campo 'id' indica si se actualiza o crea
+            // ⭐ 1. ACTUALIZAR USER (solo lo que venga en el request)
+            $user->update($validated);
 
-                $validatedData
+            // ⭐ 2. Actualizar roles SOLO si el request los incluye
+            if ($request->has('roles')) {
+                $user->syncRoles($validated['roles']);
+            }
+
+            DB::commit();
+
+            return responseOk(
+                $user->load('roles'),
+                "Proveedor actualizado correctamente",
+                200
             );
-            return responseOk($supplier, "Datos guardados correctamente update");
         } catch (\Throwable $th) {
-            //throw $th;
+
+            DB::rollback();
             Log::info($th);
-            return responseError("Error al guardar los datos del suppliero desde supplier Private controller - > update", $th);
+
+            return responseError($th, "Error al actualizar el proveedor...");
         }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Store $store)
     {
         //
-    }
-
-    public function search(Store $store, $search)
-    {
-        //
-        try {
-            Log::info('exito');
-            //selectFields esta en el modelo Product
-            return responseOk($store->suppliers()->search($search)->get(), "Elx listado de busqueda suppliers dashboard ha sido obtenido correctamente (dashboard)");
-        } catch (\Throwable $th) {
-            //throw $th;//
-            Log::info($th);
-        }
     }
 }

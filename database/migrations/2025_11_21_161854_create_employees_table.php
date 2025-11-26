@@ -19,7 +19,7 @@ return new class extends Migration
             // Campos del empleado
             $table->decimal('salary', 10, 2)->nullable();
             $table->date('date_entry')->nullable();
-
+            $table->string('phone')->nullable(); //telefono de trabajo (del empleado)
             $table->timestamps();
         });
     }

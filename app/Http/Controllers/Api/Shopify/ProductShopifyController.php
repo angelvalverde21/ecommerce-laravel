@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Api\Shopify;
 
+
 use App\Http\Controllers\Controller;
+use App\Models\Store;
 use Illuminate\Http\Request;
-use App\Services\ShopifyService;
+use App\Services\Shopify\ShopifyProductService;
+use Illuminate\Support\Facades\Log;
 
 class ProductShopifyController extends Controller
 {
@@ -12,19 +15,52 @@ class ProductShopifyController extends Controller
      * Display a listing of the resource.
      */
 
-    public function index(ShopifyService $shopify)
-    {
-        $products = $shopify->getProducts(25); // traer 5 productos
-        return response()->json($products);
+    protected $shopifyProductService;
+
+    public function __construct(
+        ShopifyProductService $shopifyProductService
+    ) {
+        $this->shopifyProductService = $shopifyProductService;
     }
 
-    public function search($search, ShopifyService $shopify)
+    public function index()
     {
-        $limit = 10;
-        // $cursor = $request->input('cursor', null);
-        // $searchTerm = $request->input('query', null);
+        try {
 
-        return $shopify->getProducts($limit, $search);
+            $array = $this->shopifyProductService->getProducts(20); // traer 5 productos
+
+            return response()->json($array);
+
+            // return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
+
+        } catch (\Throwable $th) {
+
+            Log::info($th);
+
+            return responseError($th, "Error al listar los productos.... ");
+        }
+
+
+        // return response()->json($products);
+    }
+
+    public function search(Store $store, $search = "")
+    {
+
+        if (trim($search) === '') {
+            return $this->index();
+        }
+
+        try {
+            $array = $this->shopifyProductService->getProducts(20, $search);
+
+            return response()->json($array);
+        } catch (\Throwable $th) {
+            //throw $th;
+            Log::info($th);
+
+            return responseError($th, "Error al listar los resultados de busqueda de productos.... ");
+        }
     }
 
 

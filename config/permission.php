@@ -1,5 +1,7 @@
 <?php
 
+// use App\Models\Role;
+
 return [
 
     'models' => [
@@ -23,8 +25,8 @@ return [
          * The model you want to use as a Role model needs to implement the
          * `Spatie\Permission\Contracts\Role` contract.
          */
-
-        'role' => Spatie\Permission\Models\Role::class,
+        'role' => App\Models\Role::class, //clase customizada para agregar una columna title a la tabla roles
+        // 'role' => Spatie\Permission\Models\Role::class,
 
     ],
 

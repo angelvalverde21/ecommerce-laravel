@@ -26,6 +26,9 @@ class User extends Authenticatable implements OAuthenticatable
     //     'password',
     // ];
 
+    CONST ACTIVE = 1;
+    CONST BLOCKED = 0;
+
     protected $guarded = ['id', 'created_at'];
 
     protected $guard_name = 'api';

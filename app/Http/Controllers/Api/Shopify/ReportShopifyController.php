@@ -95,7 +95,7 @@ class ReportShopifyController extends Controller
         ]);
     }
 
-    public function dailyOrders(Store $store, $days = 14)
+    public function dailyOrders(Store $store, $days = 7)
     {
         $report = $this->shopifyService->getDailyOrdersReport($days);
 

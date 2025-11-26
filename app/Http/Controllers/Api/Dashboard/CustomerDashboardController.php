@@ -3,15 +3,13 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Employee;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Spatie\Permission\Models\Role;
 
-class EmployeeDashboardController extends Controller
+class CustomerDashboardController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -20,25 +18,39 @@ class EmployeeDashboardController extends Controller
     {
         //
         try {
-            $employees = User::whereHas('employee')->with('employee')->get(); //Busca los usuarios que esten en la tabla empleados
+            $customers = User::role('customer')
+                ->get(); //Busca los usuarios que esten en la tabla empleados
 
-            return responseOk($employees, "Empleados obtenidos correctamente");
+            return responseOk($customers, "Empleados obtenidos correctamente");
         } catch (\Throwable $th) {
-            //throw $th;
+            Log::info($th);
             return responseError($th, "Ha ocurrido un error interno al obtener los datos de los empleados");
+        }
+    }
+
+    public function blocked()
+    {
+        try {
+            $customers = User::role('customer')
+                ->where('status', 0) //solo bloqueados
+                ->get();
+
+            return responseOk($customers, "Clientes bloqueados obtenidos correctamente");
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError($th, "Ha ocurrido un error interno al obtener los clientes bloqueados");
         }
     }
 
     public function search(Store $store, $search = "")
     {
 
-        if (trim($search) === '' || $search === null) {
+        if (trim($search) === '') {
             return $this->index();
         }
 
         try {
-            $employees = User::whereHas('employee')
-                ->with('employee')
+            $customers = User::role('customer')
                 ->where(function ($query) use ($search) {
                     $query->where('name', 'LIKE', '%' . $search . '%')
                         ->orWhere('email', 'LIKE', '%' . $search . '%')
@@ -48,10 +60,10 @@ class EmployeeDashboardController extends Controller
                 ->limit(10)
                 ->get();
 
-            return responseOk($employees, "Empleados obtenidos correctamente (search)");
+            return responseOk($customers, "clientes obtenidos correctamente (search) = " . $search);
         } catch (\Throwable $th) {
             Log::info($th);
-            return responseError($th, "Ha ocurrido un error interno al buscar los empleados");
+            return responseError($th, "Ha ocurrido un error interno al buscar los clientes");
         }
     }
 
@@ -61,7 +73,6 @@ class EmployeeDashboardController extends Controller
     public function create()
     {
         //
-
     }
 
     /**
@@ -73,16 +84,12 @@ class EmployeeDashboardController extends Controller
 
         try {
 
-
             // VALIDACIÓN
             $validated = $request->validate([
                 'name'            => 'required|string|max:255',
                 'email'           => 'required|email|unique:users,email',
                 'phone'           => 'nullable|string|max:20',
                 'document_number' => 'nullable|string|max:20',
-                'salary'          => 'nullable|numeric|min:0',
-                'roles'           => 'required|array|min:1',
-                'roles.*'         => 'string|exists:roles,name',
             ]);
 
             DB::beginTransaction();
@@ -97,39 +104,30 @@ class EmployeeDashboardController extends Controller
                 'password'        => bcrypt('123456'),
             ]);
 
-            // 2. CREAR EMPLEADO ASOCIADO
-            Employee::create([
-                'user_id'    => $user->id,
-                'salary'     => $validated['salary'] ?? null,
-                'date_entry' => now(), // FECHA DE CREACIÓN DEL REGISTRO
-            ]);
-
-            // 3. ASIGNAR ROLES (SPATIE)
-            $user->syncRoles($validated['roles']);
+            // 3. ASIGNAR ROL DE CLIENTE
+            $user->syncRoles(['customer']);
 
             DB::commit();
 
-            return responseOk($user->load('roles'), "Empleado creado correctamente", 201);
+            return responseOk($user->load('roles'), "Customer creado correctamente", 201);
         } catch (\Throwable $th) {
 
             Log::info($th);
 
             DB::rollback();
 
-            return responseError($th, "Error al crear el empleado.... ");
+            return responseError($th, "Error al crear el customer.... ");
         }
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Store $store, $employed_id)
+    public function show(Store $store, $customer_id)
     {
         try {
             // Obtener usuario con employee y roles
-            $user = User::whereHas('employee')
-                ->with(['employee', 'roles'])
-                ->findOrFail($employed_id);
+            $user = User::with(['roles'])->findOrFail($customer_id);
 
             // --- ELIMINAR RELACIÓN ORIGINAL ---
             $rolesOnlyNames = $user->roles->pluck('name');
@@ -137,9 +135,9 @@ class EmployeeDashboardController extends Controller
             unset($user->roles);             // quita la relación de Eloquent
             $user->setRelation('roles', $rolesOnlyNames); // asigna array limpio
 
-            return responseOk($user, "Empleado obtenido correctamente");
+            return responseOk($user, "Customer obtenido correctamente");
         } catch (\Throwable $th) {
-            return responseError($th, "No se pudo obtener el empleado solicitado");
+            return responseError($th, "No se pudo obtener el Customer solicitado");
         }
     }
 
@@ -154,19 +152,18 @@ class EmployeeDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Store $store, Request $request, $employed_id)
+    public function update(Request $request, Store $store, $customer_id)
     {
         try {
 
-            $user = User::findOrFail($employed_id);
+            $user = User::findOrFail($customer_id);
 
-            // ⭐ VALIDACIÓN FLEXIBLE (update parcial o completo)
+            // ⭐ Validación flexible (parcial o completa)
             $validated = $request->validate([
                 'name'            => 'sometimes|required|string|max:255',
-                'email'           => "sometimes|required|email|unique:users,email,$employed_id",
+                'email'           => "sometimes|required|email|unique:users,email,$customer_id",
                 'phone'           => 'sometimes|nullable|string|max:20',
                 'document_number' => 'sometimes|nullable|string|max:20',
-                'salary'          => 'sometimes|nullable|numeric|min:0',
                 'roles'           => 'sometimes|required|array|min:1',
                 'roles.*'         => 'string|exists:roles,name',
                 'status'          => 'sometimes|required|in:0,1',
@@ -174,28 +171,10 @@ class EmployeeDashboardController extends Controller
 
             DB::beginTransaction();
 
-            // ⭐ 1. Actualizar USER (solo campos presentes)
+            // 1. Actualizar USER (solo campos presentes)
             $user->update($validated);
 
-            // ⭐ 2. Actualizar EMPLOYEE si llega salary
-            if ($request->has('salary')) {
-                $employee = $user->employee;
-
-                if (!$employee) {
-                    // Si aún no existe relación employee
-                    $employee = Employee::create([
-                        'user_id'    => $user->id,
-                        'salary'     => $validated['salary'] ?? null,
-                        'date_entry' => now(),
-                    ]);
-                } else {
-                    $employee->update([
-                        'salary' => $validated['salary'] ?? null
-                    ]);
-                }
-            }
-
-            // ⭐ 3. Actualizar ROLES si llegan
+            // 2. Sincronizar roles solo si llegan
             if ($request->has('roles')) {
                 $user->syncRoles($validated['roles']);
             }
@@ -203,8 +182,8 @@ class EmployeeDashboardController extends Controller
             DB::commit();
 
             return responseOk(
-                $user->load('roles', 'employee'),
-                "Empleado actualizado correctamente",
+                $user->load('roles'),
+                "Cliente actualizado correctamente",
                 200
             );
         } catch (\Throwable $th) {
@@ -212,7 +191,7 @@ class EmployeeDashboardController extends Controller
             DB::rollback();
             Log::info($th);
 
-            return responseError($th, "Error al actualizar el empleado...");
+            return responseError($th, "Error al actualizar el cliente...");
         }
     }
 
