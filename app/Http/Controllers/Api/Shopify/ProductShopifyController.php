@@ -67,6 +67,21 @@ class ProductShopifyController extends Controller
     /**
      * Show the form for creating a new resource.
      */
+    public function sync(Store $store)
+    {
+        //
+        try {
+            $array = $this->shopifyProductService->sync();
+
+            return response()->json($array);
+        } catch (\Throwable $th) {
+            //throw $th;
+            Log::info($th);
+
+            return responseError($th, "Error al listar los resultados de busqueda de productos.... ");
+        }
+    }
+
     public function create()
     {
         //

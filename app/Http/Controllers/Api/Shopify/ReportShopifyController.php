@@ -4,12 +4,9 @@ namespace App\Http\Controllers\Api\Shopify;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
-use App\Services\Shopify\Report\ShopifyOrderReportService;
-use App\Services\Shopify\ShopifyOrderService;
-use App\Services\shopify\ShopifyReportService;
-use Illuminate\Http\Request;
+use App\Services\Shopify\ShopifyReportService;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Request;
 
 class ReportShopifyController extends Controller
 {
@@ -19,87 +16,37 @@ class ReportShopifyController extends Controller
 
     public function __construct(
         protected ShopifyReportService $shopifyService,
-        protected ShopifyOrderService $shopifyOrderService,
-        protected ShopifyOrderReportService $shopifyOrderReportService,
     ) {}
-
-    // public function topProducts(Request $request)
-    // {
-    //     $from = $request->input('from', '2025-07-01T00:00:00Z');
-    //     $to = $request->input('to', '2025-10-07T23:59:59Z');
-
-    //     $data = $this->shopifyService->topSellingProducts($from, $to);
-
-    //     return response()->json(['top_products' => $data]);
-    // }
-
-    // public function index(Request $request)
-    // {
-    //     $startDate = $request->query('start_date', now()->subMonth()->toDateString());
-    //     $endDate = $request->query('end_date', now()->toDateString());
-
-    //     $orders = $this->shopifyService->getOrdersBetween($startDate, $endDate);
-
-    //     $formatted = collect($orders)->map(function ($order) {
-    //         return [
-    //             'order_id' => $order['id'],
-    //             'order_name' => $order['name'],
-    //             'date' => $order['date'],
-    //             'total' => $order['total'],
-    //             'currency' => $order['currency'],
-    //             'items' => $order['items'],
-    //         ];
-    //     });
-
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'start_date' => $startDate,
-    //         'end_date' => $endDate,
-    //         'total_orders' => $formatted->count(),
-    //         'orders' => $formatted->values(),
-    //     ]);
-    // }
 
     public function monthAll(Store $store)
     {
 
-        $report = $this->shopifyOrderReportService->getSalesReport();
+        $report = $this->shopifyService->getReportSalesByYearMonth();
 
         return response()->json($report);
     }
 
-    public function topProducts(Request $request)
+    public function reportBarOrders(Store $store, $days = 7)
     {
-
-        // Obtener fechas desde la query o usar valores por defecto
-        $startDate = $request->query('start_date', now()->subMonths(5)->toDateString());
-        $endDate   = $request->query('end_date', now()->toDateString());
-
-        // Crear una clave de caché única basada en el rango de fechas
-        $cacheKey = sprintf('top_products_%s_%s_', $startDate, $endDate);
-
-        // Recuperar del caché o generar y guardar por 7 días (168 horas)
-        $products = Cache::remember(
-            $cacheKey,
-            now()->addDays(7),
-            fn() => $this->shopifyService->getTopProductsBetween($startDate, $endDate)
-        );
-
-        // Construir respuesta JSON
-        return response()->json([
-            'status'         => 'success',
-            'start_date'     => $startDate,
-            'end_date'       => $endDate,
-            'total_products' => count($products),
-            'top_products'   => $products,
-        ]);
-    }
-
-    public function dailyOrders(Store $store, $days = 7)
-    {
-        $report = $this->shopifyService->getDailyOrdersReport($days);
+        $report = $this->shopifyService->getReportBarOrders($days); //reporte en barras
 
         return response()->json($report);
     }
 
+
+    public function reportTopSellingProducts(Store $store, Request $request)
+    {
+
+    // Días de duración del cache (por defecto 7)
+
+    // Clave única por tienda + días
+    $cacheKey = "report_top_selling_products_{$store->id}";
+
+    $report = Cache::remember($cacheKey, now()->addHours(24), function () {
+        return $this->shopifyService->getReportTopSellingProducts();
+    });
+
+    return response()->json($report);
+
+    }
 }

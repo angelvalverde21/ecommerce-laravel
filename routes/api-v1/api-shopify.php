@@ -35,6 +35,7 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function
 
         Route::get('/', [ProductShopifyController::class, 'index']); //Listar
         Route::get('/search/{search?}', [ProductShopifyController::class, 'search']); //Listar
+        Route::get('/sync', [ProductShopifyController::class, 'sync']); //Listar
         Route::post('/', [ProductShopifyController::class, 'store']); //create
 
         Route::prefix('{product_id}')->group(function () {
@@ -49,10 +50,10 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function
     Route::prefix('reports')->group(function () {
 
         Route::get('/', [ReportShopifyController::class, 'index']); //Listar
-        Route::get('/top', [ReportShopifyController::class, 'topProducts']); //Listar
+        Route::get('/top', [ReportShopifyController::class, 'reportTopSellingProducts']); //Listar
 
         Route::prefix('bars')->group(function () {
-            Route::get('/daily/{days?}', [ReportShopifyController::class, 'dailyOrders']); //Listar
+            Route::get('/daily/{days?}', [ReportShopifyController::class, 'reportBarOrders']); //Listar
         });
 
         Route::get('/month-all', [ReportShopifyController::class, 'monthAll']); //Listar

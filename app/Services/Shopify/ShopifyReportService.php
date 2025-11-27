@@ -5,363 +5,138 @@ namespace App\Services\Shopify;
 use App\Helpers\GraphQLResponseHelper;
 use App\Services\Shopify\ShopifyBaseService;
 use Carbon\Carbon;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class ShopifyReportService extends ShopifyBaseService
 {
-    protected string $pageInfo;
 
-    public function getDailyOrdersReport_1(int $days = 7): array
+  // ==================================== REPORTES BARRAS VERTICAL  ====================================
+
+  public function getReportBarOrders(int $days = 7): array
+  {
+    $days = max(1, $days);
+
+    // Crear rango de fechas
+    [$startDate, $endDate] = $this->buildDateRange($days);
+
+    // -------------------------------------------------------------
+    // 1️⃣ — EL QUERY ESTÁ AQUÍ MISMO (plantilla)
+    // -------------------------------------------------------------
+    $queryTemplate = <<<GRAPHQL
     {
-        // Normalizar valor
-        $days = max(1, $days);
-
-        // Definir rango: últimos N días incluyendo hoy
-        $endDate = Carbon::now('America/Lima')->endOfDay();
-        $startDate = $endDate->copy()->subDays($days - 1)->startOfDay();
-
-        Log::info($startDate);
-
-        // Traer órdenes del servicio interno (usa Y-m-d strings)
-        $ordersRaw = $this->getOrdersDailyBetween($startDate->toDateString(), $endDate->toDateString());
-
-        $orders = collect($ordersRaw['items'] ?? []);
-
-        // Si no vinieron órdenes, registrar para debug
-        if ($orders->isEmpty()) {
-            Log::warning('getDailyOrdersReport: getOrdersBetween returned empty', [
-                'start' => $startDate->toDateString(),
-                'end' => $endDate->toDateString(),
-            ]);
+      orders(
+        first: 100,
+        sortKey: CREATED_AT,
+        query: "financial_status:paid cancelled_at:null created_at:>=:start created_at:<=:end",
+        after: :cursor
+      ) {
+        pageInfo {
+          hasNextPage
+          endCursor
         }
-
-        // Mapear cada orden a su fecha local (America/Lima)
-        $mapped = $orders->map(function ($order) {
-            $createdAt = $order['createdAt'];
-            if (!$createdAt) {
-                return null; // lo filtraremos luego
+        edges {
+          cursor
+          node {
+            id
+            name
+            createdAt
+            totalPriceSet {
+              shopMoney { amount currencyCode }
             }
-
-            try {
-                $localDate = Carbon::parse($createdAt)->setTimezone('America/Lima')->toDateString();
-            } catch (\Exception $e) {
-                // si no se puede parsear
-                Log::warning('getDailyOrdersReport: failed to parse createdAt', ['createdAt' => $createdAt]);
-                return null;
-            }
-
-            return ['date' => $localDate, 'order' => $order];
-        })->filter(); // eliminamos nulls
-
-        // Agrupar por fecha local
-        $grouped = $mapped->groupBy('date');
-
-        // Construir el periodo con días consecutivos (inclusivo)
-        $period = [];
-        for ($i = 0; $i < $days; $i++) {
-            $date = $startDate->copy()->addDays($i)->setTimezone('America/Lima')->toDateString();
-            $count = $grouped->has($date) ? $grouped->get($date)->count() : 0;
-            $period[] = [
-                'date' => $date,
-                'order_count' => $count,
-            ];
+          }
         }
+      }
+    }
+    GRAPHQL;
 
-        return $period;
+    // -------------------------------------------------------------
+    // 2️⃣ — QueryBuilder para reemplazar placeholders
+    // -------------------------------------------------------------
+    $queryBuilder = function (?string $cursor) use ($queryTemplate, $startDate, $endDate) {
+
+      return str_replace(
+        [':start', ':end', ':cursor'], //Elementos a reeemplazar
+        [$startDate->toDateString(), $endDate->toDateString(), $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
+        $queryTemplate //En el template
+      );
+    };
+
+    // -------------------------------------------------------------
+    // 3️⃣ — Ejecutar el query builder ($queryBuilder) para traer los datos de Shopify
+    // -------------------------------------------------------------
+    $result = $this->getDataFromShopify(
+      'orders',
+      $queryBuilder,
+      [] //podria ser 'lineItems'
+    );
+
+    // -------------------------------------------------------------
+    // 4️⃣ — Normalizar items
+    // -------------------------------------------------------------
+    $orders = collect($result['items'] ?? []);
+
+    if ($orders->isEmpty()) {
+      Log::warning('getReportBarOrders: vacío', [
+        'start' => $startDate->toDateString(),
+        'end'   => $endDate->toDateString(),
+      ]);
     }
 
-    protected function getOrdersDailyBetween_($startDate, $endDate)
-    {
-        $hasNextPage = true;
+    // Convertir fechas a local
+    $mapped = $this->mapOrdersToLocalDate($orders);
 
-        while ($hasNextPage) {
+    // Agrupar por fecha
+    $grouped = $mapped->groupBy('date');
 
-            $endCursor = null;
-            $after = $endCursor ? "\"{$endCursor}\"" : "null";
+    // Construir el periodo completo
+    return $this->buildPeriod($startDate, $days, $grouped);
+  }
 
-            $query = <<<GRAPHQL
-            {
-              orders(
-                first: 50,
-                sortKey: CREATED_AT,
-                query: "financial_status:paid cancelled_at:null created_at:>={$startDate} created_at:<={$endDate}",
-                after: $after
-              ) {
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-                edges {
-                  cursor
-                  node {
-                    id
-                    name
-                    createdAt
-                    totalPriceSet { 
-                        shopMoney {
-                            amount currencyCode 
-                        } 
-                    }
-                    lineItems(first: 50) {
-                      edges {
-                        node {
-                          name
-                          quantity
-                          variant {
-                            id
-                            title
-                            price
-                            image { url }
-                            product { 
-                            title
-                            createdAt
-                            featuredImage {
-                              url
-                            }
-                            }
-                          }
-                        }
+  // ==================================== REPORTES DEL PRODUCTO MAS VENDIDOS ORDENADOS DE MAYOR A MENOR  ====================================
+
+  public function getReportTopSellingProducts($days = 3650) // 10 años
+  {
+
+    // Crear rango de fechas
+    [$startDate, $endDate] = $this->buildDateRange($days); //3650 quiere decir 10 años
+
+    $queryTemplate = <<<GRAPHQL
+                  {
+                    orders(
+                      first: 100,
+                      sortKey: CREATED_AT,
+                      query: "financial_status:paid cancelled_at:null created_at:>=:start created_at:<=:end",
+                      after: :cursor
+                    ) {
+                      pageInfo {
+                        hasNextPage
+                        endCursor
                       }
-                    }
-                  }
-                }
-              }
-            }
-            GRAPHQL;
-
-            $json = $this->graphql($query)->json();
-
-            Log::info($json);
-
-            // Log::info($json);
-
-            if (!isset($json['data']['orders']['edges'])) {
-                break;
-            }
-
-            //Guardar edges crudos
-            foreach ($json['data']['orders']['edges'] as $edge) {
-                $allEdges[] = $edge;
-            }
-
-            $pageInfo = $json['data']['orders']['pageInfo'] ?? null;
-            $hasNextPage = $pageInfo['hasNextPage'] ?? false;
-            $endCursor = $pageInfo['endCursor'] ?? null;
-
-            // Esperar medio segundo entre llamadas
-            usleep(500000);
-        }
-
-        $finalResponse = [
-            'data' => [
-                'orders' => [
-                    'edges' => $allEdges
-                ]
-            ]
-        ];
-
-        // Log::info($allEdges);
-
-        $result = GraphQLResponseHelper::normalizeEntity(
-            $finalResponse,
-            'orders', //puede ser products pero le pondremos data para estandarizar
-            ['lineItems']
-        );
-
-        Log::info("imprimiendo result");
-
-        Log::info($result);
-
-        return $result;
-    }
-
-    protected function getOrdersDailyBetweenxx($startDate, $endDate)
-    {
-        $hasNextPage = true;
-
-        while ($hasNextPage) {
-
-            $endCursor = null;
-            $after = $endCursor ? "\"{$endCursor}\"" : "null";
-
-            $query = <<<GRAPHQL
-            {
-              orders(
-                first: 50,
-                sortKey: CREATED_AT,
-                query: "financial_status:paid cancelled_at:null created_at:>={$startDate} created_at:<={$endDate}",
-                after: $after
-              ) {
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-                edges {
-                  cursor
-                  node {
-                    id
-                    name
-                    createdAt
-                    totalPriceSet { 
-                        shopMoney {
-                            amount currencyCode 
-                        } 
-                    }
-                    lineItems(first: 50) {
                       edges {
+                        cursor
                         node {
+                          id
                           name
-                          quantity
-                          variant {
-                            id
-                            title
-                            price
-                            image { url }
-                            product { 
-                            title
-                            createdAt
-                            featuredImage {
-                              url
-                            }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            GRAPHQL;
-
-            $json = $this->graphql($query)->json();
-
-            Log::info($json);
-
-            // Log::info($json);
-
-            if (!isset($json['data']['orders']['edges'])) {
-                break;
-            }
-
-            //Guardar edges crudos
-            foreach ($json['data']['orders']['edges'] as $edge) {
-                $allEdges[] = $edge;
-            }
-
-            $pageInfo = $json['data']['orders']['pageInfo'] ?? null;
-            $hasNextPage = $pageInfo['hasNextPage'] ?? false;
-            $endCursor = $pageInfo['endCursor'] ?? null;
-
-            // Esperar medio segundo entre llamadas
-            usleep(500000);
-        }
-
-        $finalResponse = [
-            'data' => [
-                'orders' => [
-                    'edges' => $allEdges
-                ]
-            ]
-        ];
-
-        // Log::info($allEdges);
-
-        $result = GraphQLResponseHelper::normalizeEntity(
-            $finalResponse,
-            'orders', //puede ser products pero le pondremos data para estandarizar
-            ['lineItems']
-        );
-
-        Log::info("imprimiendo result");
-
-        Log::info($result);
-
-        return $result;
-    }
-
-    //===========================================================//
-
-    public function getDailyOrdersReport(int $days = 7): array
-    {
-        $days = max(1, $days);
-
-        // Crear rango de fechas
-        [$startDate, $endDate] = $this->buildDateRange($days);
-
-        // Llamada a Shopify (normalizada)
-        $result = $this->getOrdersDailyBetween(
-            $startDate->toDateString(),
-            $endDate->toDateString()
-        );
-
-        $orders = collect($result['items'] ?? []);
-
-        if ($orders->isEmpty()) {
-            Log::warning('getDailyOrdersReport: responde vacio', [
-                'start' => $startDate->toDateString(),
-                'end'   => $endDate->toDateString(),
-            ]);
-        }
-
-        // Convertir fechas a local
-        $mapped = $this->mapOrdersToLocalDate($orders);
-
-        // Agrupar por fecha
-        $grouped = $mapped->groupBy('date');
-
-        // Construir array final
-        return $this->buildPeriod($startDate, $days, $grouped);
-    }
-
-    /**
-     * Obtiene TODAS las órdenes entre fechas (paginado completo)
-     */
-    public function getOrdersDailyBetween(string $start, string $end): array
-    {
-        return $this->fetchAllEdges(
-
-            'orders',
-
-            // QueryBuilder (callable dinámico)
-            function (?string $cursor) use ($start, $end) {
-
-                $cursorValue = $cursor ? "\"$cursor\"" : 'null';
-
-                return <<<GRAPHQL
-                {
-                  orders(
-                    first: 50,
-                    sortKey: CREATED_AT,
-                    query: "financial_status:paid cancelled_at:null created_at:>={$start} created_at:<={$end}",
-                    after: $cursorValue
-                  ) {
-                    pageInfo {
-                      hasNextPage
-                      endCursor
-                    }
-                    edges {
-                      cursor
-                      node {
-                        id
-                        name
-                        createdAt
-                        totalPriceSet { shopMoney { amount currencyCode } }
-                        lineItems(first: 50) {
-                          edges {
-                            node {
-                              name
-                              quantity
-                              variant {
-                                id
-                                title
-                                price
-                                image { url }
-                                product {
+                          createdAt
+                          totalPriceSet { shopMoney { amount currencyCode } }
+                          lineItems(first: 50) {
+                            edges {
+                              node {
+                                name
+                                quantity
+                                variant {
+                                  id
                                   title
-                                  createdAt
-                                  featuredImage { url }
+                                  price
+                                  image { url }
+                                  product { 
+                                    title
+                                    createdAt
+                                    featuredImage {
+                                      url
+                                    }
+                                  }
                                 }
                               }
                             }
@@ -370,69 +145,233 @@ class ShopifyReportService extends ShopifyBaseService
                       }
                     }
                   }
-                }
-                GRAPHQL;
-            },
+            GRAPHQL;
 
-            // campos adicionales a normalizar
-            ['lineItems']
-        );
-    }
+    // -------------------------------------------------------------
+    // 2️⃣ — QueryBuilder para reemplazar placeholders
+    // -------------------------------------------------------------
 
-    /**
-     * Rango de fechas consecutivas
-     */
-    protected function buildDateRange(int $days): array
-    {
-        $end = Carbon::now('America/Lima')->endOfDay();
-        $start = $end->copy()->subDays($days - 1)->startOfDay();
-        return [$start, $end];
-    }
+    $queryBuilder = function (?string $cursor) use ($queryTemplate, $startDate, $endDate) {
 
-    /**
-     * Mapea cada orden con su fecha local
-     */
-    protected function mapOrdersToLocalDate(Collection $orders): Collection
-    {
-        return $orders->map(function ($order) {
+      return str_replace(
+        [':start', ':end', ':cursor'], //Elementos a reeemplazar
+        [$startDate->toDateString(), $endDate->toDateString(), $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
+        $queryTemplate //En el template
+      );
+    };
 
-            if (!isset($order['createdAt'])) return null;
+    //fin del QueryBuilder
 
-            try {
-                $date = Carbon::parse($order['createdAt'])
-                    ->setTimezone('America/Lima')
-                    ->toDateString();
-            } catch (\Throwable $e) {
-                Log::warning('Invalid createdAt', ['value' => $order['createdAt']]);
-                return null;
+    // -------------------------------------------------------------
+    // 3️⃣ — Ejecutar el query builder ($queryBuilder) para traer los datos de Shopify
+    // -------------------------------------------------------------
+    // getReportTopSellingProducts
+    $result = $this->getDataFromShopify( //Ejecuta el codigo del queryBuilder y trae los datos de shopify con un while para no cargar a shopify
+      'orders',
+      $queryBuilder,
+      ['lineItems'] //podria ser 'lineItems'
+    );
+
+    // -------------------------------------------------------------
+    // 4️⃣ — Normalizar items
+    // -------------------------------------------------------------
+    $orders = collect($result['items'] ?? []);
+
+    //collect() transforma un array en un objeto Collection. Esto permite usar métodos como: ,map(),filter(),groupBy(),pluck(),sortBy(),count(),where()
+    //formato que trae shopify
+    /*
+       {
+      "id":"gid:\/\/shopify\/Order\/6428652896480",
+      "name":"#6981",
+      "createdAt":"2025-11-22T16:43:00Z",
+      "totalPriceSet":{
+         "shopMoney":{
+            "amount":"99.9",
+            "currencyCode":"PEN"
+         }
+      },
+      "lineItems":[
+         {
+            "name":"Sweater Taylor Avena 1 - Standar",
+            "quantity":1,
+            "variant":{
+               "id":"gid:\/\/shopify\/ProductVariant\/47794765267168",
+               "title":"Standar",
+               "price":"84.90",
+               "image":null,
+               "product":{
+                  "title":"Sweater Taylor Avena 1",
+                  "createdAt":"2025-09-27T20:01:04Z",
+                  "featuredImage":{
+                     "url":"https:\/\/cdn.shopify.com\/s\/files\/1\/0667\/7204\/1952\/files\/9AB3B43E-9444-417F-A6CB-BA2BDB1A2521.jpg?v=1759013825"
+                  }
+               }
             }
+         }
+      ],
+      "cursor":"eyJsYXN0X2lkIjo2NDI4NjUyODk2NDgwLCJsYXN0X3ZhbHVlIjoiMjAyNS0xMS0yMiAxNjo0MzowMC41ODU3MzYifQ=="
+   },
+    */
+    $products = collect();
 
-            return [
-                'date'  => $date,
-                'order' => $order,
-            ];
-        })->filter();
+    // Log::info($orders);
+
+    foreach ($orders as $order) {
+
+      foreach ($order['lineItems'] as $item) {
+
+        $title       = $item['variant']['product']['title'] ?? $item['name'];
+        $variant     = $item['variant']['title'] ?? 'N/A';
+        $price       = (float) ($item['variant']['price'] ?? 0);
+        $qty         = (int) $item['quantity'];
+        $image       = $item['variant']['product']['featuredImage']['url'] ?? null;
+
+        // Clave única producto + variante
+        $key = "{$title} - {$variant}";
+
+        // Producto acumulado si existe
+        $existing = $products->get($key, [
+          'title'       => $title,
+          'variant'     => $variant,
+          'image'       => $image,
+          'quantity'    => 0,
+          'total_sales' => 0.0,
+        ]);
+
+        // Sumar cantidades y ventas
+        $existing['quantity']    += $qty;
+        $existing['total_sales'] += ($price * $qty);
+
+        // Guardar actualizado
+        $products->put($key, $existing);
+      }
     }
 
-    /**
-     * Arma el período completo con conteo por día
-     */
-    protected function buildPeriod(
-        Carbon $startDate,
-        int $days,
-        Collection $grouped
-    ): array {
-        $period = [];
+    Log::info($products);
 
-        for ($i = 0; $i < $days; $i++) {
-            $date = $startDate->copy()->addDays($i)->toDateString();
+    return $products
+      ->sortByDesc('quantity')   // También puedes ordenar por 'total_sales'
+      ->values()
+      ->toArray();
+  }
 
-            $period[] = [
-                'date'        => $date,
-                'order_count' => ($grouped[$date] ?? collect())->count(),
-            ];
+  // ==================================== REPORTE DE VENTAS TOTALES POR AÑO Y MES ====================================
+
+  //== NEW getReportSalesByYearMonth() ==//
+
+  public function getReportSalesByYearMonth()
+  {
+
+    // CLAVE DE CACHE (usa la tienda)
+    $cacheKey = "shopify_report_sales_year_month_";
+
+    // TIEMPO DE CACHE (puedes cambiarlo)
+    $cacheTTL = now()->addHours(24); // o addDays(7), etc.
+
+    return Cache::remember($cacheKey, $cacheTTL, function () {
+
+
+      // Crear rango de fechas
+      [$startDate, $endDate] = $this->buildDateRange(3650); //10 años
+
+      // -------------------------------------------------------------
+      // 1 — EL QUERY ESTÁ AQUÍ MISMO (plantilla)
+      // -------------------------------------------------------------
+      $queryTemplate = <<<GRAPHQL
+    {
+      orders(
+        first: 200,
+        sortKey: CREATED_AT,
+        query: "financial_status:paid cancelled_at:null created_at:>=:start created_at:<=:end",
+        after: :cursor
+      ) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          edges {
+            cursor
+            node {
+              id
+              name
+              createdAt
+              totalPriceSet { 
+                shopMoney { 
+                  amount currencyCode 
+                } 
+              }
+            }
+          }
+        }
+    }
+    GRAPHQL;
+
+
+      // -------------------------------------------------------------
+      // 2 — QueryBuilder para reemplazar placeholders
+      // -------------------------------------------------------------
+      $queryBuilder = function (?string $cursor) use ($queryTemplate, $startDate, $endDate) {
+
+        return str_replace(
+          [':start', ':end', ':cursor'], //Elementos a reeemplazar
+          [$startDate->toDateString(), $endDate->toDateString(), $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
+          $queryTemplate //En el template
+        );
+      };
+
+      // -------------------------------------------------------------
+      // 3 — Ejecutar el query builder ($queryBuilder) para traer los datos de Shopify
+      // -------------------------------------------------------------
+      $result = $this->getDataFromShopify(
+        'orders',
+        $queryBuilder,
+        ['lineItems'] //podria ser 'lineItems'
+      );
+
+      // -------------------------------------------------------------
+      // 4 — Normalizar items
+      // -------------------------------------------------------------
+      $orders = collect($result['items'] ?? []);
+
+      if ($orders->isEmpty()) {
+        Log::warning('getReportBarOrders: vacío', [
+          'start' => $startDate->toDateString(),
+          'end'   => $endDate->toDateString(),
+        ]);
+      }
+
+      // Construir el reporte
+
+      $report = [
+        'total_sales' => 0,
+        'years' => [],
+      ];
+
+      foreach ($orders as $order) {
+
+        $date = Carbon::parse($order['createdAt']);
+        $year = $date->format('Y');
+        $month = $date->format('m');
+        $amount = floatval($order['totalPriceSet']['shopMoney']['amount'] ?? 0);
+
+        if (!isset($report['years'][$year])) {
+          $report['years'][$year] = [
+            'total' => 0,
+            'months' => [],
+          ];
         }
 
-        return $period;
-    }
+        if (!isset($report['years'][$year]['months'][$month])) {
+          $report['years'][$year]['months'][$month] = 0;
+        }
+
+        $report['years'][$year]['months'][$month] += $amount;
+        $report['years'][$year]['total'] += $amount;
+        $report['total_sales'] += $amount;
+      }
+
+      return $report;
+      
+    });
+  }
 }

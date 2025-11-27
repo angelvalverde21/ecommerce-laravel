@@ -5,6 +5,7 @@ namespace App\Services\Shopify;
 use App\Helpers\GraphQLResponseHelper;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 abstract class ShopifyBaseService
@@ -45,275 +46,9 @@ abstract class ShopifyBaseService
         ])->post($this->apiUrl, ['query' => $query]);
     }
 
-
-    protected function tracking($order_id) {}
-
-    protected function mapOrder(array $order): array
-    {
-        return [
-            'id'       => $order['id'],
-            'name'     => $order['name'],
-            'note'     => $order['note'],
-            'financial_status'     => $order['displayFinancialStatus'],
-            'status'     => $order['displayFulfillmentStatus'],
-            'origen' => $order['sourceName'],
-            'events' => $order['events'] ?? null,
-            'created_at'     => $order['createdAt'],
-            'total'    => $order['totalPriceSet']['shopMoney']['amount'],
-            'currency' => $order['totalPriceSet']['shopMoney']['currencyCode'],
-            // 🧾 Cliente (si existe)
-            'customer' => isset($order['customer']) ? [
-                'id'         => $order['customer']['id'] ?? null,
-                'first_name' => $order['customer']['firstName'] ?? null,
-                'last_name'  => $order['customer']['lastName'] ?? null,
-                'email'      => $order['customer']['email'] ?? null,
-                'phone'      => $order['customer']['phone'] ?? null,
-                'tags'       => $order['customer']['tags'] ?? [],
-                'created_at' => $order['customer']['createdAt'] ?? null,
-                'address'    => [
-                    'address1' => $order['customer']['defaultAddress']['address1'] ?? null,
-                    'address2' => $order['customer']['defaultAddress']['address2'] ?? null,
-                    'city'     => $order['customer']['defaultAddress']['city'] ?? null,
-                    'province' => $order['customer']['defaultAddress']['province'] ?? null,
-                ],
-            ] : null,
-            'items' => isset($order['lineItems'])
-                ? collect($order['lineItems'])->map(function ($item) {
-                    return [
-                        'title'    => $item['variant']['product']['title'] ?? $item['name'],
-                        'variant'  => $item['variant']['title'] ?? null,
-                        'price'    => $item['variant']['price'] ?? null,
-                        'quantity' => $item['quantity'],
-                        'image'    => $item['variant']['product']['featuredImage']['url'] ?? null,
-                    ];
-                })->toArray()
-                : null,
-        ];
-    }
-
-    //Empiezan los queries
-
-    public function itemsQuery()
-    {
-
-        return  "
-                    lineItems(first: 50) {
-                        edges {
-                            node {
-                                name
-                                quantity
-                                originalUnitPriceSet {
-                                    shopMoney {
-                                        amount
-                                        currencyCode
-                                    }
-                                }
-                                variant {
-                                    id
-                                    title
-                                    price
-                                    product {
-                                        title
-                                        featuredImage { url }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                ";
-    }
-
-    public function customerQuery()
-    {
-        return "
-                customer {
-                    id
-                    firstName
-                    lastName
-                    email
-                    phone
-                    createdAt
-                    tags
-                    defaultAddress {
-                        id
-                        firstName
-                        lastName
-                        company
-                        address1
-                        address2
-                        city
-                        province
-                        provinceCode
-                        country
-                        countryCodeV2
-                        zip
-                        phone
-                        name
-                        formatted
-                    }
-
-                }
-        ";
-    }
-
-    public function eventsQuery()
-    {
-
-        return "
-            events(first: 20, reverse: true) {
-                edges {
-                    node {
-                    createdAt
-                    message
-                    }
-                }
-            }
-        ";
-    }
-
-    public function shippingAddressQuery()
-    {
-
-        return "
-            shippingAddress {
-                firstName
-                lastName
-                name
-                company
-                address1
-                address2
-                city
-                province
-                provinceCode
-                country
-                countryCodeV2
-                zip
-                phone
-                formatted
-            }
-        ";
-    }
-
-
-    public function shippingLinesQuery()
-    {
-        return "
-            shippingLines(first: 1) {
-                edges {
-                    node {
-                    title
-                    originalPriceSet {
-                        shopMoney {
-                        amount
-                        currencyCode
-                        }
-                    }
-                    discountedPriceSet {
-                        shopMoney {
-                        amount
-                        currencyCode
-                        }
-                    }
-                    }
-                }
-            }
-        ";
-    }
-
-    protected function orderQuery(array $includes = []): string
-    {
-        $query = "
-            id
-            name
-            createdAt
-            updatedAt
-            processedAt
-            sourceName
-            displayFinancialStatus
-            displayFulfillmentStatus
-            note
-            fulfillmentOrders(first: 20) {
-                edges {
-                    node {
-                        id
-                        status
-                        createdAt
-                        requestStatus
-                        updatedAt
-                    }
-                }
-            }
-            totalPriceSet {
-                shopMoney {
-                    amount
-                    currencyCode
-                }
-            }
-            " . (in_array('shippingLines', $includes) ? $this->shippingLinesQuery() : '') . "
-            " . (in_array('shippingAddress', $includes) ? $this->shippingAddressQuery() : '') . "
-            " . (in_array('customer', $includes) ? $this->customerQuery() : '') . "
-            " . (in_array('items', $includes) ? $this->itemsQuery() : '') . "
-            " . (in_array('events', $includes) ? $this->eventsQuery() : '') . "
-        ";
-
-        Log::info($query);
-
-        return $query;
-    }
-
-    public function ordersQuery(
-
-        $limit = 10,
-        $cursor = null,
-        $startDate = null,
-        $endDate = null,
-        $includes
-    ) {
-
-        // Fechas por defecto → último mes
-        $startDate = $startDate ?? now()->subYear(10)->startOfDay()->toDateString(); // si quieres todos los años
-        $endDate = $endDate ?? now()->endOfDay()->toDateString();
-
-        // Cursor opcional (paginación)
-        // Validar tipo de cursor
-        if (is_array($cursor)) {
-            $cursor = $cursor['endCursor'] ?? null;
-        }
-
-        // Cursor opcional (paginación)
-        $afterClause = is_string($cursor) && !empty($cursor)
-            ? ', after: "' . $cursor . '"'
-            : '';
-
-        // Filtro de búsqueda Shopify con AND explícitos
-        $queryFilter = 'cancelled_at:null AND created_at:>=' . $startDate . ' AND created_at:<=' . $endDate; //indica la fecha, 10 anos por defecto
-
-        // Log::info($queryFilter);
-
-        // Query GraphQL como string plano (sin heredoc)
-        return '
-            {
-                orders(
-                    first: ' . $limit . ',
-                    sortKey: CREATED_AT,
-                    reverse: true' . $afterClause . ',
-                    query: "' . $queryFilter . '"
-                ) {
-                    ' . $this->pageInfo . '
-                    edges {
-                        cursor
-                        node {
-                        ' . $this->orderQuery($includes) . '
-                        }
-                    }
-                }
-            }
-        ';
-    }
-
     //==================================== NUEVOS METODOS  ====================================
 
-    protected function fetchAllEdges(
+    protected function getDataFromShopify(
         string $rootField, //el nombre del campo raiz ej: products, orders
         callable $buildQuery, // función que construye el query
         array $normalizeChildren = [] // campos hijos para normalizar
@@ -323,13 +58,20 @@ abstract class ShopifyBaseService
         $hasNextPage = true;
         $endCursor   = null;
 
+        $paginas = 0;
+
         while ($hasNextPage) {
 
+            Log::info("--- Página: " . (++$paginas) . " ---");
+
             // Construir query por callback
-            $query = $buildQuery($endCursor);
+            $query = $buildQuery($endCursor); //aqui se le pasa el cursor
 
             // Ejecutar GraphQL
             $json = $this->graphql($query)->json();
+
+            // Log::info("imprimiendo el logo de graphql");
+            // Log::info($json);
 
             // Si no hay edges → terminar
             if (empty($json['data'][$rootField]['edges'])) {
@@ -344,7 +86,9 @@ abstract class ShopifyBaseService
             // Paginación
             $pageInfo = $json['data'][$rootField]['pageInfo'] ?? null;
             $hasNextPage = $pageInfo['hasNextPage'] ?? false;
-            $endCursor = $pageInfo['endCursor'] ?? null;
+            $endCursor = $pageInfo['endCursor'] ?? null; //el endCursor para la siguiente página
+
+            Log::info($pageInfo);
 
             // Esperar medio segundo por límites Shopify
             usleep(500000);
@@ -357,4 +101,63 @@ abstract class ShopifyBaseService
             ]
         ], $rootField, $normalizeChildren);
     }
+
+
+    /**
+     * Rango de fechas consecutivas
+     */
+    protected function buildDateRange(int $days): array
+    {
+        $end = Carbon::now('America/Lima')->endOfDay();
+        $start = $end->copy()->subDays($days - 1)->startOfDay();
+        return [$start, $end];
+    }
+
+    /**
+     * Mapea cada orden con su fecha local
+     */
+    protected function mapOrdersToLocalDate(Collection $orders): Collection
+    {
+        return $orders->map(function ($order) {
+
+            if (!isset($order['createdAt'])) return null;
+
+            try {
+                $date = Carbon::parse($order['createdAt'])
+                    ->setTimezone('America/Lima')
+                    ->toDateString();
+            } catch (\Throwable $e) {
+                Log::warning('Invalid createdAt', ['value' => $order['createdAt']]);
+                return null;
+            }
+
+            return [
+                'date'  => $date,
+                'order' => $order,
+            ];
+        })->filter();
+    }
+
+    /**
+     * Arma el período completo con conteo por día
+     */
+    protected function buildPeriod(
+        Carbon $startDate,
+        int $days,
+        Collection $grouped
+    ): array {
+        $period = [];
+
+        for ($i = 0; $i < $days; $i++) {
+            $date = $startDate->copy()->addDays($i)->toDateString();
+
+            $period[] = [
+                'date'        => $date,
+                'order_count' => ($grouped[$date] ?? collect())->count(),
+            ];
+        }
+
+        return $period;
+    }
+
 }
