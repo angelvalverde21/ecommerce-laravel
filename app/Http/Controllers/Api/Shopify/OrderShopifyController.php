@@ -26,7 +26,9 @@ class OrderShopifyController extends Controller
         //     fn() => $this->shopifyOrderService->getOrders(10)
         // );
 
-        $orders = $this->shopifyOrderService->getOrders(200);
+        $orders = Cache::remember('shopify:orders:200', now()->addMinutes(60), function () {
+            return $this->shopifyOrderService->getOrders(200);
+        });
 
         // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
         return response()->json($orders);
@@ -41,7 +43,10 @@ class OrderShopifyController extends Controller
         //     fn() => $this->shopifyOrderService->getOrders(10)
         // );
 
-        $orders = $this->shopifyOrderService->getOrdersPending(200);
+        $orders = Cache::remember('shopify:orders:pending:200', now()->addMinutes(60), function () {
+            return $this->shopifyOrderService->getOrdersPending(200);
+        });
+
 
         // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
         return response()->json($orders);

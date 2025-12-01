@@ -131,7 +131,10 @@ class ShopifyOrderService extends ShopifyBaseService
                     reverse: true' . $afterClause . ',
                     query: "' . $queryFilter . '"
                 ) {
-                    ' . $this->pageInfo . '
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
                     edges {
                         cursor
                         node {
