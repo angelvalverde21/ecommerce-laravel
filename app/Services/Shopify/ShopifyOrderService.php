@@ -311,7 +311,7 @@ class ShopifyOrderService extends ShopifyBaseService
         ";
     }
 
-    public function getOrdersPending(int $days = 2): array
+    public function getOrdersPending(int $days = 30): array
     {
 
         Log::info('getOrdersPending');
@@ -335,6 +335,7 @@ class ShopifyOrderService extends ShopifyBaseService
                                 orders(
                                     first: 100,
                                     sortKey: CREATED_AT,
+                                    reverse: true,
                                     query: "financial_status:paid cancelled_at:null fulfillment_status:unfulfilled created_at:>=:start created_at:<=:end",
                                     after: :cursor
                                 ) {
