@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         @page {
@@ -40,13 +41,23 @@
             list-style: none;
         }
 
-        .list-group{
+        .list-group {
             padding: 0 0 0 10px;
             /* border: 1px solid #ccc; */
         }
 
-        h2{
+        h2 {
             /* border: 1px solid #ccc; */
+        }
+
+        .flex {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #ccc;
+            text-align: center;
+            flew
         }
     </style>
     <title>Ticket de envio</title>
@@ -54,19 +65,32 @@
 
 <body>
     <div class="container">
-        <h2 class="text-center" style="margin: 10px 0">
-            Sorelle
-            <small>{{ $order->name }}</small>
-        </h2>
+        <div style="margin: 10px 0; text-align: center;">
+            <table style="margin: 0 auto;">
+                <tr>
+                    <td>
+                        <img src="https://sorelleclothingperu.com/cdn/shop/files/Logo_2024.png" alt=""
+                            height="25">
+                    </td>
+                    <td style="padding-left: 6px; font-size: 14px; font-weight: bold; vertical-align: middle;">
+                        {{ $order->name }}
+                    </td>
+                </tr>
+            </table>
+        </div>
         <ul class="list-group">
-            <li class="list-group-item"> Nombre: {{ Str::upper($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName)}} </li>
-            <li class="list-group-item"> DNI: {{ $order->shippingAddress->company  }} </li>
-            <li class="list-group-item"> Telefono: {{ $order->shippingAddress->phone  }} </li>
-            <li class="list-group-item" style="margin: 5px 0 0 0; letter-spacing: -1px; word-spacing: -2px;">{{ $order->shippingAddress->address1 }} </li>
-            <li class="list-group-item" style="margin: 5px 0 0 0;"> <strong>{{ $order->shippingAddress->address2 }}</strong> </li>
+            <li class="list-group-item"> Nombre:
+                {{ Str::upper($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName) }} </li>
+            <li class="list-group-item"> DNI: {{ $order->shippingAddress->company }} </li>
+            <li class="list-group-item"> Telefono: {{ $order->shippingAddress->phone }} </li>
+            <li class="list-group-item" style="margin: 5px 0 0 0; letter-spacing: -1px; word-spacing: -2px;">
+                {{ $order->shippingAddress->address1 }} </li>
+            <li class="list-group-item" style="margin: 5px 0 0 0;">
+                <strong>{{ $order->shippingAddress->address2 }}</strong>
+            </li>
         </ul>
         <h3 class="text-center" style="margin: 5px 0">
-            {{  Str::upper($courier)  }}
+            {{ Str::upper($courier) }}
         </h3>
         {{-- <p class="text-center">62516516566616</p> --}}
     </div>
