@@ -83,8 +83,8 @@
                 {{ Str::upper($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName) }} </li>
             <li class="list-group-item"> DNI: {{ $order->shippingAddress->company }} </li>
             <li class="list-group-item"> Telefono: {{ $order->shippingAddress->phone }} </li>
-            <li class="list-group-item" style="margin: 5px 0 0 0; letter-spacing: -1px; word-spacing: -2px;">
-                {{ $order->shippingAddress->address1 }} </li>
+            <li class="list-group-item" style="margin: 5px 0 0 0; letter-spacing: -1px;">
+                Direccion: {{ $order->shippingAddress->address1 }} </li>
             <li class="list-group-item" style="margin: 5px 0 0 0;">
                 <strong>{{ $order->shippingAddress->address2 }}</strong>
             </li>
