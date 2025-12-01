@@ -52,6 +52,24 @@ class OrderShopifyController extends Controller
         return response()->json($orders);
     }
 
+    public function prepared()
+    {
+
+        // $orders  = Cache::remember(
+        //     "orders_cache__?_xxxp___",
+        //     now()->addHour(1),
+        //     fn() => $this->shopifyOrderService->getOrders(10)
+        // );
+
+        $orders = Cache::remember('shopify:orders:prepared:10', now()->addMinutes(60), function () {
+            return $this->shopifyOrderService->getOrdersPrepared(10); //ultimos 10 dias
+        });
+
+
+        // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
+        return response()->json($orders);
+    }
+
     /**
      * Show the form for creating a new resource.
      */

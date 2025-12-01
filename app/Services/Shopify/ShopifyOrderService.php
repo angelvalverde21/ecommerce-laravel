@@ -415,4 +415,107 @@ class ShopifyOrderService extends ShopifyBaseService
         // $orders = collect($result['items'] ?? []);
 
     }
+
+    
+    public function getOrdersPrepared(int $days = 30): array
+    {
+
+        Log::info('getOrdersPending');
+        $days = max(1, $days);
+
+        // Crear rango de fechas
+        [$startDate, $endDate] = $this->buildDateRange($days);
+
+        // -------------------------------------------------------------
+        // 1️⃣ — EL QUERY ESTÁ AQUÍ MISMO (plantilla)
+        // -------------------------------------------------------------
+
+        $shippingLinesQuery = $this->shippingLinesQuery();
+        $shippingAddressQuery = $this->shippingAddressQuery();
+        $customerQuery = $this->customerQuery();
+        $itemsQuery = $this->itemsQuery();
+        $eventsQuery = $this->eventsQuery();
+
+        $queryTemplate = <<<GRAPHQL
+                                {
+                                orders(
+                                    first: 100,
+                                    sortKey: CREATED_AT,
+                                    reverse: true,
+                                    query: "financial_status:paid cancelled_at:null fulfillment_status:fulfilled created_at:>=:start created_at:<=:end",
+                                    after: :cursor
+                                ) {
+                                    pageInfo {
+                                    hasNextPage
+                                    endCursor
+                                    }
+                                    edges {
+                                    cursor
+                                    node {
+                                            id
+                                            name
+                                            createdAt
+                                            updatedAt
+                                            processedAt
+                                            sourceName
+                                            displayFinancialStatus
+                                            displayFulfillmentStatus
+                                            note
+                                            fulfillmentOrders(first: 20) {
+                                                edges {
+                                                    node {
+                                                        id
+                                                        status
+                                                        createdAt
+                                                        requestStatus
+                                                        updatedAt
+                                                    }
+                                                }
+                                            }
+                                            totalPriceSet {
+                                                shopMoney {
+                                                    amount
+                                                    currencyCode
+                                                }
+                                            }
+                                            $shippingLinesQuery
+                                            $shippingAddressQuery
+                                            $customerQuery
+                                            $itemsQuery
+                                            $eventsQuery
+                                        }
+                                    }
+                                }
+                                }
+        GRAPHQL;
+
+        // -------------------------------------------------------------
+        // 2️⃣ — QueryBuilder para reemplazar placeholders
+        // -------------------------------------------------------------
+        $queryBuilder = function (?string $cursor) use ($queryTemplate, $startDate, $endDate) {
+
+            return str_replace(
+                [':start', ':end', ':cursor'], //Elementos a reeemplazar
+                [$startDate->toDateString(), $endDate->toDateString(), $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
+                $queryTemplate //En el template
+            );
+        };
+
+        // -------------------------------------------------------------
+        // 3️⃣ — Ejecutar el query builder ($queryBuilder) para traer los datos de Shopify
+        // -------------------------------------------------------------
+        $result = $this->getDataFromShopify(
+            'orders',
+            $queryBuilder,
+            ['lineItems'] //podria ser 'lineItems'
+        );
+
+        // -------------------------------------------------------------
+        // 4️⃣ — Normalizar items
+        // -------------------------------------------------------------
+        Log::info($result['items']);
+        return $result;
+        // $orders = collect($result['items'] ?? []);
+
+    }
 }

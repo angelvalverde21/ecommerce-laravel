@@ -13,7 +13,7 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function
 
         Route::get('/', [OrderShopifyController::class, 'index']); //Listar
         Route::get('/pending', [OrderShopifyController::class, 'pending']); //Listar
-        // Route::get('/', [OrderShopifyController::class, 'index']); //Listar
+        Route::get('/prepared', [OrderShopifyController::class, 'prepared']); //Listar
 
         Route::post('/', [OrderShopifyController::class, 'store']); //create
 
