@@ -9,8 +9,9 @@
         }
 
         body {
-            font-family: monospace;
-            font-size: 11pt;
+            font-family: Arial, sans-serif;
+            /* font-family: monospace; */
+            font-size: 10pt;
             width: 75mm;
             /* Para impresora térmica de 58mm */
             margin: 0;

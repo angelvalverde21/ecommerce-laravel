@@ -86,7 +86,7 @@ abstract class ShopifyBaseService
             // Paginación
             $pageInfo = $json['data'][$rootField]['pageInfo'] ?? null;
             $hasNextPage = $pageInfo['hasNextPage'] ?? false;
-            $endCursor = $pageInfo['endCursor'] ?? null; //el endCursor para la siguiente página
+            $endCursor = $pageInfo['endCursor'] ?? null; //el endCursor para la siguiente página, y se le inyecta al query builder en :cursor
 
             Log::info($pageInfo);
 

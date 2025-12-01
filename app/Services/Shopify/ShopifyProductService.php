@@ -3,6 +3,8 @@
 namespace App\Services\Shopify;
 
 use App\Helpers\GraphQLResponseHelper;
+use App\Models\ShopifyProduct;
+use App\Models\ShopifyVariant;
 use App\Services\Shopify\ShopifyBaseService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -11,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 class ShopifyProductService extends ShopifyBaseService
 {
 
-    public function getProducts(int $limit = 10, ?string $searchTerm = null, ?string $cursor = null): array
+    public function getShopifyProducts(int $limit = 10, ?string $searchTerm = null, ?string $cursor = null): array //son los productos de shopify
     {
         // --- Construcción del query ---
         $filters = ['status:active']; // <-- FILTRO OBLIGATORIO
@@ -51,9 +53,9 @@ class ShopifyProductService extends ShopifyBaseService
                                     status
                                     tags
                                     category {
-                                    id
-                                    name
-                                    fullName
+                                        id
+                                        name
+                                        fullName
                                     }
                                     variants(first: 10) {
                                         edges {
@@ -189,7 +191,7 @@ class ShopifyProductService extends ShopifyBaseService
         $queryBuilder = function (?string $cursor) use ($queryTemplate) {
             return str_replace(
                 [':cursor'], //Elementos a reeemplazar
-                [ $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
+                [$cursor ? "\"$cursor\"" : 'null'], //Con estos valores
                 $queryTemplate //En el template
             );
         };
@@ -200,7 +202,7 @@ class ShopifyProductService extends ShopifyBaseService
         $result = $this->getDataFromShopify(
             'products',
             $queryBuilder,
-            ['variants','images'] //podria ser 'lineItems'
+            ['variants', 'images'] //podria ser 'lineItems'
         );
 
         // -------------------------------------------------------------
@@ -212,7 +214,13 @@ class ShopifyProductService extends ShopifyBaseService
             Log::warning('Products: vacío');
         }
 
-        Log::info($products);
+        // Log::info($products);
+
+        $products = collect($result['items'] ?? []);
+
+        //================ INICIAMOS LA SCINRONIZACIÓN EN LA BASE DE DATOS LOCAL ====//
+
+        $this->syncProducts($products->toArray());
 
         return [
             'data' => json_decode(json_encode($products)),
@@ -224,5 +232,54 @@ class ShopifyProductService extends ShopifyBaseService
         // Agrupar por fecha
 
         // Construir el periodo completo
+    }
+
+    public function syncProducts(array $products)
+    {
+        foreach ($products as $p) {
+
+            // ----------------------------------------------
+            // 1) GUARDAR / ACTUALIZAR PRODUCTO
+            // ----------------------------------------------
+            $productModel = ShopifyProduct::updateOrCreate(
+                [
+                    'shopify_product_id' => $p['id'], // GID
+                ],
+                [
+                    'title' => $p['title'],
+                    'image' => $p['featuredImage']['src'] ?? null,
+                    'status' => $p['status'] ?? null,
+                    'online_store_url' => $p['onlineStoreUrl'] ?? null,
+
+                    // Conversión obligatoria
+                    'created_at_shopify' => Carbon::parse($p['createdAt'])->toDateTimeString(),
+                    'updated_at_shopify' => Carbon::parse($p['updatedAt'])->toDateTimeString(),
+                ]
+            );
+
+            // ----------------------------------------------
+            // 2) GUARDAR VARIANTES
+            // ----------------------------------------------
+            foreach ($p['variants'] as $v) {
+
+                ShopifyVariant::updateOrCreate(
+                    [
+                        'shopify_variant_id' => $v['id'], // GID
+                    ],
+                    [
+                        'shopify_product_id' => $productModel->id, // relación LOCAL
+                        'title' => $v['title'],
+                        'sku' => $v['sku'] ?? null,
+                        'price' => $v['price'],
+                        'quantity' => $v['inventoryQuantity'] ?? 0,
+                    ]
+                );
+            }
+        }
+
+        return [
+            'synced' => count($products),
+            'status' => 'OK'
+        ];
     }
 }

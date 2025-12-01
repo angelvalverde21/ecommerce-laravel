@@ -26,7 +26,22 @@ class OrderShopifyController extends Controller
         //     fn() => $this->shopifyOrderService->getOrders(10)
         // );
 
-        $orders = $this->shopifyOrderService->getOrders(50);
+        $orders = $this->shopifyOrderService->getOrders(200);
+
+        // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
+        return response()->json($orders);
+    }
+
+    public function pending()
+    {
+
+        // $orders  = Cache::remember(
+        //     "orders_cache__?_xxxp___",
+        //     now()->addHour(1),
+        //     fn() => $this->shopifyOrderService->getOrders(10)
+        // );
+
+        $orders = $this->shopifyOrderService->getOrdersPending(200);
 
         // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
         return response()->json($orders);

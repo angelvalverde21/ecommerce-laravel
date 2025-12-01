@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Shopify;
 
 
 use App\Http\Controllers\Controller;
+use App\Models\ShopifyProduct;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use App\Services\Shopify\ShopifyProductService;
@@ -27,11 +28,9 @@ class ProductShopifyController extends Controller
     {
         try {
 
-            $array = $this->shopifyProductService->getProducts(20); // traer 5 productos
+            $products = ShopifyProduct::with('variants')->limit(200)->get(); // traer 5 productos
 
-            return response()->json($array);
-
-            // return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
+            return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
 
         } catch (\Throwable $th) {
 
@@ -39,7 +38,6 @@ class ProductShopifyController extends Controller
 
             return responseError($th, "Error al listar los productos.... ");
         }
-
 
         // return response()->json($products);
     }

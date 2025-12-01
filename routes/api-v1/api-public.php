@@ -37,3 +37,5 @@ Route::prefix('v1/public')->middleware('api')->group(function () {
     });
 
 });
+
+//https://3b.pe/laravel/api/v1/public/sorelle
