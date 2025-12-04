@@ -28,7 +28,7 @@ class ProductShopifyController extends Controller
     {
         try {
 
-            $products = ShopifyProduct::with('variants')->limit(200)->get(); // traer 5 productos
+            $products = ShopifyProduct::with('variants')->limit(100)->get(); // traer 5 productos
 
             return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
 
