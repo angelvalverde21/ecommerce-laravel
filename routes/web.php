@@ -31,11 +31,11 @@ Route::get('/config', function () {
 });
 
 Route::get('/link', function () {
-    Artisan::call('storage:link');
     // Artisan::call('storage:link');
-    // File::link(
-    //     storage_path('app/public'), public_path('storage')
-    // );
+    // Artisan::call('storage:link');
+    File::link(
+        storage_path('app/public'), public_path('storage')
+    );
  });
 
  Route::get('/clear', function () {
