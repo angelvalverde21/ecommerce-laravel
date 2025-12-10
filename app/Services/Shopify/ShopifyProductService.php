@@ -153,6 +153,7 @@ class ShopifyProductService extends ShopifyBaseService
                                             id
                                             title
                                             price
+                                            compareAtPrice
                                             inventoryQuantity
                                             }
                                         }
@@ -270,7 +271,8 @@ class ShopifyProductService extends ShopifyBaseService
                         'shopify_product_id' => $productModel->id, // relación LOCAL
                         'title' => $v['title'],
                         'sku' => $v['sku'] ?? null,
-                        'price' => $v['price'],
+                        'price_etiqueta' => $v['compareAtPrice'],
+                        'price_oferta' => $v['price'],
                         'quantity' => $v['quantity'] ?? 0,
                     ]
                 );
@@ -355,6 +357,103 @@ class ShopifyProductService extends ShopifyBaseService
                 ]
             ];
         */
+    }
 
+    public function syncPrices($type)
+    {
+
+        $query = <<<'GRAPHQL'
+                        mutation updateVariantPrice(
+                            $productId: ID!, 
+                            $variants: [ProductVariantsBulkInput!]!
+                        ) {
+                            productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+                                productVariants {
+                                    id
+                                    price
+                                    compareAtPrice
+                                }
+                                userErrors {
+                                    field
+                                    message
+                                }
+                            }
+                        }
+                    GRAPHQL;
+
+        $counter = 0;
+
+        ShopifyProduct::with('variants')
+            ->where('status', 'ACTIVE')
+            ->chunk(50, function ($products) use ($query, $type, $counter) {
+
+                foreach ($products as $product) {
+
+                    $variants = [];
+
+                    foreach ($product->variants as $variant) {
+
+                        // $data["product_id"] = GID del producto
+                        // $data["variants"] = array con N variantes
+
+                        $price = $variant->{$type} ?? null;
+
+                        if ($price === null) {
+                            continue; // saltar si no hay precio
+                        }
+
+                        $variants[] = [
+                            [
+                                "id" => $variant->shopify_variant_id,
+                                "price" => $price,
+                                "compareAtPrice" => $variant->price_etiqueta,
+                            ],
+                        ];
+                    }
+
+                    // ✅ Si no hay variantes válidas, saltar
+                    if (empty($variants)) {
+                        continue;
+                    }
+
+                    $variables = [
+                        "productId" => $product->shopify_product_id,
+                        "variants" => $variants  // aquí pueden venir N variantes
+                    ];
+
+                    $response = $this->graphql($query, $variables)->json();
+
+                    $counter++;
+
+                    // pausa cada 5 productos
+                    if ($counter % 5 === 0) {
+                        usleep(200_000); // 200ms
+                    }
+                }
+            });
+
+
+        /*  Data debe estar en el siguiente formato
+            $data = [
+                "product_id" => "gid://shopify/Product/7957731573984",
+                "variants" => [
+                    [
+                        "id" => "gid://shopify/ProductVariant/48124316057824",
+                        "price" => "119.90",
+                        "compareAtPrice" => "149.90"
+                    ],
+                    [
+                        "id" => "gid://shopify/ProductVariant/48124316057825",
+                        "price" => "119.90",
+                        "compareAtPrice" => "149.90"
+                    ],
+                    [
+                        "id" => "gid://shopify/ProductVariant/48124316057826",
+                        "price" => "119.90",
+                        "compareAtPrice" => "149.90"
+                    ]
+                ]
+            ];
+        */
     }
 }

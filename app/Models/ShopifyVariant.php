@@ -10,4 +10,9 @@ class ShopifyVariant extends Model
     protected $guarded = ['id', 'created_at'];
 
     protected $table = 'shopify_variants';
+
+    public function product()
+    {
+        return $this->belongsTo(ShopifyProduct::class);
+    }
 }

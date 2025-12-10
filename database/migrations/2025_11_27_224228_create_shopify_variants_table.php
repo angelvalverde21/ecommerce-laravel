@@ -21,7 +21,8 @@ return new class extends Migration
             $table->string('shopify_variant_id');
             $table->string('title');
             $table->string('sku')->nullable();
-            $table->decimal('price', 10, 2)->nullable();
+            $table->decimal('price_etiqueta', 10, 2)->nullable(); //precio etiqueta compareAtPrice o priceAtCompare
+            $table->decimal('price_oferta', 10, 2)->nullable(); //precio normal
             $table->decimal('price_wholesaler', 10, 2)->nullable();
             $table->decimal('price_live', 10, 2)->nullable();
             $table->decimal('price_blackfriday', 10, 2)->nullable();
