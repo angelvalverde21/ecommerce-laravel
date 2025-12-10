@@ -20,6 +20,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         //
-         app()->usePublicPath('/home/tecnoplanet/3b.pe/laravel');
+        //  app()->usePublicPath('/home/tecnoplanet/3b.pe/laravel');
     }
 }

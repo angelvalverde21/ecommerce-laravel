@@ -35,15 +35,18 @@ abstract class ShopifyBaseService
     /**
      * 🔁 Ejecuta una query GraphQL en una sola línea
      */
-    protected function graphql(string $query)
+    protected function graphql(string $query, array $variables = [])
     {
-        Log::info($this->apiUrl);
-        Log::info($this->token);
+        // Log::info($this->apiUrl);
+        // Log::info($this->token);
 
         return Http::withHeaders([
             'Content-Type' => 'application/json',
             'X-Shopify-Access-Token' => $this->token,
-        ])->post($this->apiUrl, ['query' => $query]);
+        ])->post($this->apiUrl, [
+            'query' => $query,
+            'variables' => $variables,  // soporte para variables
+        ]);
     }
 
     //==================================== NUEVOS METODOS  ====================================
@@ -159,5 +162,4 @@ abstract class ShopifyBaseService
 
         return $period;
     }
-
 }

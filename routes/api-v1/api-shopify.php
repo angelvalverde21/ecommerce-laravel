@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Shopify\OrderShopifyController;
 use App\Http\Controllers\Api\Shopify\PdfShopifyController;
 use App\Http\Controllers\Api\Shopify\ProductShopifyController;
 use App\Http\Controllers\Api\Shopify\ReportShopifyController;
+use App\Http\Controllers\Api\Shopify\SyncShopifyController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function () {
@@ -36,8 +37,24 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function
     Route::prefix('products')->group(function () {
 
         Route::get('/', [ProductShopifyController::class, 'index']); //Listar
+        Route::get('/draft', [ProductShopifyController::class, 'draft']); //Listar
+        Route::get('/active', [ProductShopifyController::class, 'active']); //Listar
+        Route::get('/archived', [ProductShopifyController::class, 'archived']); //Listar
+
         Route::get('/search/{search?}', [ProductShopifyController::class, 'search']); //Listar
-        Route::get('/sync', [ProductShopifyController::class, 'sync']); //Listar
+
+
+        Route::prefix('sync')->group(function () {
+
+            Route::get('/', [ProductShopifyController::class, 'sync']); //Sincroniza los productos de shopify
+            // Route::put('/', [ProductShopifyController::class, 'syncPrices']); //actualizar
+            Route::put('/prices', [SyncShopifyController::class, 'syncPrices']); //actualizar
+            Route::put('/price', [SyncShopifyController::class, 'synPrice']); //actualizar
+        });
+
+        Route::put('/prices', [ProductShopifyController::class, 'updatePrices']); //actualizar
+        Route::put('/price', [ProductShopifyController::class, 'updatePrice']); //actualizar
+
         Route::post('/', [ProductShopifyController::class, 'store']); //create
 
         Route::prefix('{product_id}')->group(function () {

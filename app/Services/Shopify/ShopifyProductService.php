@@ -271,7 +271,7 @@ class ShopifyProductService extends ShopifyBaseService
                         'title' => $v['title'],
                         'sku' => $v['sku'] ?? null,
                         'price' => $v['price'],
-                        'quantity' => $v['inventoryQuantity'] ?? 0,
+                        'quantity' => $v['quantity'] ?? 0,
                     ]
                 );
             }
@@ -281,5 +281,80 @@ class ShopifyProductService extends ShopifyBaseService
             'synced' => count($products),
             'status' => 'OK'
         ];
+    }
+
+    public function getProducts($status = "ACTIVE")
+    {
+
+        return ShopifyProduct::where('status', $status)->with('variants')->get();
+    }
+
+
+    public function getSearchProducts($search = "", $limit = 100)
+    {
+
+        //consulta a nuestra base de datos
+        return ShopifyProduct::with('variants')
+            ->when($search, function ($query) use ($search) {
+                $query->where('title', 'like', "%{$search}%");
+            })
+            ->limit($limit)
+            ->get();
+    }
+
+    public function syncPrice($data)
+    {
+        $query = <<<'GRAPHQL'
+        mutation updateVariantPrice(
+            $productId: ID!, 
+            $variants: [ProductVariantsBulkInput!]!
+        ) {
+            productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+                productVariants {
+                    id
+                    price
+                    compareAtPrice
+                }
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+    GRAPHQL;
+
+        // $data["product_id"] = GID del producto
+        // $data["variants"] = array con N variantes
+
+        $variables = [
+            "productId" => $data["product_id"],
+            "variants" => $data["variants"]  // aquí pueden venir N variantes
+        ];
+
+        return $this->graphql($query, $variables)->json();
+
+        /*  Data debe estar en el siguiente formato
+            $data = [
+                "product_id" => "gid://shopify/Product/7957731573984",
+                "variants" => [
+                    [
+                        "id" => "gid://shopify/ProductVariant/48124316057824",
+                        "price" => "119.90",
+                        "compareAtPrice" => "149.90"
+                    ],
+                    [
+                        "id" => "gid://shopify/ProductVariant/48124316057825",
+                        "price" => "119.90",
+                        "compareAtPrice" => "149.90"
+                    ],
+                    [
+                        "id" => "gid://shopify/ProductVariant/48124316057826",
+                        "price" => "119.90",
+                        "compareAtPrice" => "149.90"
+                    ]
+                ]
+            ];
+        */
+
     }
 }
