@@ -47,13 +47,62 @@ class PdfShopifyController extends Controller
         $keywords = ['shalom', 'dinsides', 'indriver', 'olva', 'olva courier', 'gama', 'gamma', 'express', 'showroom', 'confianza'];
         // $text = "ENVIOS GRATIS / OLVA COURIER ( POR COMPRAS MAYORES A S/299 )";
 
+        Log::info(json_encode($order->lineItems));
+
+        //Calculo del monto monto total
+
+        /*
+            {
+                "name":"Vestido Bilbao Azul - Fit regular",
+                "quantity":1,
+                "originalUnitPriceSet":{
+                    "shopMoney":{
+                        "amount":"129.9",
+                        "currencyCode":"PEN"
+                    }
+                },
+                "variant":{
+                    "id":"gid:\/\/shopify\/ProductVariant\/48379845050592",
+                    "title":"Fit regular",
+                    "price":"129.90",
+                    "product":{
+                        "title":"Vestido Bilbao Azul",
+                        "featuredImage":{
+                        "url":"https:\/\/cdn.shopify.com\/s\/files\/1\/0667\/7204\/1952\/files\/049A8C4A-A693-41A9-8792-773D488702CF.jpg?v=1765036710"
+                        }
+                    }
+                }
+            },
+        */
+
+        $sumPrice = 0;
+
+        foreach ($order->lineItems as $item) {
+
+            $compareAtPrice = $item->originalUnitPriceSet->shopMoney->amount;
+            $price = $item->variant?->price;
+
+            if($price != null){
+                $sumPrice = $sumPrice + $price;
+            }else{
+                $sumPrice = $sumPrice + $compareAtPrice;
+            }
+        }
+        
+        Log::info($sumPrice);
+
         if ($order->shippingLines) {
+
             $courier = match_courier($order->shippingLines[0]->title, $keywords);
 
             $courier = $courier === "olva" ? "Olva Courier" : $courier;
             $courier = $courier === "confianza" ? "Courier de confianza" : $courier;
 
-            Log::info($courier); // "olva courier"
+            if($sumPrice > 299){
+                $courier = "Olva Courier";
+            }
+
+            // Log::info($courier); // "olva courier"
         } else {
             $courier = "";
         }

@@ -12,10 +12,10 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function
 
     Route::prefix('orders')->group(function () {
 
-        Route::get('/search/{search?}', [OrderShopifyController::class, 'search']); //Listar
         Route::get('/', [OrderShopifyController::class, 'index']); //Listar
         Route::get('/pending', [OrderShopifyController::class, 'pending']); //Listar
         Route::get('/prepared', [OrderShopifyController::class, 'prepared']); //Listar
+        Route::get('/search/{search?}', [OrderShopifyController::class, 'search']); //Listar
 
         Route::post('/', [OrderShopifyController::class, 'store']); //create
 

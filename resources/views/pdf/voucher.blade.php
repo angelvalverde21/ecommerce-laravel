@@ -1,3 +1,39 @@
+@php
+    function normalize_text($text)
+    {
+        $replacements = [
+            'á' => 'a',
+            'Á' => 'A',
+            'é' => 'e',
+            'É' => 'E',
+            'í' => 'i',
+            'Í' => 'I',
+            'ó' => 'o',
+            'Ó' => 'O',
+            'ú' => 'u',
+            'Ú' => 'U',
+            'ñ' => 'n',
+            'Ñ' => 'N',
+        ];
+
+        // Reemplazar tildes
+        $text = strtr($text, $replacements);
+
+        // Pasar a minúsculas
+        $text = strtolower($text);
+
+        // Primera letra en mayúscula
+        return ucfirst($text);
+    }
+    function titleCaseName($text)
+    {
+        // Pasar todo a minúsculas primero
+        $text = strtolower($text);
+
+        // Convertir cada palabra a mayúscula inicial
+        return ucwords($text);
+    }
+@endphp
 <!DOCTYPE html>
 <html lang="es">
 
@@ -12,7 +48,9 @@
         body {
             font-family: Arial, sans-serif;
             /* font-family: monospace; */
-            font-size: 10pt;
+            /* font-weight: 100; */
+            letter-spacing: -0.35px;
+            font-size: 9pt;
             width: 75mm;
             /* Para impresora térmica de 58mm */
             margin: 0;
@@ -80,16 +118,25 @@
         </div>
         <ul class="list-group">
             <li class="list-group-item"> Nombre:
-                {{ Str::upper($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName) }} </li>
+                {{ titleCaseName($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName) }} </li>
             <li class="list-group-item"> DNI: {{ $order->shippingAddress->company }} </li>
             <li class="list-group-item"> Telefono: {{ $order->shippingAddress->phone }} </li>
-            <li class="list-group-item" style="margin: 5px 0 0 0">
-                Direccion: {{ $order->shippingAddress->address1 }} </li>
-            <li class="list-group-item" style="margin: 5px 0 0 0;">
-                <strong>{{ $order->shippingAddress->address2 }}</strong>
+            <li class="list-group-item" style="margin: 2px 0 0 0">
+                Direccion: {{ normalize_text($order->shippingAddress->address1) }} </li>
+            <li class="list-group-item" style="margin: 2px 0 0 0;">
+                <strong>{{ normalize_text($order->shippingAddress->address2) }}</strong>
             </li>
         </ul>
-        <h3 class="text-center" style="margin: 5px 0">
+        <h3 
+            class="text-center" 
+            style="
+                margin: 2px auto;
+                position: absolute;
+                bottom: 5px;
+                left: 0;
+                right: 0;
+                text-align: center;
+            ">
             {{ Str::upper($courier) }}
         </h3>
         {{-- <p class="text-center">62516516566616</p> --}}
