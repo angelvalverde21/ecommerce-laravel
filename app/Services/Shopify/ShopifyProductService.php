@@ -285,10 +285,16 @@ class ShopifyProductService extends ShopifyBaseService
         ];
     }
 
-    public function getProducts($status = "ACTIVE")
-    {
-
-        return ShopifyProduct::where('status', $status)->with('variants')->get();
+    public function getProducts(
+        string $status = "ACTIVE",
+        int $perPage = 20,
+        int $page = 1
+    ) {
+        $page = max(1, $page);
+        return ShopifyProduct::where('status', $status)
+            ->with('variants')
+            ->paginate($perPage, ['*'], 'page', $page)
+            ->withQueryString();
     }
 
 

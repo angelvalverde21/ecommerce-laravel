@@ -100,6 +100,7 @@ class ShopifyOrderService extends ShopifyBaseService
         $startDate = null,
         $endDate = null,
         $includes
+
     ) {
 
         // Fechas por defecto → último mes
@@ -314,7 +315,7 @@ class ShopifyOrderService extends ShopifyBaseService
         ";
     }
 
-    public function getOrdersPending(int $days = 30): array
+    public function getOrdersPendingx(int $days = 30): array
     {
 
         Log::info('getOrdersPending');
@@ -416,8 +417,117 @@ class ShopifyOrderService extends ShopifyBaseService
 
     }
 
-    
-    public function getOrdersPrepared(int $days = 30): array
+    public function getOrdersPending(int $limit = 20, $cursor = null): array
+    {
+        Log::info('getOrdersPending');
+
+        // Asegurar límite mínimo
+        $limit = max(1, $limit);
+
+        // -------------------------------------------------------------
+        // 1️⃣ — Sub-queries para evitar repetición
+        // -------------------------------------------------------------
+        $shippingLinesQuery   = $this->shippingLinesQuery();
+        $shippingAddressQuery = $this->shippingAddressQuery();
+        $customerQuery        = $this->customerQuery();
+        $itemsQuery           = $this->itemsQuery();
+        $eventsQuery          = $this->eventsQuery();
+
+        // -------------------------------------------------------------
+        // 2️⃣ — GraphQL Template SIN FECHAS, usando LIMIT
+        // -------------------------------------------------------------
+        $queryTemplate = <<<GRAPHQL
+                                {
+                                    orders(
+                                        first: :limit,
+                                        sortKey: CREATED_AT,
+                                        reverse: true,
+                                        query: "financial_status:paid cancelled_at:null fulfillment_status:unfulfilled",
+                                        after: :cursor
+                                    ) {
+                                        pageInfo {
+                                            hasNextPage
+                                            endCursor
+                                        }
+                                        edges {
+                                            cursor
+                                            node {
+                                                id
+                                                name
+                                                createdAt
+                                                updatedAt
+                                                processedAt
+                                                sourceName
+                                                displayFinancialStatus
+                                                displayFulfillmentStatus
+                                                note
+                                                fulfillmentOrders(first: 20) {
+                                                    edges {
+                                                        node {
+                                                            id
+                                                            status
+                                                            createdAt
+                                                            requestStatus
+                                                            updatedAt
+                                                        }
+                                                    }
+                                                }
+                                                totalPriceSet {
+                                                    shopMoney {
+                                                        amount
+                                                        currencyCode
+                                                    }
+                                                }
+                                                $shippingLinesQuery
+                                                $shippingAddressQuery
+                                                $customerQuery
+                                                $itemsQuery
+                                                $eventsQuery
+                                            }
+                                        }
+                                    }
+                                }
+                            GRAPHQL;
+
+        // -------------------------------------------------------------
+        // Reemplazo dinámico únicamente para cursor y limit
+        // -------------------------------------------------------------
+        $queryBuilder = function (?string $cursor) use ($queryTemplate, $limit) {
+            return str_replace(
+                [':limit', ':cursor'],
+                [
+                    $limit,
+                    $cursor ? "\"$cursor\"" : 'null'
+                ],
+                $queryTemplate
+            );
+        };
+
+        // -------------------------------------------------------------
+        // 4️⃣ — Ejecutar contra Shopify
+        // -------------------------------------------------------------
+
+        $response = $this->graphql($queryBuilder($cursor));
+
+
+        // Log::info($result['items'] ?? []);
+        $result = GraphQLResponseHelper::normalizeEntity(
+            $response,
+            'orders',
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+        );
+
+        return [
+            'orders'     => json_decode(json_encode($result['items'])),
+            'pageInfo'   => $result['pageInfo'] ?? null,
+            'lastCursor' => $result['lastCursor'] ?? null,
+        ];
+
+        // return $result;
+    }
+
+
+    public function getOrdersPreparedx(int $days = 30): array
     {
 
         Log::info('getOrdersPending');
@@ -517,5 +627,247 @@ class ShopifyOrderService extends ShopifyBaseService
         return $result;
         // $orders = collect($result['items'] ?? []);
 
+    }
+
+    public function getOrdersPrepared(int $limit = 20, $cursor = null): array
+    {
+        Log::info('getOrdersPrepared');
+
+        // Asegurar límite mínimo
+        $limit = max(1, $limit);
+
+        // -------------------------------------------------------------
+        // 1️⃣ — Sub-queries para evitar repetición
+        // -------------------------------------------------------------
+        $shippingLinesQuery   = $this->shippingLinesQuery();
+        $shippingAddressQuery = $this->shippingAddressQuery();
+        $customerQuery        = $this->customerQuery();
+        $itemsQuery           = $this->itemsQuery();
+        $eventsQuery          = $this->eventsQuery();
+
+        // -------------------------------------------------------------
+        // 2️⃣ — GraphQL Template SIN FECHAS, usando LIMIT
+        // -------------------------------------------------------------
+        $queryTemplate = <<<GRAPHQL
+                                {
+                                    orders(
+                                        first: :limit,
+                                        sortKey: CREATED_AT,
+                                        reverse: true,
+                                        query: "financial_status:paid cancelled_at:null fulfillment_status:fulfilled",
+                                        after: :cursor
+                                    ) {
+                                        pageInfo {
+                                            hasNextPage
+                                            endCursor
+                                        }
+                                        edges {
+                                            cursor
+                                            node {
+                                                id
+                                                name
+                                                createdAt
+                                                updatedAt
+                                                processedAt
+                                                sourceName
+                                                displayFinancialStatus
+                                                displayFulfillmentStatus
+                                                note
+                                                fulfillmentOrders(first: 20) {
+                                                    edges {
+                                                        node {
+                                                            id
+                                                            status
+                                                            createdAt
+                                                            requestStatus
+                                                            updatedAt
+                                                        }
+                                                    }
+                                                }
+                                                totalPriceSet {
+                                                    shopMoney {
+                                                        amount
+                                                        currencyCode
+                                                    }
+                                                }
+                                                $shippingLinesQuery
+                                                $shippingAddressQuery
+                                                $customerQuery
+                                                $itemsQuery
+                                                $eventsQuery
+                                            }
+                                        }
+                                    }
+                                }
+                            GRAPHQL;
+
+        // -------------------------------------------------------------
+        // Reemplazo dinámico únicamente para cursor y limit
+        // -------------------------------------------------------------
+        $queryBuilder = function (?string $cursor) use ($queryTemplate, $limit) {
+            return str_replace(
+                [':limit', ':cursor'],
+                [
+                    $limit,
+                    $cursor ? "\"$cursor\"" : 'null'
+                ],
+                $queryTemplate
+            );
+        };
+
+        // -------------------------------------------------------------
+        // 4️⃣ — Ejecutar contra Shopify
+        // -------------------------------------------------------------
+
+        $response = $this->graphql($queryBuilder($cursor));
+
+
+        // Log::info($result['items'] ?? []);
+        $result = GraphQLResponseHelper::normalizeEntity(
+            $response,
+            'orders',
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+        );
+
+        return [
+            'orders'     => json_decode(json_encode($result['items'])),
+            'pageInfo'   => $result['pageInfo'] ?? null,
+            'lastCursor' => $result['lastCursor'] ?? null,
+        ];
+
+        // return $result;
+    }
+
+    public function getSearchOrders(int $limit = 20, $cursor = null, $search = null): array
+    {
+        Log::info('getSearchOrders');
+
+        // Asegurar límite mínimo
+        $limit = max(1, $limit);
+
+        // Normalizar búsqueda
+        $search = trim($search ?? '');
+
+        // -------------------------------------------------------------
+        // 1️⃣ — Construcción dinámica del filtro de Shopify
+        // -------------------------------------------------------------
+        // Si busca por nombre del cliente o del pedido
+        // customer_name:*Maria*     (cliente)
+        // name:#1001                (número de orden)
+        // note:*texto*              (nota del pedido)
+        // email:*gmail*             (correo)
+        // etc.
+        // $searchFilter = $search !== ''
+        //     ? " (customer_name:*{$search}* OR name:*{$search}* OR note:*{$search}*)"
+        //     : '';
+
+
+        $searchFilter = '';
+
+        if ($search !== '') {
+            $searchFilter = " customer_name:*{$search}* OR name:*{$search}* OR note:*{$search}*";
+        }
+
+        $queryFilter = "financial_status:paid cancelled_at:null{$searchFilter}";
+
+        // -------------------------------------------------------------
+        // 2️⃣ — Sub-queries
+        // -------------------------------------------------------------
+        $shippingLinesQuery   = $this->shippingLinesQuery();
+        $shippingAddressQuery = $this->shippingAddressQuery();
+        $customerQuery        = $this->customerQuery();
+        $itemsQuery           = $this->itemsQuery();
+        $eventsQuery          = $this->eventsQuery();
+
+        // -------------------------------------------------------------
+        // 3️⃣ — GraphQL Template con placeholders
+        // -------------------------------------------------------------
+        $queryTemplate = <<<GRAPHQL
+    {
+        orders(
+            first: :limit,
+            sortKey: CREATED_AT,
+            reverse: true,
+            query: :queryFilter,
+            after: :cursor
+        ) {
+            pageInfo {
+                hasNextPage
+                endCursor
+            }
+            edges {
+                cursor
+                node {
+                    id
+                    name
+                    createdAt
+                    updatedAt
+                    processedAt
+                    sourceName
+                    displayFinancialStatus
+                    displayFulfillmentStatus
+                    note
+                    fulfillmentOrders(first: 20) {
+                        edges {
+                            node {
+                                id
+                                status
+                                createdAt
+                                requestStatus
+                                updatedAt
+                            }
+                        }
+                    }
+                    totalPriceSet {
+                        shopMoney {
+                            amount
+                            currencyCode
+                        }
+                    }
+                    $shippingLinesQuery
+                    $shippingAddressQuery
+                    $customerQuery
+                    $itemsQuery
+                    $eventsQuery
+                }
+            }
+        }
+    }
+    GRAPHQL;
+
+        // -------------------------------------------------------------
+        // 4️⃣ — Builder (limit, cursor, filtro)
+        // -------------------------------------------------------------
+        $queryBuilder = function (?string $cursor) use ($queryTemplate, $limit, $queryFilter) {
+            return str_replace(
+                [':limit', ':cursor', ':queryFilter'],
+                [
+                    $limit,
+                    $cursor ? "\"$cursor\"" : 'null',
+                    $queryFilter
+                ],
+                $queryTemplate
+            );
+        };
+
+        // -------------------------------------------------------------
+        // 5️⃣ — Ejecutar contra Shopify
+        // -------------------------------------------------------------
+        $response = $this->graphql($queryBuilder($cursor));
+
+        // -------------------------------------------------------------
+        // 6️⃣ — Normalizar datos
+        // -------------------------------------------------------------
+        $result = GraphQLResponseHelper::normalizeEntity(
+            $response,
+            'orders',
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+        );
+
+        return [
+            'orders'     => json_decode(json_encode($result['items'])),
+            'pageInfo'   => $result['pageInfo'] ?? null,
+            'lastCursor' => $result['lastCursor'] ?? null,
+        ];
     }
 }

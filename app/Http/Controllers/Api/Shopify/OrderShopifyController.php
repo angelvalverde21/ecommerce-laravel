@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Shopify;
 
 use App\Http\Controllers\Controller;
+use App\Models\Store;
 use App\Services\Shopify\ShopifyOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class OrderShopifyController extends Controller
 {
@@ -17,7 +19,37 @@ class OrderShopifyController extends Controller
         $this->shopifyOrderService = $shopifyOrderService;
     }
 
-    public function index()
+    public function index(Store $store, Request $request)
+    {
+
+        // $orders = Cache::remember('shopify:orders:20', now()->addMinutes(60), function () {
+        //     return $this->shopifyOrderService->getOrders(20);
+
+        // });
+
+        Log::info($request);
+
+        $orders = $this->shopifyOrderService->getOrders(20, $request->cursor);
+
+        return response()->json($orders);
+    }
+
+    public function search(Store $store, Request $request, $search)
+    {
+
+        // $orders = Cache::remember('shopify:orders:20', now()->addMinutes(60), function () {
+        //     return $this->shopifyOrderService->getOrders(20);
+
+        // });
+
+        Log::info($request);
+
+        $orders = $this->shopifyOrderService->getSearchOrders(20, $request->cursor, $search);
+
+        return response()->json($orders);
+    }
+
+    public function pending(Store $store, Request $request)
     {
 
         // $orders  = Cache::remember(
@@ -26,15 +58,18 @@ class OrderShopifyController extends Controller
         //     fn() => $this->shopifyOrderService->getOrders(10)
         // );
 
-        $orders = Cache::remember('shopify:orders:50', now()->addMinutes(60), function () {
-            return $this->shopifyOrderService->getOrders(50);
-        });
+        // $orders = Cache::remember('shopify:orders:pendixng:2x0s', now()->addMinutes(60), function () {
+        //     return $this->shopifyOrderService->getOrdersPending(20);
+        // });
+
+
+        $orders = $this->shopifyOrderService->getOrdersPending(20, $request->cursor);
 
         // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
         return response()->json($orders);
     }
 
-    public function pending()
+    public function prepared(Store $store, Request $request)
     {
 
         // $orders  = Cache::remember(
@@ -43,28 +78,11 @@ class OrderShopifyController extends Controller
         //     fn() => $this->shopifyOrderService->getOrders(10)
         // );
 
-        $orders = Cache::remember('shopify:orders:pending:200', now()->addMinutes(60), function () {
-            return $this->shopifyOrderService->getOrdersPending(200);
-        });
+        // $orders = Cache::remember('shopify:orders:prepared:10', now()->addMinutes(60), function () {
+        //     return $this->shopifyOrderService->getOrdersPrepared(10); //ultimos 10 dias
+        // });
 
-
-        // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
-        return response()->json($orders);
-    }
-
-    public function prepared()
-    {
-
-        // $orders  = Cache::remember(
-        //     "orders_cache__?_xxxp___",
-        //     now()->addHour(1),
-        //     fn() => $this->shopifyOrderService->getOrders(10)
-        // );
-
-        $orders = Cache::remember('shopify:orders:prepared:10', now()->addMinutes(60), function () {
-            return $this->shopifyOrderService->getOrdersPrepared(10); //ultimos 10 dias
-        });
-
+        $orders = $this->shopifyOrderService->getOrdersPrepared(20, $request->cursor); //ultimos 10 dias
 
         // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
         return response()->json($orders);

@@ -26,23 +26,31 @@ class ProductShopifyController extends Controller
         $this->shopifyProductService = $shopifyProductService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         try {
 
-            $products = $this->shopifyProductService->getProducts();
+            //Leer query params
+            $status  = $request->query('status', 'ACTIVE');
+            $page    = max(1, (int) $request->query('page', 1));
+            $perPage = (int) $request->query('per_page', 20);
 
-            return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
+            // Llamar al servicio con parámetros
+            $products = $this->shopifyProductService->getProducts(
+                $status,
+                $perPage,
+                $page
+            );
 
+            return response()->json($products);
         } catch (\Throwable $th) {
 
-            Log::info($th);
+            Log::error($th);
 
             return responseError($th, "Error al listar los productos.... ");
         }
-
-        // return response()->json($products);
     }
+
     public function active()
     {
         try {
@@ -50,7 +58,6 @@ class ProductShopifyController extends Controller
             $products = $this->shopifyProductService->getProducts();
 
             return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -67,7 +74,6 @@ class ProductShopifyController extends Controller
             $products = $this->shopifyProductService->getProducts('DRAFT');
 
             return responseOk($products, "Se ha procesado correctamente el listado de productos DRAFT");
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -84,7 +90,6 @@ class ProductShopifyController extends Controller
             $products = $this->shopifyProductService->getProducts('ARCHIVED');
 
             return responseOk($products, "Se ha procesado correctamente el listado de productos ARCHIVED");
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -95,11 +100,11 @@ class ProductShopifyController extends Controller
         // return response()->json($products);
     }
 
-    public function search(Store $store, $search = "")
+    public function search(Store $store, Request $request, $search = "")
     {
 
         if (trim($search) === '') {
-            return $this->index();
+            return $this->index($request);
         }
 
         try {
@@ -107,7 +112,7 @@ class ProductShopifyController extends Controller
             $products = $this->shopifyProductService->getSearchProducts($search);
 
             return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
-
+            
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
@@ -129,7 +134,6 @@ class ProductShopifyController extends Controller
             $array = $this->shopifyProductService->sync();
 
             return response()->json($array);
-
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
