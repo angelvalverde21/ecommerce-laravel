@@ -22,7 +22,7 @@ class SyncShopifyController extends Controller
         $this->shopifyProductService = $shopifyProductService;
     }
 
-    public function synPrice(Store $store, Request $request)
+    public function syncPrice(Store $store, Request $request)
     {
 
         // Log::info("Sync");
@@ -30,6 +30,20 @@ class SyncShopifyController extends Controller
 
         try {
             return $this->shopifyProductService->syncPrice($request);
+        } catch (\Throwable $th) {
+            //throw $th;
+        }
+    }
+
+    
+    public function syncPrices(Store $store, Request $request)
+    {
+
+        // Log::info("Sync");
+        Log::info($request);
+
+        try {
+            return $this->shopifyProductService->syncPrices($request->type);
         } catch (\Throwable $th) {
             //throw $th;
         }

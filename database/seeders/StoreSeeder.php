@@ -17,10 +17,10 @@ class StoreSeeder extends Seeder
         Store::insert([
             [
                 "id" => 1,
-                "name" => "ara",
+                "name" => "sorelle",
                 "phone" => "943402809",
                 "email" => "ara@3b.pe",
-                "slug" => "ara",
+                "slug" => "sorelle",
                 "identity_id" => "2", //2 es RUC
                 "document_number" => "20478907009",
             ],

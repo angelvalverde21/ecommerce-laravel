@@ -35,32 +35,22 @@ abstract class ShopifyBaseService
     /**
      * 🔁 Ejecuta una query GraphQL en una sola línea
      */
-    // protected function graphql(string $query)
-    // {
-    //     Log::info($this->apiUrl);
-    //     Log::info($this->token);
-
-    //     return Http::withHeaders([
-    //         'Content-Type' => 'application/json',
-    //         'X-Shopify-Access-Token' => $this->token,
-    //     ])->post($this->apiUrl, ['query' => $query]);
-    // }
-
-        protected function graphql(string $query, array $variables = [])
+    protected function graphql(string $query, ?array $variables = null)
     {
-        // Log::info($this->apiUrl);
-        // Log::info($this->token);
+        $payload = [
+            'query' => $query,
+        ];
+
+        // Solo enviar variables si existen
+        if (!empty($variables)) {
+            $payload['variables'] = $variables;
+        }
 
         return Http::withHeaders([
             'Content-Type' => 'application/json',
             'X-Shopify-Access-Token' => $this->token,
-        ])->post($this->apiUrl, [
-            'query' => $query,
-            'variables' => $variables,  // soporte para variables
-        ]);
+        ])->post($this->apiUrl, $payload);
     }
-
-
     //==================================== NUEVOS METODOS  ====================================
 
     protected function getDataFromShopify(

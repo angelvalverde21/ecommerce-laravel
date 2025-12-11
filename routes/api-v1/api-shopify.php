@@ -49,7 +49,7 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function
             Route::get('/', [ProductShopifyController::class, 'sync']); //Sincroniza los productos de shopify
             // Route::put('/', [ProductShopifyController::class, 'syncPrices']); //actualizar
             Route::put('/prices', [SyncShopifyController::class, 'syncPrices']); //actualizar
-            Route::put('/price', [SyncShopifyController::class, 'synPrice']); //actualizar
+            Route::put('/price', [SyncShopifyController::class, 'syncPrice']); //actualizar
         });
 
         Route::put('/prices', [ProductShopifyController::class, 'updatePrices']); //actualizar
