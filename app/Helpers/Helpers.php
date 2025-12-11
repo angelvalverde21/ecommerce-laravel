@@ -20,6 +20,7 @@ function pluralToSingular($word) {
 
 
 if (! function_exists('match_courier')) {
+
     function match_courier(string $text, $patterns): ?string
     {
 
@@ -36,4 +37,5 @@ if (! function_exists('match_courier')) {
 
         return null;
     }
+    
 }

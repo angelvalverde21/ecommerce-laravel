@@ -44,7 +44,7 @@ class PdfShopifyController extends Controller
         //     'content'=> []
         // ]);
 
-        $keywords = ['shalom', 'dinsides', 'indriver', 'olva', 'olva courier', 'gama', 'gamma', 'express', 'showroom', 'confianza'];
+        $keywords = ['shalom', 'dinsides', 'indriver', 'olva', 'olva courier', 'gama', 'gamma', 'express', 'showroom', 'confianza', 'recojo en tienda', 'tienda'];
         // $text = "ENVIOS GRATIS / OLVA COURIER ( POR COMPRAS MAYORES A S/299 )";
 
         Log::info(json_encode($order->lineItems));
@@ -97,6 +97,7 @@ class PdfShopifyController extends Controller
 
             $courier = $courier === "olva" ? "Olva Courier" : $courier;
             $courier = $courier === "confianza" ? "Courier de confianza" : $courier;
+            $courier = $courier === "tienda" ? "Recojo en tienda" : $courier;
 
             if($sumPrice > 299){
                 $courier = "Olva Courier";
