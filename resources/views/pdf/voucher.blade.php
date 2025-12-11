@@ -98,7 +98,7 @@
             flew
         }
     </style>
-    <title>Ticket de envio</title>
+    <title>Ticket de envio.</title>
 </head>
 
 <body>
