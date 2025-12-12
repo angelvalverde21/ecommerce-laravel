@@ -140,10 +140,10 @@
             <li class="list-group-item" style="margin: 2px 0 0 0">
                 Direccion: {{ normalize_text($order->shippingAddress->address1) }} </li>
             <li class="list-group-item" style="margin: 2px 0 0 0;">
-                {{ normalize_text($order->shippingAddress->address2) }}
+                {{ normalize_text($order->shippingAddress->address2) }}, {{ titleCaseName($order->shippingAddress->city) }}
             </li>
             <li class="list-group-item" style="margin: 2px 0 0 0;">
-                {{ normalize_text($order->shippingAddress->city) }}
+               Registro: 
             </li>
         </ul>
         <h3 class="text-center"
