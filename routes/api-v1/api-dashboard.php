@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Dashboard\CustomerDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
+use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\RoleDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
 use App\Http\Controllers\Api\Dashboard\StoreDashboardController;
@@ -196,5 +197,21 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->group(function () {
             Route::delete('/', [BrandDashboardController::class, 'destroy']); //borrar
 
         });
+    });
+
+
+    Route::prefix('purchases')->group(function () {
+    
+        Route::get('/', [PurchaseDashboardController::class, 'index']); //Listar
+        Route::post('/', [PurchaseDashboardController::class, 'store']); //create
+    
+        Route::prefix('{Purchase_id}')->group(function () {
+    
+            Route::get('/', [PurchaseDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [PurchaseDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [PurchaseDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 });

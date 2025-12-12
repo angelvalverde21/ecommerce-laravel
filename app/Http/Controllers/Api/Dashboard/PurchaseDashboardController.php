@@ -24,7 +24,7 @@ class PurchaseDashboardController extends Controller
         try {
             Log::info('exito index');
             //selectFields esta en el modelo purchase
-            return responseOk($store->purchases()->with(['unit', 'supplier'])->orderBy('id', 'desc')->get(), "El listado de compras ha sido obtenido correctamente (dashboard)");
+            return responseOk($store->purchases()->orderBy('id', 'desc')->get(), "El listado de compras ha sido obtenido correctamente (dashboard)");
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);

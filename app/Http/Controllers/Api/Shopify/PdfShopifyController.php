@@ -82,13 +82,13 @@ class PdfShopifyController extends Controller
             $compareAtPrice = $item->originalUnitPriceSet->shopMoney->amount;
             $price = $item->variant?->price;
 
-            if($price != null){
+            if ($price != null) {
                 $sumPrice = $sumPrice + $price;
-            }else{
+            } else {
                 $sumPrice = $sumPrice + $compareAtPrice;
             }
         }
-        
+
         Log::info($sumPrice);
 
         if ($order->shippingLines) {
@@ -96,10 +96,14 @@ class PdfShopifyController extends Controller
             $courier = match_courier($order->shippingLines[0]->title, $keywords);
 
             $courier = $courier === "olva" ? "Olva Courier" : $courier;
-            $courier = $courier === "confianza" ? "Courier de confianza" : $courier;
+            $courier = $courier === "confianza" ? "GAMA" : $courier;
             $courier = $courier === "tienda" ? "Recojo en tienda" : $courier;
 
-            if($sumPrice > 299){
+            if ($order->shippingLines[0]?->originalPriceSet->shopMoney->amount) {
+                $courier = "GAMA";
+            }
+
+            if ($sumPrice > 299) {
                 $courier = "Olva Courier";
             }
 
