@@ -47,7 +47,7 @@ class PurchaseDashboardController extends Controller
         //
 
         $typeMap = [
-            'batch' => \App\Models\Batch::class,
+            'batch' => \App\Models\Manufacture::class,
             // Agrega más modelos según tu caso
         ];
 
@@ -121,7 +121,7 @@ class PurchaseDashboardController extends Controller
     public function show(Store $store, $purchase_id)
     {
 
-        $purchase = Purchase::withCount('images')->find($purchase_id);
+        $purchase = Purchase::with(['user, store, supplier'])->withCount('images')->find($purchase_id);
 
         if (!$purchase) {
             return responseError([], "Error al obtener el purchaseo x");

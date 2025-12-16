@@ -17,12 +17,6 @@ class Purchase extends Model
         return $this->morphTo();
     }
 
-    public function section()
-    {
-        return $this->belongsTo(Section::class, 'section_id');
-    }
-
-
     public function unit()
     {
         return $this->belongsTo(Unit::class);
@@ -30,17 +24,12 @@ class Purchase extends Model
 
     public function supplier()
     {
-        return $this->belongsTo(Supplier::class);
+        return $this->belongsTo(User::class);
     }
 
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable')->orderBy('id', 'DESC');;
-    }
-
-    public function sections()
-    {
-        return $this->hasMany(Section::class);
     }
 
 }

@@ -21,14 +21,22 @@ class ReportShopifyController extends Controller
     public function monthAll(Store $store)
     {
 
+        //El cache esta en el servicio
         $report = $this->shopifyService->getReportSalesByYearMonth();
 
         return response()->json($report);
     }
 
-    public function reportBarOrders(Store $store, $days = 7)
+    public function reportBarDailys(Store $store, $days = 7)
     {
         $report = $this->shopifyService->getReportBarOrders($days); //reporte en barras
+
+        return response()->json($report);
+    }
+
+    public function reportBarMonths(Store $store, $days = 7)
+    {
+        $report = $this->shopifyService->getReportBarMonths($days); //reporte en barras
 
         return response()->json($report);
     }

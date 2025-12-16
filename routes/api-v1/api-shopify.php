@@ -74,7 +74,8 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function
         Route::get('/top', [ReportShopifyController::class, 'reportTopSellingProducts']); //Listar
 
         Route::prefix('bars')->group(function () {
-            Route::get('/daily/{days?}', [ReportShopifyController::class, 'reportBarOrders']); //Listar
+            Route::get('/daily/{days?}', [ReportShopifyController::class, 'reportBarDailys']); //Listar
+            Route::get('/months/{days?}', [ReportShopifyController::class, 'reportBarMonths']); //Listar
         });
 
         Route::get('/month-all', [ReportShopifyController::class, 'monthAll']); //Listar

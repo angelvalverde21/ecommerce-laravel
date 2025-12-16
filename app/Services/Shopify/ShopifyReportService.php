@@ -93,6 +93,109 @@ class ShopifyReportService extends ShopifyBaseService
     return $this->buildPeriod($startDate, $days, $grouped);
   }
 
+  public function getReportBarMonths(int $months = 12): array
+  {
+    $months = max(1, $months);
+
+    // 🔑 Cache key estable por rango mensual
+    $cacheKey = "report_bar_months:months_{$months}";
+
+    return Cache::remember(
+      $cacheKey,
+      now()->addHours(24), // ⏱️ cache 24 horas
+      function () use ($months) {
+
+        // -------------------------------------------------------------
+        // 1️⃣ — Rango de fechas por meses
+        // -------------------------------------------------------------
+        $endDate   = now()->endOfMonth();
+        $startDate = now()->subMonths($months - 1)->startOfMonth();
+
+        // -------------------------------------------------------------
+        // 2️⃣ — Query GraphQL
+        // -------------------------------------------------------------
+        $queryTemplate = <<<GRAPHQL
+            {
+              orders(
+                first: 100,
+                sortKey: CREATED_AT,
+                query: "financial_status:paid cancelled_at:null created_at:>=:start created_at:<=:end",
+                after: :cursor
+              ) {
+                pageInfo {
+                  hasNextPage
+                  endCursor
+                }
+                edges {
+                  cursor
+                  node {
+                    id
+                    name
+                    createdAt
+                    totalPriceSet {
+                      shopMoney { amount currencyCode }
+                    }
+                  }
+                }
+              }
+            }
+            GRAPHQL;
+
+        // -------------------------------------------------------------
+        // 3️⃣ — QueryBuilder
+        // -------------------------------------------------------------
+        $queryBuilder = function (?string $cursor) use ($queryTemplate, $startDate, $endDate) {
+
+          return str_replace(
+            [':start', ':end', ':cursor'],
+            [
+              $startDate->toDateString(),
+              $endDate->toDateString(),
+              $cursor ? "\"$cursor\"" : 'null'
+            ],
+            $queryTemplate
+          );
+        };
+
+        // -------------------------------------------------------------
+        // 4️⃣ — Obtener datos desde Shopify
+        // -------------------------------------------------------------
+        $result = $this->getDataFromShopify(
+          'orders',
+          $queryBuilder,
+          []
+        );
+
+        // -------------------------------------------------------------
+        // 5️⃣ — Normalizar
+        // -------------------------------------------------------------
+        $orders = collect($result['items'] ?? []);
+
+        if ($orders->isEmpty()) {
+          Log::warning('getReportBarMonths: vacío', [
+            'start' => $startDate->toDateString(),
+            'end'   => $endDate->toDateString(),
+          ]);
+        }
+
+        // Convertir a fecha local
+        $mapped = $this->mapOrdersToLocalDate($orders);
+
+        // -------------------------------------------------------------
+        // 6️⃣ — Agrupar por MES (Y-m)
+        // -------------------------------------------------------------
+        $grouped = $mapped->groupBy(function ($item) {
+          return Carbon::parse($item['date'])->format('Y-m');
+        });
+
+        // -------------------------------------------------------------
+        // 7️⃣ — Construir periodo mensual
+        // -------------------------------------------------------------
+        return $this->buildMonthPeriod($startDate, $months, $grouped);
+      }
+    );
+  }
+
   // ==================================== REPORTES DEL PRODUCTO MAS VENDIDOS ORDENADOS DE MAYOR A MENOR  ====================================
 
   public function getReportTopSellingProducts($days = 3650) // 10 años
@@ -371,7 +474,6 @@ class ShopifyReportService extends ShopifyBaseService
       }
 
       return $report;
-      
     });
   }
 }

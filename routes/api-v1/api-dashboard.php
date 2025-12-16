@@ -10,10 +10,12 @@ use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
+use App\Http\Controllers\Api\Dashboard\PurchaseOrderDashboardController;
 use App\Http\Controllers\Api\Dashboard\RoleDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
 use App\Http\Controllers\Api\Dashboard\StoreDashboardController;
 use App\Http\Controllers\Api\Dashboard\SupplierDashboardController;
+use App\Http\Controllers\Api\Dashboard\UnitDashboardController;
 use App\Http\Controllers\Api\Dashboard\UserDashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,7 +23,7 @@ use Illuminate\Support\Facades\Route;
 
 // });
 
-Route::prefix('v1/{store}/dashboard')->middleware('api')->group(function () {
+Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'])->group(function () {
 
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
 
@@ -199,8 +201,38 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->group(function () {
         });
     });
 
+    Route::prefix('units')->group(function () {
+    
+        Route::get('/', [UnitDashboardController::class, 'index']); //Listar
+        Route::post('/', [UnitDashboardController::class, 'store']); //create
+    
+        Route::prefix('{Unit_id}')->group(function () {
+    
+            Route::get('/', [UnitDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [UnitDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [UnitDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
+    });
+
 
     Route::prefix('purchases')->group(function () {
+
+        Route::prefix('orders')->group(function () {
+        
+            Route::get('/', [PurchaseOrderDashboardController::class, 'index']); //Listar
+            Route::post('/', [PurchaseOrderDashboardController::class, 'store']); //create
+        
+            Route::prefix('{purchase_order_id}')->group(function () {
+        
+                Route::get('/', [PurchaseOrderDashboardController::class, 'show']); //show o mostrar por id
+                Route::put('/', [PurchaseOrderDashboardController::class, 'update']); //actualizar
+                Route::delete('/', [PurchaseOrderDashboardController::class, 'destroy']); //borrar
+        
+            });
+        
+        });
     
         Route::get('/', [PurchaseDashboardController::class, 'index']); //Listar
         Route::post('/', [PurchaseDashboardController::class, 'store']); //create
@@ -214,4 +246,5 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->group(function () {
         });
     
     });
+
 });

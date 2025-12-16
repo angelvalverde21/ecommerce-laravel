@@ -165,4 +165,25 @@ abstract class ShopifyBaseService
         return $period;
     }
 
+    protected function buildMonthPeriod(
+        Carbon $startDate,
+        int $months,
+        Collection $grouped
+    ): array {
+        $period = [];
+
+        for ($i = 0; $i < $months; $i++) {
+
+            $monthStart = $startDate->copy()->addMonths($i)->startOfMonth();
+            $key = $monthStart->format('Y-m');          // clave para grouped (2025-12)
+            $date = $monthStart->toDateString();        // salida (2025-12-01)
+
+            $period[] = [
+                'date'        => $date,
+                'order_count' => ($grouped[$key] ?? collect())->count(),
+            ];
+        }
+
+        return $period;
+    }
 }

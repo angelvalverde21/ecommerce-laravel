@@ -89,17 +89,19 @@ class PdfShopifyController extends Controller
             }
         }
 
-        Log::info($sumPrice);
+        Log::info(json_encode($order));
+        
 
         if ($order->shippingLines) {
 
-            $courier = match_courier($order->shippingLines[0]->title, $keywords);
+            $courier = match_courier($order->shippingLines[0]->title . " " . $order?->shippingAddress?->address1, $keywords);
 
             $courier = $courier === "olva" ? "Olva Courier" : $courier;
             $courier = $courier === "confianza" ? "GAMA" : $courier;
             $courier = $courier === "tienda" ? "Recojo en tienda" : $courier;
+            $courier = $courier === "shalom" ? "Shalom" : $courier;
 
-            if ($order->shippingLines[0]?->originalPriceSet->shopMoney->amount) {
+            if ($order->shippingLines[0]?->originalPriceSet->shopMoney->amount == 15) {
                 $courier = "GAMA";
             }
 
@@ -111,6 +113,8 @@ class PdfShopifyController extends Controller
         } else {
             $courier = "";
         }
+
+        
 
         //return view('livewire.erp.orders.pdf.voucher', compact('order'));
 

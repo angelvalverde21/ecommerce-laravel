@@ -67,8 +67,10 @@ class SupplierDashboardController extends Controller
         try {
             $validated = $request->validate([
                 'name'            => 'required|string|max:255',
-                'email'           => 'required|email|unique:users,email',
-                'phone'           => 'nullable|string|max:20',
+                // 'email'           => 'required|email|unique:users,email',
+                'email'           => '',
+                // 'phone'           => 'nullable|string|max:20',
+                'phone'           => '',
                 'document_number' => 'nullable|string|max:20',
             ]);
 
