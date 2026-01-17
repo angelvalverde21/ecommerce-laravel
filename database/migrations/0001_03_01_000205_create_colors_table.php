@@ -14,12 +14,23 @@ return new class extends Migration
     {
         Schema::create('colors', function (Blueprint $table) {
             $table->id();
+
             $table->string('name');
-            $table->unsignedTinyInteger('status')->default(Status::BORRADOR)->comment('Status::PUBLICADO = 1, Status::BORRADOR = 3, Status::ELIMINADO = 0, Status::ARCHIVADO = 2]'); //desde -128 a 127
-            $table->unsignedTinyInteger('sort_order'); //del 1 al 255
-            $table->unsignedInteger('quantity')->default(0);
             $table->foreignId('product_id')->nullable()->constrained()->onDelete('cascade');
             $table->unique(['name', 'product_id']);
+
+            //======================== Campos comunes ===================================
+            
+            $table->float('price')->nullable()->default('0.00');
+            $table->float('compare_at_price')->nullable()->default('0.00');
+            $table->unsignedInteger('quantity')->default(0);
+
+            $table->string('origin')->nullable();
+            $table->tinyInteger('status')->default(Status::ACTIVE)->comment('Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3'); //desde -128 a 127
+            $table->unsignedTinyInteger('sort_order')->default(0); //del 1 al 255
+            $table->string('sku')->nullable()->unique();
+            //=====================================================================
+
             $table->timestamps();
         });
     }

@@ -60,4 +60,46 @@ if (!function_exists('shopify_large')) {
   }
 }
 
+if (!function_exists('shopify_image_by_height')) {
+    /**
+     * Genera una imagen Shopify manteniendo proporción por ALTO
+     *
+     * @param string|null $src
+     * @param int $height
+     * @return string|null
+     */
+    function shopify_image_by_height(?string $src, int $height): ?string
+    {
+        if (!$src) {
+            return null;
+        }
+
+        return preg_replace(
+            '/(\.(jpg|jpeg|png|webp))$/i',
+            "_x{$height}$1",
+            $src
+        );
+    }
+}
+
+if (!function_exists('shopify_image_sizes')) {
+    /**
+     * Genera tamaños estándar (thumbnail, medium, large)
+     */
+    function shopify_image_sizes(?string $src): ?array
+    {
+        if (!$src) {
+            return null;
+        }
+
+        return [
+            'thumbnail' => shopify_image_by_height($src, 300),
+            'medium'    => shopify_image_by_height($src, 800),
+            'large'     => shopify_image_by_height($src, 1200),
+            'original'  => $src,
+        ];
+    }
+}
+
+
 //==================================== FIN FUNCIONES DE IMAGENES DE SHOPIFY  ====================================

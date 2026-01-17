@@ -19,7 +19,7 @@ class Store extends Model
 
     public function categories()
     {
-        return $this->hasMany(Category::class);
+        return $this->hasMany(Category::class)->whereNull('parent_id');;
     }
 
     public function suppliers()
@@ -43,4 +43,9 @@ class Store extends Model
     {
         return 'slug';
     }
+
+    public function getOptionsDefaultAttribute()
+    {
+        return \App\Models\Option::DEFAULT_OPTIONS;
+    }   
 }

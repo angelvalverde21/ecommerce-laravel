@@ -25,6 +25,7 @@ class CategoryDashboardController extends Controller
             return [
                 'id' => $category->id,
                 'name' => $category->name,
+                'full_name' => $category->full_name,
                 'slug' => $category->slug,
                 'is_size' => $category->is_size,
                 'is_color' => $category->is_color,

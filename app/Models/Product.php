@@ -9,13 +9,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
+
     /** @use HasFactory<\Database\Factories\ProductFactory> */
     use HasFactory;
 
     protected $guarded = ['id', 'created_at'];
 
+    protected $appends = [
+        'attributes_init',
+        'options_init',
+        'prices_init',
+    ];
 
-    
     public function scopeSearch(Builder $query, $term)
     {
 
@@ -31,8 +36,8 @@ class Product extends Model
         // WHERE (products.name LIKE '%term%' OR products.tags LIKE '%term%')
 
         return $query->where(function ($query) use ($term) {
-            $query->where('products.name', 'LIKE', '%' . $term . '%')
-                ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
+            $query->where('products.name', 'LIKE', '%' . $term . '%');
+            // ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
         });
     }
 
@@ -41,28 +46,68 @@ class Product extends Model
         return $query->where('status', 1);
     }
 
-    public function category(){
+    public function category()
+    {
         return $this->belongsTo(Category::class);
     }
 
-    public function images(){
+    public function images()
+    {
         return $this->morphMany(Image::class, 'imageable');
     }
-
-    public function image(){
-        return $this->morphMany(Image::class, 'imageable');
+    
+    public function prices()
+    {
+        return $this->morphMany(Price::class, 'priceable');
     }
 
-    public function sizes(){
+    public function image()
+    {
+        return $this->morphOne(Image::class, 'imageable');
+    }
+
+    public function sizes()
+    {
         return $this->hasMany(Size::class)->orderBy('sort_order', 'ASC');
     }
 
-    public function colors(){
+
+    public function colors()
+    {
         return $this->hasMany(Color::class)->orderBy('sort_order', 'ASC');
     }
 
-    public function attributes(){
+    public function attributes()
+    {
         return $this->hasMany(Attribute::class);
     }
 
+
+    public function getAttributesInitAttribute()
+    {
+        return Attribute::DEFAULT_OPTIONS;
+    }
+
+    public function getOptionsInitAttribute()
+    {
+        return Option::DEFAULT_OPTIONS;
+    }
+
+    public function getPricesInitAttribute()
+    {
+        return Price::DEFAULT_OPTIONS;
+    }
+
+
+    /******************************************** */
+
+    public function variants()
+    {
+        return $this->hasMany(Variant::class);
+    }
+
+    public function options()
+    {
+        return $this->hasMany(Option::class);
+    }
 }

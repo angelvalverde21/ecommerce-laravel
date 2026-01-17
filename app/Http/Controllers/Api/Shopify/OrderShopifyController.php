@@ -82,7 +82,7 @@ class OrderShopifyController extends Controller
         //     return $this->shopifyOrderService->getOrdersPrepared(10); //ultimos 10 dias
         // });
 
-        $orders = $this->shopifyOrderService->getOrdersPrepared(20, $request->cursor); //ultimos 10 dias
+        $orders = $this->shopifyOrderService->getOrdersPrepared(150, $request->cursor); //ultimos 10 dias
 
         // $orders = $this->shopify->getOrders(20); // Trae 20 órdenes
         return response()->json($orders);

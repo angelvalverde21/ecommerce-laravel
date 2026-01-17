@@ -121,9 +121,6 @@ class ProductShopifyController extends Controller
         }
     }
 
-
-
-
     /**
      * Show the form for creating a new resource.
      */
@@ -131,7 +128,7 @@ class ProductShopifyController extends Controller
     {
         //
         try {
-            $array = $this->shopifyProductService->sync();
+            $array = $this->shopifyProductService->sync($store);
 
             return response()->json($array);
         } catch (\Throwable $th) {

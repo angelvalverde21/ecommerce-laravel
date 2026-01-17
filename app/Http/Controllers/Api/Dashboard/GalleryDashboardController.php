@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Store;
+use App\Models\store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
-class StoreDashboardController extends Controller
+class GalleryDashboardController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -14,6 +15,24 @@ class StoreDashboardController extends Controller
     public function index()
     {
         //
+
+        try {
+        
+            DB::beginTransaction();
+        
+            //Aqui agregar el codigo
+        
+            DB::commit();
+        
+            return responseOk([], "Se ha procesado correctamente");
+        
+        } catch (\Throwable $th) {
+        
+            DB::rollback();
+        
+            return responseError($th, "Error al eliminar.... ");
+        
+        }
     }
 
     /**
@@ -35,22 +54,15 @@ class StoreDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Store $store)
+    public function show(store $store)
     {
-        try {
-            // Log::info('exito');
-            //selectFields esta en el modelo Product
-            return responseOk($store->with(['categories.children'])->first(), "La informacion de la tienda ha sido obtenida satisfactoriamente");
-        } catch (\Throwable $th) {
-            //throw $th;
-            // Log::info($th);
-        }
+        //
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(store $store)
     {
         //
     }
@@ -58,7 +70,7 @@ class StoreDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, store $store)
     {
         //
     }
@@ -66,7 +78,7 @@ class StoreDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(store $store)
     {
         //
     }

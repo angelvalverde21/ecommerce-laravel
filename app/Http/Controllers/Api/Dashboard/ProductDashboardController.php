@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attribute;
+use App\Models\Option;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\Variant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +46,7 @@ class ProductDashboardController extends Controller
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
+            return responseError($th, "Ocurrio un error al traer los productos");
         }
     }
 
@@ -56,14 +59,14 @@ class ProductDashboardController extends Controller
 
             $search = pluralToSingular($search);
 
-            $products = $store->products()->search($search)->limit(10)->get();
+            $products = $store->products()->with(['sizes', 'image'])->search($search)->limit(10)->get();
 
             Log::info($products);
 
             return responseOk($products, "Datos obtenidos con exito de search");
         } catch (\Throwable $th) {
             Log::info($th);
-            return responseError($th);
+            return responseError($th, "Error al obtener los datos de search");
         }
 
         // $products = $store->products;
@@ -74,7 +77,7 @@ class ProductDashboardController extends Controller
     {
         //
 
-        $product = $store->products()->with(['category', 'colors.sizes', 'sizes'])->find($product_id);
+        $product = $store->products()->with(['category', 'colors.sizes', 'attributes', 'options.option_values', 'variants.variant_option_values.optionValue', 'prices', 'sizes'])->find($product_id);
 
         if (!$product) {
             return responseError([], "Error al obtener el producto x", 404);
@@ -107,52 +110,92 @@ class ProductDashboardController extends Controller
                     'name' => $resp['name'],
                     'slug' => Str::slug($resp['name']),
                     'body' => $resp['body'],
-                    'brand_id' => $resp['brand_id'],
-                    'model' => $resp['model'],
-                    'price' => $resp['price'],
                     'category_id' => $resp['category_id'],
+                    // 'tags' => $resp['tags'],
+                    // 'price' => $resp['price'],
+                    // 'compare_at_price' => $resp['compare_at_price'],
+                    // 'quantity' => $resp['quantity'],
                     'user_id' => Auth::id(),
                     'store_id' => $store->id,
                     'status' => 1,
                 ]
             );
 
+            // $rows = array_map(function ($option) use ($product, $store) {
+            //     return [
+            //         'product_id' => $product->id,
+            //         'store_id'   => $store->id,
+            //         'name'       => $option['name'],
+            //         'sort_order' => $option['sort_order'],
+            //         'created_at' => now(),
+            //         'updated_at' => now(),
+            //     ];
+            // }, Option::DEFAULT_OPTIONS);
+
+            // Option::insert($rows);4
+
+            Variant::create(
+                [
+                'product_id' => $product->id,
+                'sku' => Str::upper(substr($product->name, 0, 3)) . "-" . $product->id,
+                'price' => 0,
+                'stock' => 0,
+                ]
+            );
+
+
+            // $rows = array_map(function ($option) use ($product, $store) {
+            //     return [
+            //         'product_id' => $product->id,
+            //         'store_id'   => $store->id,
+            //         'name'       => $option['name'],
+            //         'sort_order' => $option['sort_order']
+            //     ];
+            // }, Attribute::DEFAULT_OPTIONS);
+
+            // Attribute::insert($rows);
             //creamos los attributes
 
-            // Attribute::insert(
+            // $options_default = Option::DEFAULT_OPTIONS;
+
+            // foreach ($options_default as $option) {
+            //     Option::create([
+            //         'product_id' => $product->id,
+            //         'store_id' => $store->id,
+            //         'name' => $option['name'],
+            //         'sort_order' => $option['sort_order'],
+            //     ]);
+            // }
+
+            // Option::insert(
             //     [
             //         [
             //             'product_id' => $product->id,
             //             'name' => 'Color',
-            //             'scope' => 'product',
             //             'created_at' => now(),
             //             'updated_at' => now(),
             //         ],
             //         [
             //             'product_id' => $product->id,
             //             'name' => 'Talla',
-            //             'scope' => 'variant',
             //             'created_at' => now(),
             //             'updated_at' => now(),
             //         ],
             //         [
             //             'product_id' => $product->id,
             //             'name' => 'Marca',
-            //             'scope' => 'product',
             //             'created_at' => now(),
             //             'updated_at' => now(),
             //         ],
             //         [
             //             'product_id' => $product->id,
             //             'name' => 'Modelo',
-            //             'scope' => 'product',
             //             'created_at' => now(),
             //             'updated_at' => now(),
             //         ],
             //         [
             //             'product_id' => $product->id,
             //             'name' => 'Material',
-            //             'scope' => 'product',
             //             'created_at' => now(),
             //             'updated_at' => now(),
             //         ]
@@ -163,7 +206,7 @@ class ProductDashboardController extends Controller
 
             DB::commit();
 
-            return responseOk($product, "se agrego correctamente el product en create");
+            return responseOk($product, "se agrego correctamente el product en create con sus opciones");
         } catch (\Throwable $th) {
 
             DB::rollback();
@@ -186,9 +229,6 @@ class ProductDashboardController extends Controller
             $validated = $request->validate([
                 'name'        => 'required|string|max:255',
                 'body'        => 'nullable|string',
-                'brand_id'    => 'required|exists:brands,id',
-                'model'       => 'nullable|string|max:255',
-                'price'       => 'required|numeric|min:0',
                 'category_id' => 'required|exists:categories,id',
                 'status'      => 'nullable|in:0,1', // opcional: 0=inactivo, 1=activo
             ]);
@@ -200,11 +240,8 @@ class ProductDashboardController extends Controller
                 'name'        => $validated['name'],
                 'slug'        => $validated['slug'] ?? Str::slug($validated['name']),
                 'body'        => $validated['body'] ?? $product->body,
-                'brand_id'    => $validated['brand_id'],
-                'model'       => $validated['model'] ?? $product->model,
-                'price'       => $validated['price'],
                 'category_id' => $validated['category_id'],
-                'user_id'     => Auth::id(), // se actualiza con el usuario logueado
+                // 'user_id'     => Auth::id(), // se actualiza con el usuario logueado
                 'status'      => $validated['status'] ?? $product->status,
             ]);
 

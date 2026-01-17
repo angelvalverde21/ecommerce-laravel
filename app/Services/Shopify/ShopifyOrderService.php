@@ -158,6 +158,7 @@ class ShopifyOrderService extends ShopifyBaseService
             sourceName
             displayFinancialStatus
             displayFulfillmentStatus
+            tags
             note
             fulfillmentOrders(first: 20) {
                 edges {
@@ -655,7 +656,7 @@ class ShopifyOrderService extends ShopifyBaseService
                                         first: :limit,
                                         sortKey: CREATED_AT,
                                         reverse: true,
-                                        query: "financial_status:paid cancelled_at:null fulfillment_status:fulfilled",
+                                        query: "financial_status:paid  tag:aylin cancelled_at:null fulfillment_status:fulfilled",
                                         after: :cursor
                                     ) {
                                         pageInfo {

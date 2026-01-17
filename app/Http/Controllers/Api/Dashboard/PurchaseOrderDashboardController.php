@@ -49,13 +49,13 @@ class PurchaseOrderDashboardController extends Controller
             DB::beginTransaction();
 
             $data = $request->validate([
-                'name'          => ['required', 'string', 'max:255'],
+                // 'name'          => ['required', 'string', 'max:255'],
                 'observations'  => ['nullable', 'string'],
                 'supplier_id'   => ['required', 'exists:suppliers,id'],
             ]);
 
             $purchaseOrder = PurchaseOrder::create([
-                'name'         => $data['name'],
+                'name'         => $data['name'] ?? null,
                 'observations' => $data['observations'] ?? null,
                 'supplier_id'  => $data['supplier_id'],
                 'store_id'     => $store->id ?? null,
@@ -72,7 +72,7 @@ class PurchaseOrderDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al eliminar.... ");
+            return responseError($th, "Error al crear la orden de compra.... ");
         }
     }
 

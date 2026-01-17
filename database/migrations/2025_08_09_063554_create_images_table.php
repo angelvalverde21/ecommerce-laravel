@@ -15,16 +15,13 @@ return new class extends Migration
 
             $table->id();
 
-            $table->string('alt')->nullable();
-            $table->integer('position')->default(0);
+            $table->string('name')->nullable(); //guarda el nombre original del archivo
+            $table->string('title')->nullable();// titulo de la imagen (opcional)
+            $table->string('thumbnail')->nullable();
+            $table->string('medium')->nullable();
+            $table->string('large')->nullable();
 
-            // relación polimórfica
-            $table->morphs('imageable'); // crea imageable_id (bigint) + imageable_type (string)
-
-            $table->string('admin_graphql_api_id')->nullable();
-            $table->integer('width')->nullable();
-            $table->integer('height')->nullable();
-            $table->text('src');
+            $table->morphs('imageable');
 
             $table->timestamps();
             

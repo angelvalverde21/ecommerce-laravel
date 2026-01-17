@@ -33,27 +33,34 @@ class Image extends Model
     public function getUrlThumbnailAttribute()
     {
         // return  Storage::disk('public')->url($this->original);
-        if (strlen($this->thumbnail) > 1) {
+        if (strlen($this->thumbnail) > 1 && !(substr($this->thumbnail, 0, 4) === 'http')) {
 
             return asset(Storage::url(Image::DIR_ROOT . '/' . $this->thumbnail));
+        }else{
+            
+            return $this->thumbnail;
         }
     }
 
     public function getUrlMediumAttribute()
     {
         // return  Storage::disk('public')->url($this->original);
-        if (strlen($this->medium) > 1) {
+        if (strlen($this->medium) > 1 && !(substr($this->thumbnail, 0, 4) === 'http')) {
 
             return asset(Storage::url(Image::DIR_ROOT . '/' . $this->medium));
+        }else{
+            return $this->medium;
         }
     }
 
     public function getUrlLargeAttribute()
     {
         // return  Storage::disk('public')->url($this->original);
-        if (strlen($this->large) > 1) {
+        if (strlen($this->large) > 1 && !(substr($this->thumbnail, 0, 4) === 'http')) {
 
             return asset(Storage::url(Image::DIR_ROOT . '/' . $this->large));
+        }else{
+            return $this->large;
         }
     }
 }

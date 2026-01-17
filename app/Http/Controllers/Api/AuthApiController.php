@@ -71,6 +71,7 @@ class AuthApiController extends Controller
 
 
                 $store = Store::where('slug', $store)->first();
+                $store['options_default'] = $store->options_default;
 
                 Log::info($store);
 
@@ -114,16 +115,13 @@ class AuthApiController extends Controller
                             'message' => 'Inicio de sesion correcto',
                             'data' => $data
                         ]);
-                        
                     } catch (\Throwable $th) {
                         //throw $th;
                         return responseError($th, "El usuario no pertenece a la tienda en linea");
                     }
-
                 } else {
 
                     return responseError("", "El usuario existe pero no pertenece a esta tienda");
-
                 }
             } catch (\Throwable $th) {
                 Log::info($th);

@@ -10,7 +10,7 @@ class Category extends Model
     /** @use HasFactory<\Database\Factories\CategoryFactory> */
     use HasFactory;
 
-        protected $guarded = ['id'];
+    protected $guarded = ['id'];
 
     // protected $appends = [
     //     'profile_photo_url',

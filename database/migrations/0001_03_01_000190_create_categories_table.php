@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Status;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,20 +16,25 @@ return new class extends Migration
             $table->id();
 
             $table->string('name');
+            $table->string('full_name')->nullable();
             $table->string('slug');
             $table->foreignId('parent_id')->nullable()->constrained('categories')->onDelete('cascade');
-            
-            $table->unsignedSmallInteger('sort_order')->default(0);
 
-            $table->boolean('status')->default(true)->comment('1 activo 0 archivado'); //desde -128 a 127
-
-            $table->boolean('is_color')->default(true);
-            $table->boolean('is_size')->default(false);
+            // $table->boolean('is_color')->default(true); //Se elimina porque ahora el producto sera el color, y el modelo collection agrupara a los colores
+            // $table->boolean('is_size')->default(false); //Entonces ahora solo sera necesario consultar si la categoria tiene tallas
 
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('store_id')->constrained()->onDelete('cascade');
 
 
+
+            //======================== Campos comunes ===================================
+
+            $table->string('origin')->nullable();
+            $table->tinyInteger('status')->default(Status::ACTIVE)->comment('Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3'); //desde -128 a 127
+            $table->unsignedTinyInteger('sort_order')->default(0); //del 1 al 255
+
+            //===========================================================================
             $table->timestamps();
         });
     }

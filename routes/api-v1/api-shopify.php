@@ -8,7 +8,7 @@ use App\Http\Controllers\Api\Shopify\ReportShopifyController;
 use App\Http\Controllers\Api\Shopify\SyncShopifyController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->group(function () {
+Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['auth:api'])->group(function () {
 
     Route::prefix('orders')->group(function () {
 

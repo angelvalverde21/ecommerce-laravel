@@ -3,12 +3,19 @@
 namespace App\Services\Shopify;
 
 use App\Helpers\GraphQLResponseHelper;
+use App\Models\Category;
+use App\Models\Price;
+use App\Models\Product;
 use App\Models\ShopifyProduct;
 use App\Models\ShopifyVariant;
+use App\Models\Size;
+use App\Models\Status;
+use App\Models\Store;
 use App\Services\Shopify\ShopifyBaseService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ShopifyProductService extends ShopifyBaseService
 {
@@ -110,7 +117,7 @@ class ShopifyProductService extends ShopifyBaseService
         ];
     }
 
-    public function sync(): array
+    public function sync_(Store $store): array
     {
         //
 
@@ -221,7 +228,8 @@ class ShopifyProductService extends ShopifyBaseService
 
         //================ INICIAMOS LA SCINRONIZACIÓN EN LA BASE DE DATOS LOCAL ====//
 
-        $this->syncProducts($products->toArray());
+        $this->syncProductsShopify($products->toArray(), $store);
+        $this->syncProductsErp($products->toArray(), $store);
 
         return [
             'data' => json_decode(json_encode($products)),
@@ -235,9 +243,136 @@ class ShopifyProductService extends ShopifyBaseService
         // Construir el periodo completo
     }
 
-    public function syncProducts(array $products)
+    public function sync(Store $store): array
     {
+        $cacheKey = "shopify:products:raw:storex:{$store->id}";
+        $ttl = now()->addHours(6);
+
+        // ============================================================
+        // 🔐 INICIO CACHE — SOLO DATA DE SHOPIFY
+        // ============================================================
+        $products = Cache::remember($cacheKey, $ttl, function () use ($store) {
+
+            // -------------------------------------------------------------
+            // 1️⃣ — QUERY GRAPHQL
+            // -------------------------------------------------------------
+
+            $queryTemplate = <<<GRAPHQL
+                    {
+                        products(
+                            first: 100,
+                            after: :cursor,
+                            sortKey: CREATED_AT,
+                            reverse: true
+                        ) {
+                            edges {
+                                cursor
+                                node {
+                                    id
+                                    title
+                                    bodyHtml
+                                    vendor
+                                    productType
+                                    handle
+                                    createdAt
+                                    updatedAt
+                                    onlineStoreUrl
+                                    status
+                                    tags
+                                    category {
+                                        id
+                                        name
+                                        fullName
+                                    }
+                                    variants(first: 10) {
+                                        edges {
+                                            node {
+                                            id
+                                            title
+                                            price
+                                            compareAtPrice
+                                            inventoryQuantity
+                                            }
+                                        }
+                                    }
+                                    options {
+                                        id
+                                        name
+                                        values
+                                    }
+                                    images(first: 10) {
+                                        edges {
+                                            node {
+                                            id
+                                            src
+                                            }
+                                        }
+                                    }
+                                    featuredImage {
+                                        id
+                                        src
+                                    }
+                                }
+                            }
+                            pageInfo {
+                                hasNextPage
+                                hasPreviousPage,
+                                endCursor
+                            }
+                        }
+                    }
+                    GRAPHQL;
+
+            $queryBuilder = function (?string $cursor) use ($queryTemplate) {
+                return str_replace(
+                    [':cursor'],
+                    [$cursor ? "\"$cursor\"" : 'null'],
+                    $queryTemplate
+                );
+            };
+
+            // -------------------------------------------------------------
+            // 2️⃣ — CONSULTA SHOPIFY (solo si no hay cache)
+            // -------------------------------------------------------------
+            $result = $this->getDataFromShopify(
+                'products',
+                $queryBuilder,
+                ['variants']
+            );
+
+            return collect($result['items'] ?? []);
+        });
+        // ============================================================
+        // 🔐 FINAL CACHE — desde aquí TODO usa data cacheada
+        // ============================================================
+
+        if ($products->isEmpty()) {
+            Log::warning('Shopify sync: productos vacíos');
+        }
+
+        // ============================================================
+        // 🔁 ESTOS MÉTODOS SE EJECUTAN SIEMPRE (PERO CON DATA CACHEADA)
+        // ============================================================
+        $this->syncProductsShopify($products->toArray(), $store);
+        $this->syncProductsErp($products->toArray(), $store);
+
+        return [
+            'data' => json_decode(json_encode($products)),
+        ];
+    }
+
+    public function syncProductsShopify(array $products, Store $store)
+    {
+
+        $i = 0;
+
         foreach ($products as $p) {
+
+            $i++;
+
+            if ($i <= 1) {
+                Log::info($p);
+            }
 
             // ----------------------------------------------
             // 1) GUARDAR / ACTUALIZAR PRODUCTO
@@ -283,6 +418,116 @@ class ShopifyProductService extends ShopifyBaseService
             'synced' => count($products),
             'status' => 'OK'
         ];
+    }
+
+    public function syncProductsErp(array $products, Store $store)
+    {
+        foreach ($products as $p) {
+
+            // ----------------------------------------------
+            // 1) GUARDAR / ACTUALIZAR LA CATEGORIA
+            // ----------------------------------------------
+
+            $category = Category::updateOrCreate(
+                [
+                    'origin' => $p['category']['id'] ?? null // GID
+                ],
+                [
+                    'name' => $p['category']['name'] ?? "Predeterminado",
+                    'full_name' => $p['category']['fullName'] ?? "Predeterminado",
+                    'status' => 1,
+                    'is_color' => 0,
+                    'is_size' => 1,
+                    'slug' => Str::slug($p['category']['name'] ?? "Predeterminado"),
+                    'user_id' => auth()->id(),
+                    'store_id' => $store->id,
+                ]
+            );
+
+
+            // ----------------------------------------------
+            // 1) GUARDAR / ACTUALIZAR PRODUCTO
+            // ----------------------------------------------
+
+            $product = Product::updateOrCreate(
+                [
+                    'origin'   => $p['id'],
+                    'store_id' => $store->id
+                ],
+                [
+                    'name' => $p['title'],
+                    'status' => $this->mapShopifyStatus($p['status'] ?? null),
+                    'slug' => Str::slug($p['title']) . '-' . $store->id,
+                    'online_store_url' => $p['onlineStoreUrl'] ?? null,
+                    'user_id' => auth()->id(),
+                    'store_id' => $store->id,
+                    'category_id' => $category->id,
+                    // Conversión obligatoria
+                    'created_at' => Carbon::parse($p['createdAt'])->toDateTimeString(),
+                    'updated_at' => Carbon::parse($p['updatedAt'])->toDateTimeString(),
+                ]
+            );
+
+            $src = $p['featuredImage']['src'] ?? null;
+
+            $product->images()->create(
+                [
+                    'title' => $p['title'] ?? null,
+                    'name' => $src ?? null,
+                    'thumbnail' => shopify_image_by_height($src, 300),
+                    'medium'    => shopify_image_by_height($src, 800),
+                    'large'     => shopify_image_by_height($src, 1200),
+                ]
+            );
+
+            // ----------------------------------------------
+            // 2) GUARDAR VARIANTES
+            // ----------------------------------------------
+            foreach ($p['variants'] as $v) {
+
+                $size = Size::updateOrCreate(
+                    [
+                        'origin' => $v['id'], // GID
+                    ],
+                    [
+                        'name' => $v['title'],
+                        'sort_order' => 0,
+                        'quantity' => $v['quantity'] ?? 0,
+                        'product_id' => $product->id,
+                    ]
+                );
+
+                // $size->prices()->updateOrCreate(
+                //     ['type' => Price::ETIQUETA],
+                //     ['value' => (float) $v['compareAtPrice']]
+                // );
+
+                $size->prices()->updateOrCreate(
+                    ['name' => Price::ETIQUETA], //el primero se usa para evitar duplicados
+                    ['value' => (float) $v['compareAtPrice']]
+                );
+
+                $size->prices()->updateOrCreate(
+                    ['name' =>  Price::OFERTA], //el primero se usa para evitar duplicados
+                    ['value' => (float) $v['price']]
+                );
+            }
+        }
+
+        return [
+            'synced' => count($products),
+            'status' => 'OK'
+        ];
+    }
+
+    private function mapShopifyStatus(?string $status): int
+    {
+        return match ($status) {
+            'ACTIVE'   => Status::ACTIVE,
+            'DRAFT'    => Status::DRAFT,
+            'ARCHIVED' => Status::ARCHIVED,
+            default    => Status::DRAFT, // fallback seguro
+        };
     }
 
     public function getProducts(

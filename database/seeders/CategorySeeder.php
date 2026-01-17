@@ -22,58 +22,86 @@ class CategorySeeder extends Seeder
         $categories = [
             [
                 'name' => 'Ropa',
-                'is_color' => true,
-                'is_size' => true,
+                'full_name' => 'Ropa',
                 'children' => [
-                    ['name' => 'Hombre'],
-                    ['name' => 'Mujer'],
-                    ['name' => 'Niños'],
+                    [
+                        'name' => 'Hombre',
+                        'full_name' => 'Ropa > Hombre'
+                    ],
+                    [
+                        'name' => 'Mujer',
+                        'full_name' => 'Ropa > Mujer'
+                    ],
+                    [
+                        'name' => 'Niños',
+                        'full_name' => 'Ropa > Niños'
+                    ],
                 ],
             ],
             [
                 'name' => 'Calzado',
-                'is_color' => true,
-                'is_size' => true,
+                'full_name' => 'Calzado',
                 'children' => [
-                    ['name' => 'Zapatillas'],
-                    ['name' => 'Botas'],
-                    ['name' => 'Sandalias'],
+
+                    [
+                        'name' => 'Zapatillas',
+                        'full_name' => 'Calzado > Zapatillas'
+
+                    ],
+
+                    [
+                        'name' => 'Botas',
+                        'full_name' => 'Calzado > Botas'
+
+                    ],
+
+                    [
+                        'name' => 'Sandalias',
+                        'full_name' => 'Calzado > Sandalias'
+
+                    ],
                 ],
             ],
             [
                 'name' => 'Accesorios',
-                'is_color' => true,
-                'is_size' => false,
+                'full_name' => 'Accesorios',
                 'children' => [
-                    ['name' => 'Bolsos'],
-                    ['name' => 'Gorros'],
-                    ['name' => 'Cinturones'],
+                    [
+                        'name' => 'Bolsos',
+                        'full_name' => 'Accesorios > Bolsos'
+
+                    ],
+                    [
+                        'name' => 'Gorros',
+                        'full_name' => 'Accesorios > Gorros'
+
+                    ],
+                    [
+                        'name' => 'Cinturones',
+                        'full_name' => 'Accesorios > Cinturones'
+
+                    ],
                 ],
             ],
             [
                 'name' => 'Belleza y Cuidado Personal',
-                'is_color' => false,
-                'is_size' => false,
+                'full_name' => 'Belleza y Cuidado Personal',
             ],
             [
                 'name' => 'Hogar y Decoración',
-                'is_color' => false,
-                'is_size' => false,
+                'full_name' => 'Hogar y Decoración',
             ],
             [
                 'name' => 'Electrónica',
-                'is_color' => false,
-                'is_size' => false,
+                'full_name' => 'Electrónica',
             ],
             [
                 'name' => 'Deportes y Fitness',
-                'is_color' => true,
-                'is_size' => true,
+                'full_name' => 'Deportes y Fitness',
             ],
             [
                 'name' => 'Ofertas',
-                'is_color' => true,
-                'is_size' => false,
+                'full_name' => 'Ofertas',
             ],
         ];
 
@@ -84,12 +112,11 @@ class CategorySeeder extends Seeder
                 ['slug' => Str::slug($catData['name'])],
                 [
                     'name' => $catData['name'],
+                    'full_name' => $catData['full_name'],
                     'slug' => Str::slug($catData['name']),
                     'parent_id' => null,
                     'sort_order' => $sortOrder++,
                     'status' => true,
-                    'is_color' => $catData['is_color'] ?? true,
-                    'is_size' => $catData['is_size'] ?? false,
                     'user_id' => $userId,
                     'store_id' => $storeId,
                 ]
@@ -100,18 +127,18 @@ class CategorySeeder extends Seeder
                 $childSort = 1;
 
                 foreach ($catData['children'] as $child) {
+                    
                     Category::updateOrCreate(
                         [
                             'slug' => Str::slug($child['name']),
                         ],
                         [
                             'name' => $child['name'],
+                            'full_name' => $child['full_name'],
                             'slug' => Str::slug($child['name']),
                             'parent_id' => $category->id,
                             'sort_order' => $childSort++,
                             'status' => true,
-                            'is_color' => $catData['is_color'] ?? true,
-                            'is_size' => $catData['is_size'] ?? false,
                             'user_id' => $userId,
                             'store_id' => $storeId,
                         ]

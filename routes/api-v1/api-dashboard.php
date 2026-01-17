@@ -2,12 +2,18 @@
 
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
+use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
 use App\Http\Controllers\Api\Dashboard\BrandDashboardController;
 use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
 use App\Http\Controllers\Api\Dashboard\ColorDashboardController;
 use App\Http\Controllers\Api\Dashboard\CustomerDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
+use App\Http\Controllers\Api\Dashboard\GalleryDashboardController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageDashboardController;
+use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
+use App\Http\Controllers\Api\Dashboard\OptionDashboardController;
+use App\Http\Controllers\Api\Dashboard\OptionValueDashboardController;
+use App\Http\Controllers\Api\Dashboard\PriceDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseOrderDashboardController;
@@ -141,14 +147,42 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
             Route::prefix('images')->group(function () {
 
-                Route::get('/', [ImageDashboardController::class, 'index']); //Listar
-                Route::post('/', [ImageDashboardController::class, 'store']); //create
+                Route::get('/', [ImageProductController::class, 'index']); //Listar
+                Route::post('/', [ImageProductController::class, 'store']); //create
 
                 Route::prefix('{brand_id}')->group(function () {
 
-                    Route::get('/', [ImageDashboardController::class, 'show']); //show o mostrar por id
-                    Route::put('/', [ImageDashboardController::class, 'update']); //actualizar
-                    Route::delete('/', [ImageDashboardController::class, 'destroy']); //borrar
+                    Route::get('/', [ImageProductController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [ImageProductController::class, 'update']); //actualizar
+                    Route::delete('/', [ImageProductController::class, 'destroy']); //borrar
+
+                });
+            });
+
+            Route::prefix('prices')->group(function () {
+
+                Route::get('/', [PriceDashboardController::class, 'index']); //Listar
+                Route::post('/', [PriceDashboardController::class, 'store']); //create
+
+                Route::prefix('{price_id}')->group(function () {
+
+                    Route::get('/', [PriceDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [PriceDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [PriceDashboardController::class, 'destroy']); //borrar
+
+                });
+            });
+
+            Route::prefix('attributes')->group(function () {
+
+                Route::get('/', [AttributeDashboardController::class, 'index']); //Listar
+                Route::post('/', [AttributeDashboardController::class, 'store']); //create
+
+                Route::prefix('{attribute_id}')->group(function () {
+
+                    Route::get('/', [AttributeDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [AttributeDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [AttributeDashboardController::class, 'destroy']); //borrar
 
                 });
             });
@@ -183,8 +217,58 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 });
             });
-        });
+
+            Route::prefix('options')->group(function () {
+
+                Route::get('/', [OptionDashboardController::class, 'index']); //Listar
+                Route::post('/', [OptionDashboardController::class, 'store']); //create
+
+                Route::prefix('{option_id}')->group(function () {
+
+                    Route::get('/', [OptionDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [OptionDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [OptionDashboardController::class, 'destroy']); //borrar
+
+                    Route::prefix('galleries')->group(function () {
+
+                        Route::get('/', [GalleryDashboardController::class, 'index']); //Listar
+                        Route::post('/', [GalleryDashboardController::class, 'store']); //create
+
+                        Route::prefix('{Gallery_id}')->group(function () {
+
+                            Route::get('/', [GalleryDashboardController::class, 'show']); //show o mostrar por id
+                            Route::put('/', [GalleryDashboardController::class, 'update']); //actualizar
+                            Route::delete('/', [GalleryDashboardController::class, 'destroy']); //borrar
+
+                        });
+                    });
+                    //option_values
+
+
+                    Route::prefix('values')->group(function () {
+
+                        Route::get('/', [OptionValueDashboardController::class, 'index']); //Listar
+                        Route::post('/', [OptionValueDashboardController::class, 'store']); //create
+
+                        Route::prefix('{option_value_id}')->group(function () {
+
+                            Route::get('/', [OptionValueDashboardController::class, 'show']); //show o mostrar por id
+                            Route::put('/', [OptionValueDashboardController::class, 'update']); //actualizar
+                            Route::delete('/', [OptionValueDashboardController::class, 'destroy']); //borrar
+
+                        });
+                    });
+                });
+            });
+        }); //fin de product_id
+
+
+        //options
+
+
     });
+
+
 
 
     Route::prefix('brands')->group(function () {
@@ -202,49 +286,45 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('units')->group(function () {
-    
+
         Route::get('/', [UnitDashboardController::class, 'index']); //Listar
         Route::post('/', [UnitDashboardController::class, 'store']); //create
-    
+
         Route::prefix('{Unit_id}')->group(function () {
-    
+
             Route::get('/', [UnitDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [UnitDashboardController::class, 'update']); //actualizar
             Route::delete('/', [UnitDashboardController::class, 'destroy']); //borrar
-    
+
         });
-    
     });
 
 
     Route::prefix('purchases')->group(function () {
 
         Route::prefix('orders')->group(function () {
-        
+
             Route::get('/', [PurchaseOrderDashboardController::class, 'index']); //Listar
             Route::post('/', [PurchaseOrderDashboardController::class, 'store']); //create
-        
+
             Route::prefix('{purchase_order_id}')->group(function () {
-        
+
                 Route::get('/', [PurchaseOrderDashboardController::class, 'show']); //show o mostrar por id
                 Route::put('/', [PurchaseOrderDashboardController::class, 'update']); //actualizar
                 Route::delete('/', [PurchaseOrderDashboardController::class, 'destroy']); //borrar
-        
+
             });
-        
         });
-    
+
         Route::get('/', [PurchaseDashboardController::class, 'index']); //Listar
         Route::post('/', [PurchaseDashboardController::class, 'store']); //create
-    
+
         Route::prefix('{Purchase_id}')->group(function () {
-    
+
             Route::get('/', [PurchaseDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [PurchaseDashboardController::class, 'update']); //actualizar
             Route::delete('/', [PurchaseDashboardController::class, 'destroy']); //borrar
-    
-        });
-    
-    });
 
+        });
+    });
 });
