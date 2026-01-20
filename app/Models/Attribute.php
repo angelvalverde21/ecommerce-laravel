@@ -14,15 +14,18 @@ class Attribute extends Model
 
     const DEFAULT_OPTIONS = [
         [
-            'name' => 'Marca',
+            'name' => 'brand',
+            'label' => 'Marca', //Ejemplo Garmin
             'sort_order' => 1,
         ],
         [
-            'name' => 'Modelo',
+            'name' => 'model',
+            'label' => 'Modelo', //Ejemplo NUVI 1300
             'sort_order' => 2,
         ],
-                    [
-            'name' => 'Material',
+        [
+            'name' => 'material',
+            'label' => 'Material',
             'sort_order' => 3,
         ],
     ];
@@ -31,6 +34,4 @@ class Attribute extends Model
     {
         return $this->hasMany(AttributeValue::class, 'attribute_id')->orderBy('sort_order', 'ASC');
     }
-
-
 }

@@ -33,6 +33,22 @@ class StoreUserSeeder extends Seeder
                     "updated_at" => now(),
                 ],
 
+                [
+                    "id" => 3,
+                    "user_id" => 3,
+                    "store_id" => 1,
+                    "created_at" => now(),
+                    "updated_at" => now(),
+                ],
+
+                [
+                    "id" => 4,
+                    "user_id" => 4,
+                    "store_id" => 1,
+                    "created_at" => now(),
+                    "updated_at" => now(),
+                ],
+
             ]
         );
     }

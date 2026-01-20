@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Option;
+use App\Models\OptionValue;
+use App\Observers\OptionObserver;
+use App\Observers\OptionValueObserver;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,5 +25,7 @@ class AppServiceProvider extends ServiceProvider
     {
         //
         //  app()->usePublicPath('/home/tecnoplanet/3b.pe/laravel');
+        Option::observe(OptionObserver::class);
+        OptionValue::observe(OptionValueObserver::class);
     }
 }

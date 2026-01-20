@@ -14,16 +14,14 @@ class StoreSeeder extends Seeder
     public function run(): void
     {
         //
-        Store::insert([
-            [
-                "id" => 1,
-                "name" => "sorelle",
-                "phone" => "943402809",
-                "email" => "ara@3b.pe",
-                "slug" => "sorelle",
-                "identity_id" => "2", //2 es RUC
-                "document_number" => "20478907009",
-            ],
+        Store::create([
+            "id" => 1,
+            "name" => "sorelle",
+            "phone" => "943402809",
+            "email" => "ara@3b.pe",
+            "slug" => "sorelle",
+            "identity_id" => "2", //2 es RUC
+            "document_number" => "20478907009",
         ]);
     }
 }

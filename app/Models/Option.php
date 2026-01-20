@@ -10,30 +10,17 @@ class Option extends Model
 
     const DEFAULT_OPTIONS = [
         [
+            'multiple' => true, //como las variables son multples entraran al producto cartesiano
             'name' => 'color',
             'label' => 'Colores',
             'sort_order' => 1,
         ],
         [
+            'multiple' => true, //como las variables son multples entraran al producto cartesiano
             'name' => 'size',
             'label' => 'Tallas',
             'sort_order' => 2,
-        ],
-        [
-            'name' => 'brand',
-            'label' => 'Marca',
-            'sort_order' => 3,
-        ],
-        [
-            'name' => 'model',
-            'label' => 'Modelo',
-            'sort_order' => 4,
-        ],
-        [
-            'name' => 'material',
-            'label' => 'Material',
-            'sort_order' => 5,
-        ],
+        ]
 
     ];
 

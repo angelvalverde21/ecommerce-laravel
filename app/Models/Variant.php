@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\ActiveVariantScope;
 use Illuminate\Database\Eloquent\Model;
 
 class Variant extends Model
@@ -15,6 +16,11 @@ class Variant extends Model
         'stock',
         'status',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new ActiveVariantScope);
+    }
 
     public function product()
     {
@@ -33,7 +39,8 @@ class Variant extends Model
         )->with('option');
     }
 
-    public function variant_option_values(){
+    public function variant_option_values()
+    {
         return $this->hasMany(VariantOptionValue::class);
     }
 }
