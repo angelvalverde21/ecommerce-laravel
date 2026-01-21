@@ -872,4 +872,32 @@ class ShopifyOrderService extends ShopifyBaseService
             'lastCursor' => $result['lastCursor'] ?? null,
         ];
     }
+
+    public function create($input){
+
+        $query = <<<GRAPHQL
+                    mutation orderCreate($input: OrderInput!) {
+                        orderCreate(input: $input) {
+                            order {
+                            id
+                            name
+                            displayFinancialStatus
+                            displayFulfillmentStatus
+                            totalPriceSet {
+                                shopMoney {
+                                amount
+                                currencyCode
+                                }
+                            }
+                            }
+                            userErrors {
+                            field
+                            message
+                            }
+                        }
+                        }
+                    }
+                GRAPHQL;
+    }
+                
 }
