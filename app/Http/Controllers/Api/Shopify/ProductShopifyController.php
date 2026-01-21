@@ -144,8 +144,11 @@ class ProductShopifyController extends Controller
         $variants = $request->all();
 
         foreach ($variants as $v) {
+
             ShopifyVariant::where('id', $v['id'])->update([
-                'price_normal'      => $v['price_normal'],
+                'price_etiqueta'    => $v['price_etiqueta'],
+                'price_oferta'      => $v['price_oferta'],
+                'price_sale'        => $v['price_sale'],
                 'price_wholesaler'  => $v['price_wholesaler'],
                 'price_live'        => $v['price_live'],
                 'price_blackfriday' => $v['price_blackfriday'],
@@ -166,7 +169,9 @@ class ProductShopifyController extends Controller
 
         // Armamos el payload de actualización
         $data = [
-            'price_normal'      => $request->price_normal,
+            'price_etiqueta'    => $request->price_etiqueta,
+            'price_oferta'      => $request->price_oferta,
+            'price_sale'        => $request->price_sale,
             'price_wholesaler'  => $request->price_wholesaler,
             'price_live'        => $request->price_live,
             'price_blackfriday' => $request->price_blackfriday,

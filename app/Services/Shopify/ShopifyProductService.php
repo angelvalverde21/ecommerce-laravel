@@ -242,117 +242,104 @@ class ShopifyProductService extends ShopifyBaseService
 
         // Construir el periodo completo
     }
-
+    
     public function sync(Store $store): array
     {
-        $cacheKey = "shopify:products:raw:storex:{$store->id}";
-        $ttl = now()->addHours(6);
-
-        // ============================================================
-        // 🔐 INICIO CACHE — SOLO DATA DE SHOPIFY
-        // ============================================================
-        $products = Cache::remember($cacheKey, $ttl, function () use ($store) {
-
-            // -------------------------------------------------------------
-            // 1️⃣ — QUERY GRAPHQL
-            // -------------------------------------------------------------
-
-            $queryTemplate = <<<GRAPHQL
-                    {
-                        products(
-                            first: 100,
-                            after: :cursor,
-                            sortKey: CREATED_AT,
-                            reverse: true
-                        ) {
-                            edges {
-                                cursor
-                                node {
-                                    id
-                                    title
-                                    bodyHtml
-                                    vendor
-                                    productType
-                                    handle
-                                    createdAt
-                                    updatedAt
-                                    onlineStoreUrl
-                                    status
-                                    tags
-                                    category {
-                                        id
-                                        name
-                                        fullName
-                                    }
-                                    variants(first: 10) {
-                                        edges {
-                                            node {
-                                            id
-                                            title
-                                            price
-                                            compareAtPrice
-                                            inventoryQuantity
-                                            }
-                                        }
-                                    }
-                                    options {
-                                        id
-                                        name
-                                        values
-                                    }
-                                    images(first: 10) {
-                                        edges {
-                                            node {
-                                            id
-                                            src
-                                            }
-                                        }
-                                    }
-                                    featuredImage {
-                                        id
-                                        src
-                                    }
-                                }
-                            }
-                            pageInfo {
-                                hasNextPage
-                                hasPreviousPage,
-                                endCursor
+        // -------------------------------------------------------------
+        // 1️⃣ — QUERY GRAPHQL
+        // -------------------------------------------------------------
+        $queryTemplate = <<<GRAPHQL
+    {
+        products(
+            first: 100,
+            after: :cursor,
+            sortKey: CREATED_AT,
+            reverse: true
+        ) {
+            edges {
+                cursor
+                node {
+                    id
+                    title
+                    bodyHtml
+                    vendor
+                    productType
+                    handle
+                    createdAt
+                    updatedAt
+                    onlineStoreUrl
+                    status
+                    tags
+                    category {
+                        id
+                        name
+                        fullName
+                    }
+                    variants(first: 10) {
+                        edges {
+                            node {
+                                id
+                                title
+                                price
+                                compareAtPrice
+                                inventoryQuantity
                             }
                         }
                     }
-                    GRAPHQL;
+                    options {
+                        id
+                        name
+                        values
+                    }
+                    images(first: 10) {
+                        edges {
+                            node {
+                                id
+                                src
+                            }
+                        }
+                    }
+                    featuredImage {
+                        id
+                        src
+                    }
+                }
+            }
+            pageInfo {
+                hasNextPage
+                hasPreviousPage
+                endCursor
+            }
+        }
+    }
+    GRAPHQL;
 
-            $queryBuilder = function (?string $cursor) use ($queryTemplate) {
-                return str_replace(
-                    [':cursor'],
-                    [$cursor ? "\"$cursor\"" : 'null'],
-                    $queryTemplate
-                );
-            };
-
-            // -------------------------------------------------------------
-            // 2️⃣ — CONSULTA SHOPIFY (solo si no hay cache)
-            // -------------------------------------------------------------
-            $result = $this->getDataFromShopify(
-                'products',
-                $queryBuilder,
-                ['variants']
+        $queryBuilder = function (?string $cursor) use ($queryTemplate) {
+            return str_replace(
+                [':cursor'],
+                [$cursor ? "\"$cursor\"" : 'null'],
+                $queryTemplate
             );
+        };
 
-            return collect($result['items'] ?? []);
-        });
-        // ============================================================
-        // 🔐 FINAL CACHE — desde aquí TODO usa data cacheada
-        // ============================================================
+        // -------------------------------------------------------------
+        // 2️⃣ — CONSULTA DIRECTA A SHOPIFY (SIEMPRE)
+        // -------------------------------------------------------------
+        $result = $this->getDataFromShopify(
+            'products',
+            $queryBuilder,
+            ['variants']
+        );
+
+        $products = collect($result['items'] ?? []);
 
         if ($products->isEmpty()) {
             Log::warning('Shopify sync: productos vacíos');
         }
 
-        // ============================================================
-        // 🔁 ESTOS MÉTODOS SE EJECUTAN SIEMPRE (PERO CON DATA CACHEADA)
-        // ============================================================
+        // -------------------------------------------------------------
+        // 3️⃣ — SYNC A ERP / DB
+        // -------------------------------------------------------------
         $this->syncProductsShopify($products->toArray(), $store);
         $this->syncProductsErp($products->toArray(), $store);
 
@@ -360,6 +347,7 @@ class ShopifyProductService extends ShopifyBaseService
             'data' => json_decode(json_encode($products)),
         ];
     }
+
 
     public function syncProductsShopify(array $products, Store $store)
     {
