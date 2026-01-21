@@ -21,6 +21,8 @@ class UserSeeder extends Seeder
     {
 
 
+        //====================== Creando el primer usuarios ============
+
         $user = User::create(
             [
                 "id" => 1,
@@ -35,7 +37,11 @@ class UserSeeder extends Seeder
             ],
         );
 
-        $user->assignRole(['master', 'ceo']);
+        //asignar su rol
+
+        $user->assignRole(['master']);
+
+        //===================== Creando el segundo usuario =============
 
         $user = User::create(
             [
@@ -51,7 +57,20 @@ class UserSeeder extends Seeder
             ],
         );
 
+        //Asignar su rol
+
         $user->assignRole(['master', 'ceo']);
+
+        //Asignarlo como empleado
+
+        Employee::create(
+            [
+                'user_id' => $user->id,
+                'salary' => 1500,
+            ]
+        );
+
+        //===================== Creando el tercer usuario =============
 
         $user = User::create(
             [
@@ -67,6 +86,9 @@ class UserSeeder extends Seeder
             ],
         );
 
+        $user->assignRole(['sales']);
+
+
         Employee::create(
             [
                 'user_id' => $user->id,
@@ -74,7 +96,7 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $user->assignRole(['sales']);
+        //===================== Creando el cuarto usuario =============
 
         $user = User::create(
             [
@@ -99,11 +121,13 @@ class UserSeeder extends Seeder
 
         $user->assignRole(['sales']);
 
-                $user = User::create(
+        //===================== Creando el Quinto usuario =============
+
+        $user = User::create(
             [
                 "id" => 5,
                 "name" => 'Pamela',
-                "email" => 'pamela@3b.pe',
+                "email" => 'sorelle@3b.pe',
                 "password" => bcrypt("76935223"),
                 "phone" => '000000000',
                 "document_number" => '927463297',
@@ -121,7 +145,5 @@ class UserSeeder extends Seeder
         );
 
         $user->assignRole(['ceo']);
-
-        
     }
 }
