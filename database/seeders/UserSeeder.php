@@ -76,9 +76,9 @@ class UserSeeder extends Seeder
             [
                 "id" => 3,
                 "name" => 'Jennifer',
-                "email" => 'jeni@3b.pe',
-                "password" => bcrypt("12345678"),
-                "phone" => '904086292',
+                "email" => 'jenni@3b.pe',
+                "password" => bcrypt("74641638"),
+                "phone" => '963126332',
                 "document_number" => '74641638',
                 "identity_id" => 1, //dni
                 "created_at" => now(),
@@ -101,11 +101,11 @@ class UserSeeder extends Seeder
         $user = User::create(
             [
                 "id" => 4,
-                "name" => 'Aylin',
+                "name" => 'Aylin Sosa',
                 "email" => 'aylin@3b.pe',
-                "password" => bcrypt("12345678"),
-                "phone" => '000000000',
-                "document_number" => '00000000',
+                "password" => bcrypt("72700998"),
+                "phone" => '945574155',
+                "document_number" => '72700998',
                 "identity_id" => 1, //dni
                 "created_at" => now(),
                 "updated_at" => now(),

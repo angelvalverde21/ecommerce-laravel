@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\public\StorePublicController;
 use App\Http\Controllers\Api\public\WebPublicController;
+use App\Http\Controllers\Api\Shopify\App\AppShopifyController;
 // use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -31,11 +32,15 @@ Route::prefix('v1/public')->middleware('api')->group(function () {
 
         Route::get('/', [StorePublicController::class, 'show']);
         Route::post('/login', [AuthApiController::class, 'login']);
-        
+
         Route::get('/tracking/{order_id}', [WebPublicController::class, 'tracking']);
 
-    });
+        Route::prefix('app-shopify')->group(function () {
 
+            Route::post('/tracking', [AppShopifyController::class, 'tracking']); //create
+
+        });
+    });
 });
 
 //https://3b.pe/laravel/api/v1/public/sorelle

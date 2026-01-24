@@ -66,9 +66,39 @@ class ShopifyOrderService extends ShopifyBaseService
         );
     }
 
+
+    public function orderByNumber(string $orderNumber, $includes = ['customer', 'items', 'shippingAddress', 'shippingLines'])
+    {
+        // Shopify espera el #
+        if (!str_starts_with($orderNumber, '#')) {
+            $orderNumber = '#' . $orderNumber;
+        }
+
+        $queryFilter = 'name:' . $orderNumber;
+
+        return $this->fetchOrder(
+            '
+                {
+                    orders(
+                        first: 1,
+                        query: "' . $queryFilter . '"
+                    ) {
+                        edges {
+                            node {
+                                ' . $this->orderQuery($includes) . '
+                            }
+                        }
+                    }
+                }
+            '
+        );
+    }
+
     private function fetchOrders(string $query)
     {
         $response = $this->graphql($query);
+
+        // Log::info($response);
 
         if ($response->failed()) {
             Log::error('Error al obtener 贸rdenes', ['response' => $response]);
@@ -91,6 +121,35 @@ class ShopifyOrderService extends ShopifyBaseService
             'pageInfo'   => $result['pageInfo'] ?? null,
             'lastCursor' => $result['lastCursor'] ?? null,
         ];
+    }
+
+    private function fetchOrder(string $query)
+    {
+        $response = $this->graphql($query);
+
+        // Log::info($response);
+
+        if ($response->failed()) {
+            Log::error('Error al obtener 贸rdenes', ['response' => $response]);
+            return ['error' => 'No se pudieron obtener las 贸rdenes'];
+        }
+
+        $result = GraphQLResponseHelper::normalizeSingle(
+            $response,
+            'orders',
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress', 'fulfillmentOrders']
+        );
+
+        // Log::info("viendo que hay en result");
+
+        // Log::info($result);
+
+        // Aplicar el mapeo solo una vez aqu铆
+        // $orders = collect($result['items'])
+        //     ->map(fn($order) => $this->mapOrder($order))
+        //     ->toArray();
+
+        return $result;
     }
 
     public function ordersQuery(
@@ -184,7 +243,7 @@ class ShopifyOrderService extends ShopifyBaseService
             " . (in_array('events', $includes) ? $this->eventsQuery() : '') . "
         ";
 
-        Log::info($query);
+        // Log::info($query);
 
         return $query;
     }
@@ -873,7 +932,8 @@ class ShopifyOrderService extends ShopifyBaseService
         ];
     }
 
-    public function create($input){
+    public function create($input)
+    {
 
         $query = <<<GRAPHQL
                     mutation orderCreate($input: OrderInput!) {
@@ -899,5 +959,4 @@ class ShopifyOrderService extends ShopifyBaseService
                     }
                 GRAPHQL;
     }
-                
 }

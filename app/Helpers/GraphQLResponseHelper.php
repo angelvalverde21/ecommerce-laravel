@@ -27,7 +27,7 @@ class GraphQLResponseHelper
     /**
      * Normaliza una respuesta GraphQL con estructura edges/nodes
      *
-    */
+     */
     public static function normalize(
         $response,
         string $dataPath,
@@ -110,4 +110,37 @@ class GraphQLResponseHelper
 
         return $node;
     }
+
+    // public static function normalizeSingle(
+    //     $response,
+    //     string $dataPath,
+    //     array $nestedFields = [],
+    //     ?callable $transformer = null
+    // ): ?array {
+
+    //     // Obtener el nodo directamente
+    //     $node = is_array($response)
+    //         ? data_get($response, $dataPath)
+    //         : $response->json($dataPath);
+
+    //     if (!$node) {
+    //         return null;
+    //     }
+
+    //     // Normalizar campos anidados (ej: lineItems, fulfillments, etc)
+    //     foreach ($nestedFields as $field) {
+    //         if (isset($node[$field]['edges'])) {
+    //             $node[$field] = collect($node[$field]['edges'])
+    //                 ->map(fn($e) => $e['node'])
+    //                 ->toArray();
+    //         }
+    //     }
+
+    //     // Aplicar transformación personalizada
+    //     if ($transformer) {
+    //         $node = $transformer($node);
+    //     }
+
+    //     return $node;
+    // }
 }
