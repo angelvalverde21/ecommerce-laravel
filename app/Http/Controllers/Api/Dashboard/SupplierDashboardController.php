@@ -17,6 +17,7 @@ class SupplierDashboardController extends Controller
     public function index()
     {
         try {
+
             $suppliers = User::role('supplier')->get();
 
             return responseOk($suppliers, 'Suppliers obtenidos correctamente');
@@ -65,6 +66,7 @@ class SupplierDashboardController extends Controller
     public function store(Store $store, Request $request)
     {
         try {
+            
             $validated = $request->validate([
                 'name'            => 'required|string|max:255',
                 // 'email'           => 'required|email|unique:users,email',
@@ -90,6 +92,7 @@ class SupplierDashboardController extends Controller
             DB::commit();
 
             return responseOk($user->load('roles'), 'Supplier creado correctamente', 201);
+
         } catch (\Throwable $th) {
             Log::info($th);
             DB::rollBack();

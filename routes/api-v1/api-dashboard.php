@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
 use App\Http\Controllers\Api\Dashboard\BrandDashboardController;
 use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
 use App\Http\Controllers\Api\Dashboard\ColorDashboardController;
+use App\Http\Controllers\Api\Dashboard\CourierDashboardController;
 use App\Http\Controllers\Api\Dashboard\CustomerDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\GalleryDashboardController;
@@ -116,7 +117,20 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         //Esto se encuentra dentro de user porque quiere decir que "un user tiene un perfil de employees (empleado)"
     });
 
-
+    Route::prefix('couriers')->group(function () {
+    
+        Route::get('/', [CourierDashboardController::class, 'index']); //Listar
+        Route::post('/', [CourierDashboardController::class, 'store']); //create
+    
+        Route::prefix('{courier_id}')->group(function () {
+    
+            Route::get('/', [CourierDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [CourierDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [CourierDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
+    });
 
     Route::prefix('categories')->group(function () {
 

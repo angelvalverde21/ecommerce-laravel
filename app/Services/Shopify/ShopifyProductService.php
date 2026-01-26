@@ -242,7 +242,7 @@ class ShopifyProductService extends ShopifyBaseService
 
         // Construir el periodo completo
     }
-    
+
     public function sync(Store $store): array
     {
         // -------------------------------------------------------------
@@ -624,7 +624,7 @@ class ShopifyProductService extends ShopifyBaseService
 
         ShopifyProduct::with('variants')
             ->where('status', 'ACTIVE')
-            ->chunk(50, function ($products) use ($query, $type, $counter) {
+            ->chunk(50, function ($products) use ($query, $type, &$counter) {
 
                 foreach ($products as $product) {
 
@@ -642,11 +642,9 @@ class ShopifyProductService extends ShopifyBaseService
                         }
 
                         $variants[] = [
-                            [
-                                "id" => $variant->shopify_variant_id,
-                                "price" => $price,
-                                "compareAtPrice" => $variant->price_etiqueta,
-                            ],
+                            "id" => $variant->shopify_variant_id,
+                            "price" => $price,
+                            "compareAtPrice" => $variant->price_etiqueta,
                         ];
                     }
 
@@ -661,6 +659,8 @@ class ShopifyProductService extends ShopifyBaseService
                     ];
 
                     $response = $this->graphql($query, $variables)->json();
+
+                    Log::info($response);
 
                     $counter++;
 

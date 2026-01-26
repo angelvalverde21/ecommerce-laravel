@@ -20,9 +20,7 @@ class Supplier extends Model
         //     ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
         // Esto da como resultado una consulta sin los parentesis
         // WHERE products.name LIKE '%term%' OR products.tags LIKE '%term%'
-
-
-
+        
         //Es mejor usar esta consulta porque encapsula el query por si se concatena con otra consulta, esta no se vera afectara
         // porque el resultado final tendra los parentesis
         // WHERE (products.name LIKE '%term%' OR products.tags LIKE '%term%')

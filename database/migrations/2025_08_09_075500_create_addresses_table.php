@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Address;
+use App\Models\Status;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -27,7 +28,7 @@ return new class extends Migration
             $table->string('coordenadas')->nullable();
             $table->string('maps')->nullable();
 
-            $table->tinyInteger('status')->default(Address::PUBLICADO);
+            $table->tinyInteger('status')->default(Status::ACTIVE)->comment('Address::INACTIVE = 0, Address::ACTIVE = 1'); //desde -128 a 127
 
             $table->foreignId('district_id')->constrained()->onDelete('cascade');
 

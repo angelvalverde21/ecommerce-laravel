@@ -12,13 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('attributes', function (Blueprint $table) {
+
             $table->id();
             $table->foreignId('store_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->string('value');
             $table->integer('sort_order')->default(0);
-            $table->unique(['store_id', 'product_id', 'name', 'value']);
+            $table->morphs('attributeable');
+            $table->unique(['attributeable_type', 'attributeable_id', 'store_id','name', 'value']);
             $table->timestamps();
         });
     }

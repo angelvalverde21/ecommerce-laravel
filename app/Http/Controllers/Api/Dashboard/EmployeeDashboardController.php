@@ -20,7 +20,8 @@ class EmployeeDashboardController extends Controller
     {
         //
         try {
-            $employees = User::whereHas('employee')->with('employee')->get(); //Busca los usuarios que esten en la tabla empleados
+            $employees = User::whereHas('employee')->with('employee')->get(); //Busca los usuarios que esten en la tabla empleados, aqui se usa el user como base
+            // $employees = Employee::with('user')->get(); //Aqui se usa el employee como base y trae los datos del user relacionado
 
             return responseOk($employees, "Empleados obtenidos correctamente");
         } catch (\Throwable $th) {
