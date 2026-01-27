@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
 use App\Http\Controllers\Api\Dashboard\ColorDashboardController;
 use App\Http\Controllers\Api\Dashboard\CourierDashboardController;
 use App\Http\Controllers\Api\Dashboard\CustomerDashboardController;
+use App\Http\Controllers\Api\Dashboard\DistrictDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\GalleryDashboardController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageDashboardController;
@@ -47,6 +48,21 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         // });
 
+    });
+
+    Route::prefix('districts')->group(function () {
+
+        Route::get('/', [DistrictDashboardController::class, 'index']); //Listar
+        Route::post('/', [DistrictDashboardController::class, 'store']); //create
+        Route::get('/search/{search?}', [DistrictDashboardController::class, 'search']); //buscar
+
+        Route::prefix('{district_id}')->group(function () {
+
+            Route::get('/', [DistrictDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [DistrictDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [DistrictDashboardController::class, 'destroy']); //borrar
+
+        });
     });
 
     Route::prefix('users')->group(function () {

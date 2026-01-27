@@ -19,7 +19,6 @@ class CourierDashboardController extends Controller
 
 
     protected CourierService $courierService;
-    protected $name;
 
     public function __construct()
     {
@@ -66,7 +65,10 @@ class CourierDashboardController extends Controller
         try {
 
             //Esto quiere decir que si search viene vacio o con espacios en blanco, se llama al index, en caso contrario prosigo y llamo al search
-            return respondePaginateOk(trim($search) ? $this->courierService->search($store, $search, 100) : $this->index($store), 'Courier obtenidos correctamente (search)');
+
+            $couriers = trim($search) ? $this->courierService->search($store, $search, 100) : $this->index($store);
+            return respondePaginateOk($couriers, 'Courier obtenidos correctamente (search)');
+
         } catch (\Throwable $th) {
 
             Log::error($th);
