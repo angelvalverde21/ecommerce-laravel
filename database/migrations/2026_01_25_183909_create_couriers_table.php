@@ -12,21 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('couriers', function (Blueprint $table) {
+            
             $table->id();
 
-            $table->string('name');
-            $table->string('email')->unique()->nullable();
+            $table->foreignId('user_id')->unique()->constrained()->onDelete('cascade');
 
-            $table->tinyInteger('status')
-                ->default(1)
-                ->comment('1 = active, 0 = blocked');
+            //El courier acepta pago contra entrega, osea que el pago se realiza al momento de la entrega
+            $table->boolean('is_cash_on_delivery')->default(false); 
+            $table->boolean('is_freight_collect')->default(false); //El courier acepta flete por cobrar, por ejemplo shalom e indriver
+            $table->boolean('is_express_shipping')->default(false); //El courier acepta envios express (rapidos)
 
-            $table->foreignId('identity_id')->nullable()
-                ->constrained()
-                ->onDelete('cascade'); // DNI, RUC, CE, etc
-
-            $table->string('document_number', 20)->nullable()->unique();
-            // Campos del empleado
             $table->timestamps();
         });
     }

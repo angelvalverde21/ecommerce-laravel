@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\FlatUserResource;
+use App\Models\Customer;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Dashboard\UserRelatedService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,24 +17,49 @@ class CustomerDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        //
-        try {
-            $customers = User::role('customer')
-                ->get(); //Busca los usuarios que esten en la tabla empleados
 
-            return responseOk($customers, "Empleados obtenidos correctamente");
+    protected UserRelatedService $service;
+    protected $name;
+
+    public function __construct()
+    {
+        // Pasamos el modelo que vamos a usar
+        $this->service = new UserRelatedService(Customer::class);
+        $this->name = 'Customers';
+    }
+
+    public function index(Store $store)
+    {
+        try {
+            return respondePaginateOk($this->service->index($store, 25), $this->name . ' obtenidos correctamente');
         } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError($th, "Ha ocurrido un error interno al obtener los datos de los empleados");
+            Log::error($th);
+            return responseError($th, 'Error al obtener ' . $this->name);
+        }
+    }
+
+    public function search(Store $store, $search)
+    {
+
+        try {
+
+            //Esto quiere decir que si search viene vacio o con espacios en blanco, se llama al index, en caso contrario prosigo y llamo al search
+
+            return respondePaginateOk(trim($search) ? $this->service->search($store, $search, 100) : $this->index($store), $this->name . ' obtenidos correctamente (search)');
+        
+        } catch (\Throwable $th) {
+
+            Log::error($th);
+            
+            return responseError($th, 'Error al buscar ' . $this->name);
+
         }
     }
 
     public function blocked()
     {
         try {
-            $customers = User::role('customer')
+            $customers = Customer::with('user') //entity_id=1 quiere decir para los usuarios registrados con dni
                 ->where('status', 0) //solo bloqueados
                 ->get();
 
@@ -42,30 +70,6 @@ class CustomerDashboardController extends Controller
         }
     }
 
-    public function search(Store $store, $search = "")
-    {
-
-        if (trim($search) === '') {
-            return $this->index();
-        }
-
-        try {
-            $customers = User::role('customer')
-                ->where(function ($query) use ($search) {
-                    $query->where('name', 'LIKE', '%' . $search . '%')
-                        ->orWhere('email', 'LIKE', '%' . $search . '%')
-                        ->orWhere('phone', 'LIKE', '%' . $search . '%')
-                        ->orWhere('document_number', 'LIKE', '%' . $search . '%');
-                })
-                ->limit(10)
-                ->get();
-
-            return responseOk($customers, "clientes obtenidos correctamente (search) = " . $search);
-        } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError($th, "Ha ocurrido un error interno al buscar los clientes");
-        }
-    }
 
     /**
      * Show the form for creating a new resource.
@@ -95,21 +99,20 @@ class CustomerDashboardController extends Controller
             DB::beginTransaction();
 
             // 1. CREAR USUARIO
-            $user = User::create([
+            $user = $store->users()->create([
                 'name'            => $validated['name'],
                 'email'           => $validated['email'],
                 'phone'           => $validated['phone'],
                 'document_number' => $validated['document_number'],
-                'identity_id' => 1,
-                'password'        => bcrypt('123456'),
+                'identity_id' => $validated['identity_id'],
+                'password'        => bcrypt($validated['document_number']),
             ]);
 
-            // 3. ASIGNAR ROL DE CLIENTE
-            $user->syncRoles(['customer']);
+            $customer = $user->customer()->create();
 
             DB::commit();
 
-            return responseOk($user->load('roles'), "Customer creado correctamente", 201);
+            return responseOk($customer, "Customer creado correctamente", 201);
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -194,7 +197,6 @@ class CustomerDashboardController extends Controller
             return responseError($th, "Error al actualizar el cliente...");
         }
     }
-
 
     /**
      * Remove the specified resource from storage.

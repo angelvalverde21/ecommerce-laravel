@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\FlatUserResource;
 use App\Models\Employee;
 use App\Models\Store;
 use App\Models\User;
@@ -16,14 +17,17 @@ class EmployeeDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Store $store)
     {
         //
         try {
-            $employees = User::whereHas('employee')->with('employee')->get(); //Busca los usuarios que esten en la tabla empleados, aqui se usa el user como base
-            // $employees = Employee::with('user')->get(); //Aqui se usa el employee como base y trae los datos del user relacionado
 
-            return responseOk($employees, "Empleados obtenidos correctamente");
+            $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar supplier->user en el front sino todo plano
+                $store->employees()->get()
+            );
+
+            return responseOk($employees, 'Employees obtenidos correctamente');
+
         } catch (\Throwable $th) {
             //throw $th;
             return responseError($th, "Ha ocurrido un error interno al obtener los datos de los empleados");
@@ -34,7 +38,7 @@ class EmployeeDashboardController extends Controller
     {
 
         if (trim($search) === '' || $search === null) {
-            return $this->index();
+            return $this->index($store);
         }
 
         try {
@@ -89,28 +93,31 @@ class EmployeeDashboardController extends Controller
             DB::beginTransaction();
 
             // 1. CREAR USUARIO
-            $user = User::create([
+            $user = $store->users()->create([
                 'name'            => $validated['name'],
                 'email'           => $validated['email'],
                 'phone'           => $validated['phone'],
                 'document_number' => $validated['document_number'],
-                'identity_id' => 1,
-                'password'        => bcrypt('123456'),
+                'identity_id'     => $validated['identity_id'],
+                'password'        => bcrypt($validated['document_number']),
             ]);
 
             // 2. CREAR EMPLEADO ASOCIADO
-            Employee::create([
-                'user_id'    => $user->id,
-                'salary'     => $validated['salary'] ?? null,
-                'date_entry' => now(), // FECHA DE CREACIÓN DEL REGISTRO
-            ]);
 
-            // 3. ASIGNAR ROLES (SPATIE)
-            $user->syncRoles($validated['roles']);
+            $employee = $user->employee()->create(
+                [
+                    'salary'     => $validated['salary'] ?? null,
+                    'date_entry' => now(), // FECHA DE CREACIÓN DEL REGISTRO
+                ]
+            );
+
+
+            // 3. ASIGNAR ROLES (SPATIE), osea si se ha mandado roles se les debe asignar aqui
+            $user->syncRoles($validated['roles']); //se agrega el rol del futuro empleado
 
             DB::commit();
 
-            return responseOk($user->load('roles'), "Empleado creado correctamente", 201);
+            return responseOk($employee, "Empleado creado correctamente", 201);
         } catch (\Throwable $th) {
 
             Log::info($th);

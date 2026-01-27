@@ -9,11 +9,7 @@ class Address extends Model
 {
     /** @use HasFactory<\Database\Factories\AddressFactory> */
     use HasFactory;
-
-    CONST BORRADO = 0;
-    CONST PUBLICADO = 1;
-    CONST ARCHIVADO = 2;
-
+    
     protected $guarded = ['id', 'created_at'];
 
     public function district()

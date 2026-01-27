@@ -118,18 +118,18 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('couriers')->group(function () {
-    
+
         Route::get('/', [CourierDashboardController::class, 'index']); //Listar
+        Route::get('/active', [CourierDashboardController::class, 'active']); //Listar
+        Route::get('/blocked', [CourierDashboardController::class, 'blocked']); //Listar
         Route::post('/', [CourierDashboardController::class, 'store']); //create
-    
+        Route::get('/search/{search?}', [CourierDashboardController::class, 'search']); //buscar
+
         Route::prefix('{courier_id}')->group(function () {
-    
             Route::get('/', [CourierDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [CourierDashboardController::class, 'update']); //actualizar
             Route::delete('/', [CourierDashboardController::class, 'destroy']); //borrar
-    
         });
-    
     });
 
     Route::prefix('categories')->group(function () {

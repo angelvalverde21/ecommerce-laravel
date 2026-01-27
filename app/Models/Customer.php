@@ -5,18 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Modelo Employee
+ * Modelo Customer
  *
  * Documentación:
  * file://./readme.md
  */
 
-class Employee extends Model
+class Customer extends Model
 {
     //
-    protected $guarded = ['id', 'created_at'];
 
-    protected $with = ['user'];
+    protected $guarded = ['id', 'created_at'];
 
     public function user()
     {

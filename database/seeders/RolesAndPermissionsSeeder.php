@@ -150,24 +150,18 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             [
                 'id'    => 10,
-                'name'  => 'customer',
-                'title' => 'Cliente',
-                'permissions' => [],
-            ],
-            [
-                'id'    => 11,
                 'name'  => 'supplier',
                 'title' => 'Proveedor',
                 'permissions' => [],
             ],
             [
-                'id'    => 12,
+                'id'    => 11,
                 'name'  => 'wholesaler',
                 'title' => 'Mayorista',
                 'permissions' => [],
             ],
             [
-                'id'    => 13,
+                'id'    => 12,
                 'name'  => 'packing',
                 'title' => 'Empaque',
                 'permissions' => [
@@ -176,7 +170,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ],
             ],
             [
-                'id'    => 14,
+                'id'    => 13,
                 'name'  => 'shipping',
                 'title' => 'Envío',
                 'permissions' => [

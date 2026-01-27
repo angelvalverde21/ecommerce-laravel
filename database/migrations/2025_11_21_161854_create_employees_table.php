@@ -15,7 +15,8 @@ return new class extends Migration
 
             $table->id();
 
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->unique()->constrained()->onDelete('cascade');
+            
             // Campos del empleado
             $table->decimal('salary', 10, 2)->nullable();
             $table->date('date_entry')->nullable();

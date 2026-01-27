@@ -24,9 +24,15 @@ return new class extends Migration
                 ->comment('1 = active, 0 = blocked');
 
             $table->string('phone')->nullable();
-            $table->foreignId('identity_id')->nullable()
-                ->constrained()
-                ->onDelete('cascade'); // DNI, RUC, CE, etc
+
+            // $table->foreignId('identity_id')->nullable()
+                // ->constrained()
+                // ->onDelete('cascade'); // DNI, RUC, CE, etc
+
+            $table->foreignId('identity_id') // DNI, RUC, CE, etc
+                ->nullable()
+                ->constrained('identities')
+                ->restrictOnDelete();
 
             $table->string('document_number', 20)->nullable()->unique();
             $table->rememberToken();

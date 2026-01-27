@@ -17,22 +17,23 @@ return new class extends Migration
 
             $table->id();
 
-            // $table->string('name');
-            // $table->foreignId('identity_id')->nullable()->constrained()->onDelete('cascade'); //DNI, RUC, CE, etc
-            // $table->tinyInteger('document_number');
+            $table->string('name');
+            $table->foreignId('identity_id')->nullable()->constrained()->onDelete('cascade'); //DNI, RUC, CE, etc
+            $table->tinyInteger('document_number')->nullable();
 
             $table->string('type')->nullable(); //casa, oficina, trabajo, etc
-            $table->string('primary')->nullable();
-            $table->string('secondary')->nullable();
+            $table->string('primary')->nullable(); //direccion principal, por ejemplo: Av. Siempre Viva 123
+            $table->string('secondary')->nullable(); //direccion secundaria, por ejemplo: Urb. Los Robles
             $table->string('references')->nullable();
-            $table->string('coordenadas')->nullable();
-            $table->string('maps')->nullable();
+            $table->string('latitud')->nullable();
+            $table->string('longitud')->nullable();
+            $table->string('url_maps')->nullable();
 
             $table->tinyInteger('status')->default(Status::ACTIVE)->comment('Address::INACTIVE = 0, Address::ACTIVE = 1'); //desde -128 a 127
+            $table->boolean('is_default')->default(false);
 
             $table->foreignId('district_id')->constrained()->onDelete('cascade');
 
-            $table->boolean('is_default')->default(false);
             /*
                 $table->unsignedInteger('district_id')->default(150101);
                 $table->foreign('district_id')->references('id')->on('districts');
@@ -47,6 +48,7 @@ return new class extends Migration
                 $table->string('addressable_type');
                 $table->index(['addressable_id', 'addressable_type']);
             */
+            
 
             $table->timestamps();
         });

@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\FlatUserResource;
+use App\Http\Resources\SupplierResource;
 use App\Models\Store;
+use App\Models\Supplier;
 use App\Models\User;
+use App\Services\UserRelatedService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,41 +18,49 @@ class SupplierDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+
+    protected UserRelatedService $service;
+    protected $name;
+
+    public function __construct()
+    {
+        // Pasamos el modelo que vamos a usar
+        $this->service = new UserRelatedService(Supplier::class);
+        $this->name = 'Suppliers';
+    }
+
+    public function index(Store $store)
     {
         try {
+            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
+            return respondePaginateOk($this->service->index($store, 25), $this->name . ' obtenidos correctamente');
 
-            $suppliers = User::role('supplier')->get();
-
-            return responseOk($suppliers, 'Suppliers obtenidos correctamente');
         } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError($th, 'Ha ocurrido un error interno al obtener los suppliers');
+            Log::error($th);
+            return responseError($th, 'Error al obtener ' . $this->name);
         }
     }
 
-    public function search(Store $store, $search = "")
+    public function search(Store $store, $search)
     {
 
-        if (trim($search) === '') {
-            return $this->index();
-        }
-
         try {
-            $suppliers = User::role('supplier')
-                ->where(function ($query) use ($search) {
-                    $query->where('name', 'LIKE', '%' . $search . '%')
-                        ->orWhere('email', 'LIKE', '%' . $search . '%')
-                        ->orWhere('phone', 'LIKE', '%' . $search . '%')
-                        ->orWhere('document_number', 'LIKE', '%' . $search . '%');
-                })
-                ->limit(10)
-                ->get();
 
-            return responseOk($suppliers, 'Suppliers obtenidos correctamente (search)');
+            // if (trim($search) === '') {
+            //     $suppliers = $this->index($store);
+            // } else {
+            //     $suppliers = $this->service->search($store, $search, 100);
+            // }
+
+            //Esto quiere decir que si search viene vacio o con espacios en blanco, se llama al index, en caso contrario prosigo y llamo al search
+
+            return respondePaginateOk(trim($search) ? $this->service->search($store, $search, 100) : $this->index($store), $this->name . ' obtenidos correctamente (search)');
+
         } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError($th, 'Ha ocurrido un error interno al buscar los suppliers');
+
+            Log::error($th);
+            return responseError($th, 'Error al buscar ' . $this->name);
+
         }
     }
 
@@ -66,32 +78,31 @@ class SupplierDashboardController extends Controller
     public function store(Store $store, Request $request)
     {
         try {
-            
+
             $validated = $request->validate([
                 'name'            => 'required|string|max:255',
-                // 'email'           => 'required|email|unique:users,email',
-                'email'           => '',
-                // 'phone'           => 'nullable|string|max:20',
-                'phone'           => '',
+                'email'           => 'nullable|email|unique:users,email',
+                'phone'           => 'nullable',
                 'document_number' => 'nullable|string|max:20',
+                'identity_id'     => 'nullable|string|max:20',
             ]);
 
             DB::beginTransaction();
 
-            $user = User::create([
+            $user = $store->users()->create([
                 'name'            => $validated['name'],
                 'email'           => $validated['email'],
                 'phone'           => $validated['phone'],
                 'document_number' => $validated['document_number'],
-                'identity_id'     => 1,
-                'password'        => bcrypt('123456'),
+                'identity_id'     => $validated['identity_id'],
+                'password'        => bcrypt($validated['document_number']),
             ]);
 
-            $user->syncRoles(['supplier']);
+            $supplier = $user->supplier()->create();
 
             DB::commit();
 
-            return responseOk($user->load('roles'), 'Supplier creado correctamente', 201);
+            return responseOk($supplier, 'Supplier creado correctamente', 201);
 
         } catch (\Throwable $th) {
             Log::info($th);
@@ -107,11 +118,13 @@ class SupplierDashboardController extends Controller
     public function show(Store $store, $supplier_id)
     {
         try {
-            $user = User::with(['roles'])->findOrFail($supplier_id);
+            $user = User::with(['supplier'])->findOrFail($supplier_id);
+
 
             $rolesOnlyNames = $user->roles->pluck('name');
 
             unset($user->roles);
+
             $user->setRelation('roles', $rolesOnlyNames);
 
             return responseOk($user, 'Supplier obtenido correctamente');
@@ -165,6 +178,7 @@ class SupplierDashboardController extends Controller
                 "Proveedor actualizado correctamente",
                 200
             );
+            
         } catch (\Throwable $th) {
 
             DB::rollback();
