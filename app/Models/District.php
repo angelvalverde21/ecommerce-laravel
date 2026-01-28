@@ -9,4 +9,9 @@ class District extends Model
 {
     /** @use HasFactory<\Database\Factories\DistrictFactory> */
     use HasFactory;
+    protected $guarded = ['id', 'created_at'];
+
+    public function province(){
+        return $this->belongsTo(Province::class);
+    }
 }

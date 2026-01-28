@@ -9,4 +9,6 @@ class Identity extends Model
 {
     /** @use HasFactory<\Database\Factories\IdentityFactory> */
     use HasFactory;
+
+    
 }

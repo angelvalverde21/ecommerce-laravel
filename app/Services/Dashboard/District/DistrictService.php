@@ -25,11 +25,11 @@ class DistrictService
                             $q->orWhere('district_id', (int) $search);
                         }
                     })
-                    ->with('provinces.departments')
+                    ->with('province.department')
                     ->limit(25)
                     ->get();
 
-        return $districts->paginate($perPage);
+        return $districts;
 
     }
 }
