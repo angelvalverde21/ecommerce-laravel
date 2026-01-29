@@ -14,13 +14,13 @@ return new class extends Migration
         Schema::create('options', function (Blueprint $table) {
 
             $table->id();
-            $table->foreignId('store_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             //Parent option (auto referencia)
             $table->foreignId('parent_id')
                 ->nullable()
                 ->constrained('options')
-                ->nullOnDelete();
+                ->cascadeOnDelete(); //
 
             $table->boolean('multiple')->default(false); //este campo indica si la variable entra al producto cartesiano, true indica que es multiple por ejemplo tallas tiene multples varlores, colores tambien
             $table->string('name');

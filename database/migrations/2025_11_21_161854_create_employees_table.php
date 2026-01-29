@@ -15,7 +15,7 @@ return new class extends Migration
 
             $table->id();
 
-            $table->foreignId('user_id')->unique()->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete(); // Si se elimina el usuario, se eliminan los empleados asociados (la relacion 1 a 1)
             
             // Campos del empleado
             $table->decimal('salary', 10, 2)->nullable();

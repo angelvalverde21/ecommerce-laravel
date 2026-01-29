@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id();
 
             $table->string('name');
-            $table->foreignId('product_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('product_id')->nullable()->constrained()->cascadeOnDelete();  // Si se elimina el producto, se eliminan los colores asociados
             $table->unique(['name', 'product_id']);
 
             //======================== Campos comunes ===================================

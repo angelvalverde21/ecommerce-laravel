@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Services\Dashboard\Courier;
+namespace App\Services\Dashboard\Supplier;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Log;
 
-//Aplana todos los elementos que vienen de courier y los fusiona con los del user
+//Aplana todos los elementos que vienen de Supplier y los fusiona con los del user
 
-class FlatCourierUserResource extends JsonResource
+class FlatSupplierUserResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -29,9 +29,6 @@ class FlatCourierUserResource extends JsonResource
             'phone' => $user->phone,
             'email' => $user->email,
             'document_number' => $user->document_number,
-            'is_cash_on_delivery' => $this->is_cash_on_delivery,
-            'is_freight_collect'  => $this->is_freight_collect,
-            'addresses' => $user->addresses,
         ];
     }
 }

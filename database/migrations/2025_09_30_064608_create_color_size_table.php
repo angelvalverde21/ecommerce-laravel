@@ -16,8 +16,8 @@ return new class extends Migration
 
             $table->id();
 
-            $table->foreignId('color_id')->constrained()->onDelete('cascade');
-            $table->foreignId('size_id')->constrained()->onDelete('cascade');
+            $table->foreignId('color_id')->constrained()->cascadeOnDelete(); // Si se elimina el color, se eliminan los registros asociados
+            $table->foreignId('size_id')->constrained()->cascadeOnDelete(); // Si se elimina la talla, se eliminan los registros asociados
             $table->unique(['color_id', 'size_id']);
 
             //======================== Campos comunes ===================================

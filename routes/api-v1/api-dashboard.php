@@ -2,6 +2,7 @@
 
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
+use App\Http\Controllers\Api\Dashboard\AddressDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
 use App\Http\Controllers\Api\Dashboard\BrandDashboardController;
 use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
@@ -50,6 +51,20 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
     });
 
+    Route::prefix('addresses')->group(function () {
+
+        Route::get('/', [AddressDashboardController::class, 'index']); //Listar
+        Route::post('/', [AddressDashboardController::class, 'store']); //create
+
+        Route::prefix('{address_id}')->group(function () {
+
+            Route::get('/', [AddressDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [AddressDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [AddressDashboardController::class, 'destroy']); //borrar
+
+        });
+    });
+
     Route::prefix('districts')->group(function () {
 
         Route::get('/', [DistrictDashboardController::class, 'index']); //Listar
@@ -61,6 +76,22 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::get('/', [DistrictDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [DistrictDashboardController::class, 'update']); //actualizar
             Route::delete('/', [DistrictDashboardController::class, 'destroy']); //borrar
+
+        });
+    });
+
+    Route::prefix('suppliers')->group(function () {
+
+        Route::get('/', [SupplierDashboardController::class, 'index']); //Listar
+        Route::get('/blocked', [SupplierDashboardController::class, 'blocked']); //Listar
+        Route::get('/search/{search?}', [SupplierDashboardController::class, 'search']); //buscar
+        Route::post('/', [SupplierDashboardController::class, 'store']); //create
+
+        Route::prefix('{supplier_id}')->group(function () {
+
+            Route::get('/', [SupplierDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [SupplierDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [SupplierDashboardController::class, 'destroy']); //borrar
 
         });
     });
@@ -101,21 +132,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             });
         });
 
-        Route::prefix('suppliers')->group(function () {
 
-            Route::get('/', [SupplierDashboardController::class, 'index']); //Listar
-            Route::get('/blocked', [SupplierDashboardController::class, 'blocked']); //Listar
-            Route::get('/search/{search?}', [SupplierDashboardController::class, 'search']); //buscar
-            Route::post('/', [SupplierDashboardController::class, 'store']); //create
-
-            Route::prefix('{supplier_id}')->group(function () {
-
-                Route::get('/', [SupplierDashboardController::class, 'show']); //show o mostrar por id
-                Route::put('/', [SupplierDashboardController::class, 'update']); //actualizar
-                Route::delete('/', [SupplierDashboardController::class, 'destroy']); //borrar
-
-            });
-        });
 
         //Todos los usuarios
         Route::get('/', [UserDashboardController::class, 'index']); //Listar

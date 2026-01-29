@@ -11,6 +11,23 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
+    /*
+         name
+        identity_id
+        document_number
+        type
+        primary
+        secondary
+        references
+        latitud
+        longitud
+        url_maps
+        status
+        is_default
+        district_id
+        sort_order
+        
+        */
     public function up(): void
     {
         Schema::create('addresses', function (Blueprint $table) {
@@ -18,10 +35,10 @@ return new class extends Migration
             $table->id();
 
             $table->string('name');
-            $table->foreignId('identity_id')->nullable()->constrained()->onDelete('cascade'); //DNI, RUC, CE, etc
+            $table->foreignId('identity_id')->nullable()->constrained()->restrictOnDelete(); //DNI, RUC, CE, etc
             $table->tinyInteger('document_number')->nullable();
 
-            $table->string('type')->nullable(); //casa, oficina, trabajo, etc
+            $table->string('type')->nullable()->default(Address::DEFAULT_TYPE_ADDRESS['casa']); //casa, oficina, trabajo, etc
             $table->string('primary')->nullable(); //direccion principal, por ejemplo: Av. Siempre Viva 123
             $table->string('secondary')->nullable(); //direccion secundaria, por ejemplo: Urb. Los Robles
             $table->string('references')->nullable();
@@ -30,9 +47,12 @@ return new class extends Migration
             $table->string('url_maps')->nullable();
 
             $table->tinyInteger('status')->default(Status::ACTIVE)->comment('Address::INACTIVE = 0, Address::ACTIVE = 1'); //desde -128 a 127
+
             $table->boolean('is_default')->default(false);
 
-            $table->foreignId('district_id')->constrained()->onDelete('cascade');
+            $table->foreignId('district_id')->constrained()->restrictOnDelete();
+
+            $table->tinyInteger('sort_order')->default(0);
 
             /*
                 $table->unsignedInteger('district_id')->default(150101);
@@ -48,7 +68,7 @@ return new class extends Migration
                 $table->string('addressable_type');
                 $table->index(['addressable_id', 'addressable_type']);
             */
-            
+
 
             $table->timestamps();
         });

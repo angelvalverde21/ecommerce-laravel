@@ -17,7 +17,7 @@ return new class extends Migration
             
             $table->string('name');
 
-            $table->foreignId('province_id')->nullable()->constrained()->onDelete('cascade'); //department_id
+            $table->foreignId('province_id')->nullable()->constrained()->cascadeOnDelete(); //department_id
 
             $table->timestamps();
         });

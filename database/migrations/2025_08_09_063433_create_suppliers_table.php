@@ -15,16 +15,16 @@ return new class extends Migration
 
             $table->id();
 
-            $table->foreignId('user_id')->unique()->constrained()->onDelete('cascade');
-            // $table->string('name');
-            // $table->string('address')->nullable();
-            // $table->string('email')->nullable()->unique();
-            // $table->foreignId('store_id')->nullable()->constrained()->onDelete('cascade');
-            // $table->unsignedBigInteger('phone')->unique()->nullable();
-            // $table->foreignId('identity_id')->nullable()->constrained()->onDelete('cascade'); //DNI, RUC, CE, etc
-            // $table->string('document_number', 20)->nullable()->unique();
+            // $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete(); // Si se elimina el usuario, se eliminan los suppliers asociados
+            $table->string('name');
+            $table->string('address')->nullable();
+            $table->string('email')->nullable()->unique();
+            $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('phone')->unique()->nullable();
+            $table->foreignId('identity_id')->nullable()->constrained()->cascadeOnDelete(); //DNI, RUC, CE, etc
+            $table->string('document_number', 20)->nullable()->unique();
 
-            // $table->unique(['store_id', 'phone']);
+            $table->unique(['store_id', 'phone']);
 
             $table->timestamps();
         });

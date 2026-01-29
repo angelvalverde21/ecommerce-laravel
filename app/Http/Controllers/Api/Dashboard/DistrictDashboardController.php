@@ -59,9 +59,17 @@ class DistrictDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Store $store)
+    public function show(Store $store, $district_id)
     {
         //
+        try {
+
+            return responseOk($this->districtService->show($district_id), "Datos obtenidos con exito de show");
+
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError($th, "Error al obtener los datos de show");
+        }
     }
 
     /**

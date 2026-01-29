@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('attribute_values', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('attribute_id')->constrained()->onDelete('cascade');
+            $table->foreignId('attribute_id')->constrained()->cascadeOnDelete(); // Si se elimina el atributo, se eliminan los valores asociados (sus attribute_values)
             $table->string('value');
             $table->integer('sort_order')->default(0);
             

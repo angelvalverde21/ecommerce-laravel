@@ -16,7 +16,7 @@ return new class extends Migration
             $table->id(); //shopify_variant_id
 
             $table->unsignedBigInteger('shopify_product_id'); //este campo hace referencia al id de la tabla shopify_products, no al campo shopify_product_id de Shopify
-            $table->foreign('shopify_product_id')->references('id')->on('shopify_products')->onDelete('cascade');
+            $table->foreign('shopify_product_id')->references('id')->on('shopify_products')->cascadeOnDelete(); // Si se elimina el producto, se eliminan las variantes asociadas
  
             $table->string('shopify_variant_id');
             $table->string('title');

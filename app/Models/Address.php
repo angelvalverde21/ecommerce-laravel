@@ -9,7 +9,14 @@ class Address extends Model
 {
     /** @use HasFactory<\Database\Factories\AddressFactory> */
     use HasFactory;
-    
+
+    const DEFAULT_TYPE_ADDRESS = [
+        'casa' => 'Casa',
+        'oficina' => 'Oficina',
+        'trabajo' => 'Trabajo',
+        'otro' => 'Otro',
+    ];
+
     protected $guarded = ['id', 'created_at'];
 
     public function district()

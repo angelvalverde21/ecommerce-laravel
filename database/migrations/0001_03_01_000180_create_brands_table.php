@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('brands', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->foreignId('store_id')->constrained()->onDelete('cascade');
+            $table->foreignId('store_id')->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las marcas asociadas
             $table->string('slug');
             $table->boolean('status')->default(true)->comment('1 activo 0 archivado'); //desde -128 a 127
             $table->timestamps();

@@ -18,10 +18,13 @@ return new class extends Migration
             $table->unsignedBigInteger('phone')->unique()->nullable();
             $table->string('email')->unique();
             $table->string('slug')->unique();
-            $table->foreignId('identity_id')->nullable()->constrained()->onDelete('cascade');
+            // Impide eliminar un registro de identities si está siendo usado
+            // por algún usuario. Primero se debe desvincular o eliminar
+            // el usuario que lo referencia.
+            $table->foreignId('identity_id')->nullable()->constrained()->nullOnDelete(); // deja identity_id en null al borrar identity
             $table->string('document_number', 20)->nullable()->unique();
 
-            
+
             $table->timestamps();
         });
     }

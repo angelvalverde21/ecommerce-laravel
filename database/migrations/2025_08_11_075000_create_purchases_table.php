@@ -19,9 +19,9 @@ return new class extends Migration
             $table->string('unit_id');
             $table->decimal('price', 8, 2)->nullable();
             $table->decimal('total', 8, 2)->nullable();
-            $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('store_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el proveedor, deja el campo en null
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el usuario, deja el campo en null
+            $table->foreignId('store_id')->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las compras asociadas
             $table->morphs('purchaseable'); //ya agrega el index
 
             $table->timestamps();

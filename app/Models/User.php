@@ -57,6 +57,11 @@ class User extends Authenticatable implements OAuthenticatable
             'password' => 'hashed',
         ];
     }
+    
+    public function addresses()
+    {
+        return $this->morphMany(Address::class, 'addressable');
+    }
 
     public function stores()
     {

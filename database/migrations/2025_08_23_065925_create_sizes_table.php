@@ -18,7 +18,7 @@ return new class extends Migration
 
 
             $table->string('name');
-            $table->foreignId('product_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('product_id')->nullable()->constrained()->cascadeOnDelete(); // Si se elimina el producto, se eliminan las tallas asociadas
             $table->unique(['name', 'product_id']);
 
 

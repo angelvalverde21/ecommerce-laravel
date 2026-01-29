@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('observations')->nullable();
-            $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); //creado de la orden
-            $table->foreignId('store_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el proveedor, se deja en null
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); //creador de la orden
+            $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las ordenes de compra asociadas
             $table->timestamps();
         });
     }

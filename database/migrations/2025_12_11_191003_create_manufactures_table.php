@@ -18,7 +18,7 @@ return new class extends Migration
             $table->integer('quantity_total')->default(0); // Total producidos
             $table->integer('quantity_failures')->default(0); // Merma o malogrados
             $table->decimal('cost', 10, 2)->default(0.00); // Costo de producción
-            $table->foreignId('store_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las manufacturas asociadas
             // $table->foreignId('section_id')->nullable()->constrained('sections')->cascadeOnDelete();
             $table->timestamps();
         });

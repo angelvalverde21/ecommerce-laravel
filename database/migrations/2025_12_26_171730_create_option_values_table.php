@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('option_values', function (Blueprint $table) {
             
             $table->id();
-            $table->foreignId('option_id')->constrained()->onDelete('cascade');
+            $table->foreignId('option_id')->constrained()->cascadeOnDelete(); // Si se elimina la opción, se eliminan los valores asociados (sus option_values)
             $table->string('value');
             $table->integer('sort_order')->default(0);
 

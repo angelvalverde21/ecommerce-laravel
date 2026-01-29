@@ -26,13 +26,22 @@ return new class extends Migration
             $table->string('phone')->nullable();
 
             // $table->foreignId('identity_id')->nullable()
-                // ->constrained()
-                // ->onDelete('cascade'); // DNI, RUC, CE, etc
+            // ->constrained()
+            // ->cascadeOnDelete(); // DNI, RUC, CE, etc
+
+            // Impide eliminar un registro de identities si está siendo usado
+            // por algún usuario. Primero se debe desvincular o eliminar
+            // el usuario que lo referencia.
+            // $table->foreignId('identity_id') // DNI, RUC, CE, etc
+            //     ->nullable()
+            //     ->constrained('identities')
+            //     ->restrictOnDelete(); // impide eliminar identity si está siendo usado por user
 
             $table->foreignId('identity_id') // DNI, RUC, CE, etc
                 ->nullable()
                 ->constrained('identities')
-                ->restrictOnDelete();
+                ->nullOnDelete(); // deja identity_id en null al borrar identity
+
 
             $table->string('document_number', 20)->nullable()->unique();
             $table->rememberToken();

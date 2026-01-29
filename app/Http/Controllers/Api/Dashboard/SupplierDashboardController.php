@@ -3,41 +3,61 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\FlatUserResource;
-use App\Http\Resources\SupplierResource;
-use App\Models\Store;
 use App\Models\Supplier;
+use App\Models\Store;
 use App\Models\User;
-use App\Services\UserRelatedService;
+use App\Services\Dashboard\Supplier\SupplierService;
+use App\Services\Dashboard\Supplier\FlatSupplierUserResource;
+use App\Services\Dashboard\UserRelatedService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class SupplierDashboardController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
 
-    protected UserRelatedService $service;
-    protected $name;
+
+    protected SupplierService $supplierService;
 
     public function __construct()
     {
         // Pasamos el modelo que vamos a usar
-        $this->service = new UserRelatedService(Supplier::class);
-        $this->name = 'Suppliers';
+        $this->supplierService = new SupplierService();
     }
 
     public function index(Store $store)
     {
         try {
+
             //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
-            return respondePaginateOk($this->service->index($store, 25), $this->name . ' obtenidos correctamente');
+            return responsePaginateOk($this->supplierService->index($store, 25), 'Suppliers activos obtenidos correctamente');
 
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . $this->name);
+            return responseError($th, 'Error al obtener ' . 'Suppliers activos');
+        }
+    }
+
+    public function active(Store $store)
+    {
+        try {
+            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
+            return responsePaginateOk($this->supplierService->active($store, 25), 'Supplier activos obtenidos correctamente');
+        } catch (\Throwable $th) {
+            Log::error($th);
+            return responseError($th, 'Error al obtener ' . 'Supplier activos');
+        }
+    }
+
+    public function blocked(Store $store)
+    {
+        try {
+            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
+            return responsePaginateOk($this->supplierService->blocked($store, 25), 'Supplier bloqueados obtenidos correctamente');
+        } catch (\Throwable $th) {
+            Log::error($th);
+            return responseError($th, 'Error al obtener ' . 'Supplier bloqueados');
         }
     }
 
@@ -46,22 +66,17 @@ class SupplierDashboardController extends Controller
 
         try {
 
-            // if (trim($search) === '') {
-            //     $suppliers = $this->index($store);
-            // } else {
-            //     $suppliers = $this->service->search($store, $search, 100);
-            // }
-
             //Esto quiere decir que si search viene vacio o con espacios en blanco, se llama al index, en caso contrario prosigo y llamo al search
 
-            return respondePaginateOk(trim($search) ? $this->service->search($store, $search, 100) : $this->index($store), $this->name . ' obtenidos correctamente (search)');
+            $Suppliers = trim($search) ? $this->supplierService->search($store, $search, 100) : $this->index($store);
+            return responsePaginateOk($Suppliers, 'Supplier obtenidos correctamente (search)');
 
         } catch (\Throwable $th) {
 
             Log::error($th);
-            return responseError($th, 'Error al buscar ' . $this->name);
-
+            return responseError($th, 'Error al buscar ' . $search);
         }
+
     }
 
     /**
@@ -77,59 +92,132 @@ class SupplierDashboardController extends Controller
      */
     public function store(Store $store, Request $request)
     {
+        //
         try {
-
-            $validated = $request->validate([
-                'name'            => 'required|string|max:255',
-                'email'           => 'nullable|email|unique:users,email',
-                'phone'           => 'nullable',
-                'document_number' => 'nullable|string|max:20',
-                'identity_id'     => 'nullable|string|max:20',
-            ]);
 
             DB::beginTransaction();
 
-            $user = $store->users()->create([
+            $validated = $request->validate([
+                'name'            => 'required|string|max:255',
+                'email'           => 'required|email|unique:users,email',
+                'phone'           => 'nullable|string|max:20',
+                'document_number' => 'nullable|string|max:20',
+                'is_cash_on_delivery' => 'nullable|boolean',
+                'is_freight_collect'  => 'nullable|boolean',
+                'is_express_shipping'  => 'nullable|boolean',
+            ]);
+
+            // 1. CREAR USUARIO
+            $user = User::create([
                 'name'            => $validated['name'],
                 'email'           => $validated['email'],
                 'phone'           => $validated['phone'],
                 'document_number' => $validated['document_number'],
-                'identity_id'     => $validated['identity_id'],
+                'identity_id'     => 2, //2 es para RUC,
                 'password'        => bcrypt($validated['document_number']),
             ]);
 
-            $supplier = $user->supplier()->create();
+            // 2. ASIGNAR USUARIO A LA TIENDA
+            $user->stores()->attach($store->id);
+
+            // 3. CREAR Supplier
+            $Supplier = $user->supplier()->create([
+                'is_cash_on_delivery' => $validated['is_cash_on_delivery'] ?? false,
+                'is_freight_collect'  => $validated['is_freight_collect'] ?? false,
+                'is_express_shipping'  => $validated['is_express_shipping'] ?? false,
+            ]); //Crear el Supplier relacionado al user
 
             DB::commit();
 
-            return responseOk($supplier, 'Supplier creado correctamente', 201);
-
+            return responseOk( new FlatSupplierUserResource($Supplier->fresh(['user']) ),  "Se ha procesado correctamente la creacion del Supplier");
+                    
         } catch (\Throwable $th) {
-            Log::info($th);
-            DB::rollBack();
 
-            return responseError($th, 'Error al crear el supplier');
+            Log::info($th);
+
+            DB::rollback();
+
+            return responseError($th, "Error al crear el Supplier.... ");
         }
     }
 
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Store $store, $supplier_id)
+    {
+
+        try {
+            //Aquí ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
+            $Supplier = Supplier::findOrFail($supplier_id);
+
+            Log::info($Supplier);
+
+            // ⭐ VALIDACIÓN FLEXIBLE (update parcial o completo)
+            $validated = $request->validate([
+                'name'            => 'sometimes|required|string|max:255',
+                'email' => [
+                    'nullable',
+                    'email',
+                    Rule::unique('users', 'email')->ignore($Supplier->user->id),
+                ],
+                'phone'           => 'sometimes|nullable|string|max:20',
+                'document_number' => 'sometimes|nullable|string|max:20',
+                'status'          => 'sometimes|required|in:0,1',
+                'is_cash_on_delivery' => 'sometimes|nullable|boolean',
+                'is_freight_collect'  => 'sometimes|nullable|boolean',
+                'is_express_shipping'  => 'sometimes|nullable|boolean',
+            ]);
+
+            DB::beginTransaction();
+
+            // ⭐ 1. ACTUALIZAR USER (solo lo que venga en el request)
+            $Supplier->user->update(
+                [
+                    'name'            => $validated['name'] ?? $Supplier->user->name,
+                    'email'           => $validated['email'] ?? $Supplier->user->email,
+                    'phone'           => $validated['phone'] ?? $Supplier->user->phone,
+                    'document_number' => $validated['document_number'] ?? $Supplier->user->document_number,
+                    'status'          => $validated['status'] ?? $Supplier->user->status,
+                ]
+            );
+
+            // ⭐ 2. ACTUALIZAR Supplier
+            $Supplier->update(
+                [
+                    'is_cash_on_delivery' => $validated['is_cash_on_delivery'] ?? $Supplier->is_cash_on_delivery,
+                    'is_freight_collect'  => $validated['is_freight_collect'] ?? $Supplier->is_freight_collect,
+                ]
+            );
+
+            DB::commit();
+
+            return responseOk(
+                new FlatSupplierUserResource(
+                    $Supplier->fresh(['user'])
+                ),
+                "Supplier actualizado correctamente",
+                200
+            );
+        } catch (\Throwable $th) {
+
+            DB::rollback();
+            Log::info($th);
+
+            return responseError($th, "Error al actualizar el Supplier...");
+        }
+    }
     /**
      * Display the specified resource.
      */
     public function show(Store $store, $supplier_id)
     {
         try {
-            $user = User::with(['supplier'])->findOrFail($supplier_id);
-
-
-            $rolesOnlyNames = $user->roles->pluck('name');
-
-            unset($user->roles);
-
-            $user->setRelation('roles', $rolesOnlyNames);
-
-            return responseOk($user, 'Supplier obtenido correctamente');
+            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
+            return responseOk($this->supplierService->show($store, $supplier_id), 'Supplier obtenidos correctamente');
         } catch (\Throwable $th) {
-            return responseError($th, 'No se pudo obtener el supplier solicitado');
+            Log::error($th);
+            return responseError($th, 'Error al obtener ' . $supplier_id);
         }
     }
 
@@ -141,52 +229,7 @@ class SupplierDashboardController extends Controller
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Store $store, $supplier_id)
-    {
-        try {
 
-            $user = User::findOrFail($supplier_id);
-
-            // ⭐ VALIDACIÓN FLEXIBLE (update parcial o completo)
-            $validated = $request->validate([
-                'name'            => 'sometimes|required|string|max:255',
-                'email'           => "sometimes|required|email|unique:users,email,$supplier_id",
-                'phone'           => 'sometimes|nullable|string|max:20',
-                'document_number' => 'sometimes|nullable|string|max:20',
-                'roles'           => 'sometimes|required|array|min:1',
-                'roles.*'         => 'string|exists:roles,name',
-                'status'          => 'sometimes|required|in:0,1',
-            ]);
-
-            DB::beginTransaction();
-
-            // ⭐ 1. ACTUALIZAR USER (solo lo que venga en el request)
-            $user->update($validated);
-
-            // ⭐ 2. Actualizar roles SOLO si el request los incluye
-            if ($request->has('roles')) {
-                $user->syncRoles($validated['roles']);
-            }
-
-            DB::commit();
-
-            return responseOk(
-                $user->load('roles'),
-                "Proveedor actualizado correctamente",
-                200
-            );
-            
-        } catch (\Throwable $th) {
-
-            DB::rollback();
-            Log::info($th);
-
-            return responseError($th, "Error al actualizar el proveedor...");
-        }
-    }
 
     /**
      * Remove the specified resource from storage.

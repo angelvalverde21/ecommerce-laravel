@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Services\Dashboard\Courier;
+namespace App\Services\Dashboard\Supplier;
 
 use App\Models\Store;
-use App\Models\Courier;
+use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class CourierService
+class SupplierService
 {
     /**
-     * Buscar couriers relacionados a un store con filtro
+     * Buscar Suppliers relacionados a un store con filtro
      */
     public function search(Store $store, string $search, int $perPage = 50)
     {
-        $query = Courier::with('user')
+        $query = Supplier::with('user')
             ->whereHas('user', function (Builder $q) use ($store, $search) {
 
                 $q->active()
@@ -33,34 +33,34 @@ class CourierService
                 }
             });
 
-        return FlatCourierUserResource::collection(
+        return FlatSupplierUserResource::collection(
             $query->paginate($perPage)
         );
     }
 
     /**
-     * Obtener todos los couriers del store
+     * Obtener todos los Suppliers del store
      */
     public function index(Store $store, int $perPage = 20)
     {
-        $query = Courier::with(['user'])
+        $query = Supplier::with(['user'])
             ->whereHas('user', function (Builder $q) use ($store) {
                 $q->whereHas('stores', function (Builder $sq) use ($store) {
                     $sq->where('stores.id', $store->id);
                 });
             });
 
-        return FlatCourierUserResource::collection(
+        return FlatSupplierUserResource::collection(
             $query->paginate($perPage)
         );
     }
 
     /**
-     * Obtener couriers activos
+     * Obtener Suppliers activos
      */
     public function active(Store $store, int $perPage = 20)
     {
-        $query = Courier::with('user')
+        $query = Supplier::with('user')
             ->whereHas('user', function (Builder $q) use ($store) {
                 $q->active()
                   ->whereHas('stores', function (Builder $sq) use ($store) {
@@ -68,34 +68,34 @@ class CourierService
                   });
             });
 
-        return FlatCourierUserResource::collection(
+        return FlatSupplierUserResource::collection(
             $query->paginate($perPage)
         );
     }
 
     /**
-     * Obtener couriers bloqueados
+     * Obtener Suppliers bloqueados
      */
     public function blocked(Store $store, int $perPage = 20)
     {
-        $query = Courier::blocked()
+        $query = Supplier::blocked()
             ->whereHas('user', function (Builder $q) use ($store) {
                 $q->whereHas('stores', function (Builder $sq) use ($store) {
                     $sq->where('stores.id', $store->id);
                 });
             });
 
-        return FlatCourierUserResource::collection(
+        return FlatSupplierUserResource::collection(
             $query->paginate($perPage)
         );
     }
 
     /**
-     * Mostrar un courier específico del store
+     * Mostrar un Supplier específico del store
      */
     public function show(Store $store, int $id)
     {
-        $courier = Courier::with('user.addresses.district')
+        $Supplier = Supplier::with('user.addresses.district')
             ->where('id', $id)
             ->whereHas('user', function (Builder $q) use ($store) {
                 $q->whereHas('stores', function (Builder $sq) use ($store) {
@@ -104,19 +104,19 @@ class CourierService
             })
             ->firstOrFail();
 
-        Log::info($courier);
+        Log::info($Supplier);
 
-        return new FlatCourierUserResource($courier);
+        return new FlatSupplierUserResource($Supplier);
     }
 
     /**
-     * Actualizar un courier
+     * Actualizar un Supplier
      */
     public function update(Store $store, int $id, array $data)
     {
         return DB::transaction(function () use ($store, $id, $data) {
 
-            $courier = Courier::with('user')
+            $Supplier = Supplier::with('user')
                 ->where('id', $id)
                 ->whereHas('user', function (Builder $q) use ($store) {
                     $q->whereHas('stores', function (Builder $sq) use ($store) {
@@ -125,10 +125,10 @@ class CourierService
                 })
                 ->firstOrFail();
 
-            $courier->user->update($data);
+            $Supplier->user->update($data);
 
-            return new FlatCourierUserResource(
-                $courier->fresh(['user'])
+            return new FlatSupplierUserResource(
+                $Supplier->fresh(['user'])
             );
         });
     }

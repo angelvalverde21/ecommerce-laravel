@@ -25,4 +25,8 @@ class Courier extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function addresses()
+    {
+        return $this->user->addresses();
+    }
 }

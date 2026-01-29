@@ -26,12 +26,19 @@ return new class extends Migration
 
             $table->string('online_store_url')->nullable();
 
-            $table->foreignId('category_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete(); //si se borra las categorias deja el campo en null
             $table->string('barcode')->nullable();
 
+            // Si se elimina el usuario, la base de datos elimina automáticamente todos los registros de products asociados a ese usuario
+            $table->foreignId('user_id')
+                ->constrained()
+                ->cascadeOnDelete();
 
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('store_id')->constrained()->onDelete('cascade');
+            // Si se elimina la tienda, la base de datos elimina automáticamente
+            // todos los registros de products asociados a esa tienda
+            $table->foreignId('store_id')
+                ->constrained()
+                ->cascadeOnDelete();
 
             //==========================================================================
             $table->index('name'); //para las busquedas mas rapidas

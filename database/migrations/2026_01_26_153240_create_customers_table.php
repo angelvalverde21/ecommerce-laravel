@@ -15,7 +15,7 @@ return new class extends Migration
 
             $table->id();
 
-            $table->foreignId('user_id')->unique()->constrained()->onDelete('cascade');// un customer solo debe estar relacionado a un user
+            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();// un customer solo debe estar relacionado a un user
             // $table->string('origen')->nullable(); //para ver de donde vino el usuario puede ser de una tienda online, facebook, instagram, etc
 
             $table->timestamps();

@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('variants', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->foreignId('product_id')->constrained()->cascadeOnDelete(); // Si se elimina el producto, se eliminan las variantes asociadas
             $table->string('sku')->unique();
             $table->decimal('price', 10, 2);
             $table->integer('stock')->default(0);
