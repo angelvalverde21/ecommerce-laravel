@@ -58,7 +58,7 @@ class CourierService
     /**
      * Obtener couriers activos
      */
-    public function active(Store $store, int $perPage = 20)
+    public function active(Store $store, int $perPage = 20) //Recuerda que el active o bloqued estan en un Trait HasStatusScopesTrait
     {
         $query = Courier::with('user')
             ->whereHas('user', function (Builder $q) use ($store) {
@@ -76,7 +76,7 @@ class CourierService
     /**
      * Obtener couriers bloqueados
      */
-    public function blocked(Store $store, int $perPage = 20)
+    public function blocked(Store $store, int $perPage = 20)//Recuerda que el active o blocked estan en un Trait HasStatusScopesTrait
     {
         $query = Courier::blocked()
             ->whereHas('user', function (Builder $q) use ($store) {

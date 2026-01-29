@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\GalleryDashboardController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
+use App\Http\Controllers\Api\Dashboard\ManufactureDashboardController;
 use App\Http\Controllers\Api\Dashboard\OptionDashboardController;
 use App\Http\Controllers\Api\Dashboard\OptionValueDashboardController;
 use App\Http\Controllers\Api\Dashboard\PriceDashboardController;
@@ -94,6 +95,22 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::delete('/', [SupplierDashboardController::class, 'destroy']); //borrar
 
         });
+    });
+
+    Route::prefix('manufactures')->group(function () {
+
+        Route::get('/', [ManufactureDashboardController::class, 'index']); //Listar
+        Route::post('/', [ManufactureDashboardController::class, 'store']); //create
+        Route::get('/search/{search?}', [ManufactureDashboardController::class, 'search']); //buscar
+
+        Route::prefix('{manufacture_id}')->group(function () {
+
+            Route::get('/', [ManufactureDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [ManufactureDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [ManufactureDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 
     Route::prefix('users')->group(function () {

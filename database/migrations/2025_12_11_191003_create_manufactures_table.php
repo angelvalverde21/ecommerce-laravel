@@ -13,11 +13,13 @@ return new class extends Migration
     {
         Schema::create('manufactures', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name'); //nombre del proyecto de manufactura, no es del producto
+            $table->float('budget')->nullable()->default('0.00'); //presupuesto asignado al proyecto de manufatura
             // $table->integer('total')->default(0);
             $table->integer('quantity_total')->default(0); // Total producidos
             $table->integer('quantity_failures')->default(0); // Merma o malogrados
             $table->decimal('cost', 10, 2)->default(0.00); // Costo de producción
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las manufacturas asociadas
             // $table->foreignId('section_id')->nullable()->constrained('sections')->cascadeOnDelete();
             $table->timestamps();

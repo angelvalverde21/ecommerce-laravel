@@ -1,0 +1,144 @@
+<?php
+
+namespace App\Http\Controllers\Api\Dashboard;
+
+use App\Http\Controllers\Controller;
+use App\Models\Store;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class ManufactureDashboardController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Store $store)
+    {
+        //
+        try {
+
+            $manufactures = $store->manufactures()->get();
+
+            return responseOk($manufactures, "Listado de manufacturas obtenido correctamente");
+
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError($th, "Error al obtener el listado de manufacturas");
+        }
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create(Store $store)
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Store $store, Request $request)
+    {
+        //
+
+        try {
+
+            DB::beginTransaction();
+
+            $data = $request->validate([
+                'product_id' => 'required|string|max:255',
+                'budget' => 'required|numeric',
+            ]);
+
+            $manufacture = $store->manufactures()->create(
+                [
+                    'product_id' => $data['product_id'],
+                    'budget' => $data['budget'],
+                    'user_id' => Auth::id(),
+                ]
+            );
+
+            DB::commit();
+
+            return responseOk($manufacture, "Se ha procesado correctamente");
+        } catch (\Throwable $th) {
+
+            Log::info($th);
+
+            DB::rollback();
+
+            return responseError($th, "Error al eliminar.... ");
+        }
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Store $store, $manufacture_id)
+    {
+        try {
+
+            $manufacture = $store->manufactures()->findOrFail($manufacture_id);
+
+            return responseOk($manufacture);
+
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError($th, "Error al mostrar la manufactura");
+        }
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Store $store)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Store $store, $manufacture_id)
+    {
+        //
+
+        try {
+        
+            DB::beginTransaction();
+
+            $data = $request->validate([
+                'name' => 'required|string|max:255',
+                'budget' => 'required|numeric',
+                'quantity_total' => 'nullable|integer',
+            ]);
+
+            $manufacture = $store->manufactures()->findOrFail($manufacture_id);
+            $manufacture->update($data);
+
+            DB::commit();
+        
+            return responseOk($manufacture, "Se ha actualizado correctamente la manufactura");
+        
+        } catch (\Throwable $th) {
+
+            Log::info($th);
+        
+            DB::rollback();
+        
+            return responseError($th, "Error al actualizar la manufactura.... ");
+        
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Store $store)
+    {
+        //
+    }
+}

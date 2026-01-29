@@ -36,8 +36,8 @@ return new class extends Migration
 
             $table->string('name');
             $table->foreignId('identity_id')->nullable()->constrained()->restrictOnDelete(); //DNI, RUC, CE, etc
-            $table->tinyInteger('document_number')->nullable();
-
+            $table->string('document_number')->nullable();
+            $table->string('phone')->nullable();
             $table->string('type')->nullable()->default(Address::DEFAULT_TYPE_ADDRESS['casa']); //casa, oficina, trabajo, etc
             $table->string('primary')->nullable(); //direccion principal, por ejemplo: Av. Siempre Viva 123
             $table->string('secondary')->nullable(); //direccion secundaria, por ejemplo: Urb. Los Robles

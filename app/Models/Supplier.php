@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasStatusScopesTrait;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,7 +18,7 @@ class Supplier extends Model
      * file://./readme.md
      */
 
-    use HasFactory;
+    use HasFactory, HasStatusScopesTrait; //Aqui viene los scopes active y blocked
 
     protected $with = ['user'];
 
@@ -26,6 +27,11 @@ class Supplier extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function store()
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function scopeSearch(Builder $query, $term)
@@ -46,13 +52,8 @@ class Supplier extends Model
         });
     }
 
-    public function scopeActive(Builder $query)
-    {
-        return $query->where('status', Status::ACTIVE);
+    public function addresses(){
+        return $this->hasMany(Address::class);
     }
 
-    public function scopeBlocked(Builder $query)
-    {
-        return $query->where('status', Status::INACTIVE);
-    }
 }

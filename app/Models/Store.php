@@ -92,4 +92,8 @@ class Store extends Model
     {
         return \App\Models\Option::DEFAULT_OPTIONS;
     }
+
+    public function manufactures(){
+        return $this->hasMany(Manufacture::class);
+    }
 }

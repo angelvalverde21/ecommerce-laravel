@@ -29,6 +29,7 @@ class FlatSupplierUserResource extends JsonResource
             'phone' => $user->phone,
             'email' => $user->email,
             'document_number' => $user->document_number,
+            'addresses' => $user->addresses,
         ];
     }
 }

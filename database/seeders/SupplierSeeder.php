@@ -213,39 +213,42 @@ class SupplierSeeder extends Seeder
             ],
         ];
 
+        // DB::table('suppliers')->insert($suppliers);
+
         foreach ($suppliers as $supplier) {
 
-            Supplier::create($supplier);
+            // Supplier::create($supplier);
 
-            // $user = User::create([
-            //     'name' => $supplier['name'],
-            //     'email' => $supplier['email'],
-            //     'phone' => $supplier['phone'],
-            //     'identity_id' => 1,
-            //     'document_number' => $supplier['document_number'],
-            //     'password' => bcrypt($supplier['phone']),
-            // ]);
+            $user = User::create([
+                'name' => $supplier['name'],
+                'email' => $supplier['email'],
+                'phone' => $supplier['phone'],
+                'identity_id' => 1,
+                'document_number' => $supplier['document_number'],
+                'password' => bcrypt($supplier['phone']),
+            ]);
 
-            // $user->stores()->attach($supplier['store_id']); // Asignar el usuario a la tienda correspondiente
+            $user->stores()->attach($supplier['store_id']); // Asignar el usuario a la tienda correspondiente
 
-            // $user->addresses()->create([
-            //     'name' => $supplier['name'],
-            //     'identity_id' => 1,
-            //     'document_number' => $supplier['document_number'],
-            //     'type' => Address::DEFAULT_TYPE_ADDRESS['trabajo'],
-            //     'primary' => $supplier['address'],
-            //     'secondary' => null,
-            //     'references' => null,
-            //     'latitud' => null,
-            //     'longitud' => null,
-            //     'url_maps' => null,
-            //     'status' => 1,
-            //     'is_default' => true,
-            //     'district_id' => 150115, //LA VICTORIA
-            //     'sort_order' => 0,
-            // ]);
+            $user->addresses()->create([
+                'name' => $supplier['name'],
+                'identity_id' => 1,
+                'document_number' => $supplier['document_number'],
+                'type' => Address::DEFAULT_TYPE_ADDRESS['trabajo'],
+                'primary' => $supplier['address'],
+                'secondary' => null,
+                'references' => null,
+                'latitud' => null,
+                'longitud' => null,
+                'url_maps' => null,
+                'status' => 1,
+                'is_default' => true,
+                'district_id' => 150115, //LA VICTORIA
+                'sort_order' => 0,
+            ]);
 
-            // $supplier = $user->suppliers()->create();
+            //Luego relaciono el usuario con el supplier
+            $supplier = $user->supplier()->create();
         }
     }
 }

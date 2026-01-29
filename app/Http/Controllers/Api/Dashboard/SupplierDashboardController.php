@@ -32,7 +32,6 @@ class SupplierDashboardController extends Controller
 
             //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
             return responsePaginateOk($this->supplierService->index($store, 25), 'Suppliers activos obtenidos correctamente');
-
         } catch (\Throwable $th) {
             Log::error($th);
             return responseError($th, 'Error al obtener ' . 'Suppliers activos');
@@ -61,22 +60,31 @@ class SupplierDashboardController extends Controller
         }
     }
 
-    public function search(Store $store, $search)
+    public function search(Store $store, string $search = '')
     {
-
         try {
 
-            //Esto quiere decir que si search viene vacio o con espacios en blanco, se llama al index, en caso contrario prosigo y llamo al search
+            $search = trim($search);
 
-            $Suppliers = trim($search) ? $this->supplierService->search($store, $search, 100) : $this->index($store);
-            return responsePaginateOk($Suppliers, 'Supplier obtenidos correctamente (search)');
+            if ($search === '') {
+                $suppliers = $this->supplierService->index($store, 100);
+            } else {
+                $suppliers = $this->supplierService->search($store, $search, 100);
+            }
 
+            return responsePaginateOk(
+                $suppliers,
+                'Suppliers obtenidos correctamente'
+            );
         } catch (\Throwable $th) {
 
             Log::error($th);
-            return responseError($th, 'Error al buscar ' . $search);
-        }
 
+            return responseError(
+                $th,
+                'Error al buscar suppliers'
+            );
+        }
     }
 
     /**
@@ -99,12 +107,10 @@ class SupplierDashboardController extends Controller
 
             $validated = $request->validate([
                 'name'            => 'required|string|max:255',
-                'email'           => 'required|email|unique:users,email',
-                'phone'           => 'nullable|string|max:20',
+                'email'           => 'nullable|email|unique:users,email',
+                'phone'           => 'required|string|max:20',
                 'document_number' => 'nullable|string|max:20',
-                'is_cash_on_delivery' => 'nullable|boolean',
-                'is_freight_collect'  => 'nullable|boolean',
-                'is_express_shipping'  => 'nullable|boolean',
+                'identity_id'     => 'nullable|integer|exists:identities,id',
             ]);
 
             // 1. CREAR USUARIO
@@ -113,7 +119,7 @@ class SupplierDashboardController extends Controller
                 'email'           => $validated['email'],
                 'phone'           => $validated['phone'],
                 'document_number' => $validated['document_number'],
-                'identity_id'     => 2, //2 es para RUC,
+                'identity_id'     => $validated['identity_id'],
                 'password'        => bcrypt($validated['document_number']),
             ]);
 
@@ -121,16 +127,16 @@ class SupplierDashboardController extends Controller
             $user->stores()->attach($store->id);
 
             // 3. CREAR Supplier
-            $Supplier = $user->supplier()->create([
-                'is_cash_on_delivery' => $validated['is_cash_on_delivery'] ?? false,
-                'is_freight_collect'  => $validated['is_freight_collect'] ?? false,
-                'is_express_shipping'  => $validated['is_express_shipping'] ?? false,
-            ]); //Crear el Supplier relacionado al user
+            $supplier = $user->supplier()->create(); //Crear el Supplier relacionado al user
 
             DB::commit();
 
-            return responseOk( new FlatSupplierUserResource($Supplier->fresh(['user']) ),  "Se ha procesado correctamente la creacion del Supplier");
-                    
+            return responseOk(
+                new FlatSupplierUserResource(
+                    $supplier->fresh(['user'])
+                ),
+                "Se ha procesado correctamente la creacion del Supplier"
+            );
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -148,18 +154,18 @@ class SupplierDashboardController extends Controller
     {
 
         try {
-            //Aquí ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
-            $Supplier = Supplier::findOrFail($supplier_id);
+            //
+            $supplier = Supplier::findOrFail($supplier_id);
 
-            Log::info($Supplier);
+            Log::info($supplier);
 
-            // ⭐ VALIDACIÓN FLEXIBLE (update parcial o completo)
+            //VALIDACIÓN FLEXIBLE (update parcial o completo)
             $validated = $request->validate([
                 'name'            => 'sometimes|required|string|max:255',
                 'email' => [
                     'nullable',
                     'email',
-                    Rule::unique('users', 'email')->ignore($Supplier->user->id),
+                    Rule::unique('users', 'email')->ignore($supplier->user->id),
                 ],
                 'phone'           => 'sometimes|nullable|string|max:20',
                 'document_number' => 'sometimes|nullable|string|max:20',
@@ -171,30 +177,25 @@ class SupplierDashboardController extends Controller
 
             DB::beginTransaction();
 
-            // ⭐ 1. ACTUALIZAR USER (solo lo que venga en el request)
-            $Supplier->user->update(
+            // 1. ACTUALIZAR USER (solo lo que venga en el request)
+            $supplier->user->update(
                 [
-                    'name'            => $validated['name'] ?? $Supplier->user->name,
-                    'email'           => $validated['email'] ?? $Supplier->user->email,
-                    'phone'           => $validated['phone'] ?? $Supplier->user->phone,
-                    'document_number' => $validated['document_number'] ?? $Supplier->user->document_number,
-                    'status'          => $validated['status'] ?? $Supplier->user->status,
+                    'name'            => $validated['name'] ?? $supplier->user->name,
+                    'email'           => $validated['email'] ?? $supplier->user->email,
+                    'phone'           => $validated['phone'] ?? $supplier->user->phone,
+                    'document_number' => $validated['document_number'] ?? $supplier->user->document_number,
+                    'status'          => $validated['status'] ?? $supplier->user->status,
                 ]
             );
 
-            // ⭐ 2. ACTUALIZAR Supplier
-            $Supplier->update(
-                [
-                    'is_cash_on_delivery' => $validated['is_cash_on_delivery'] ?? $Supplier->is_cash_on_delivery,
-                    'is_freight_collect'  => $validated['is_freight_collect'] ?? $Supplier->is_freight_collect,
-                ]
-            );
+            // 2. ACTUALIZAR Supplier
+            // $supplier->update();
 
             DB::commit();
 
             return responseOk(
                 new FlatSupplierUserResource(
-                    $Supplier->fresh(['user'])
+                    $supplier->fresh(['user'])
                 ),
                 "Supplier actualizado correctamente",
                 200
