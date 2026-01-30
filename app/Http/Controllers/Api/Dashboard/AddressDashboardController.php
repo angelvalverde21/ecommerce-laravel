@@ -72,7 +72,7 @@ class AddressDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al crear la direccion.... ");
+            return responseError("Error al crear la direccion.... ");
         }
     }
 
@@ -146,7 +146,7 @@ class AddressDashboardController extends Controller
 
             Log::error($th);
 
-            return responseError($th, "Error al actualizar la dirección");
+            return responseError("Error al actualizar la dirección");
         }
     }
 

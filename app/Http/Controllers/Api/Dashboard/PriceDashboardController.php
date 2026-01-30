@@ -66,7 +66,7 @@ class PriceDashboardController extends Controller
 
             DB::rollback();
         
-            return responseError($th, "Error al crear el precio.... ");
+            return responseError("Error al crear el precio.... ");
         
         }
 

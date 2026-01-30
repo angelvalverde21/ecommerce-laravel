@@ -27,7 +27,7 @@ class BrandDashboardController extends Controller
 
             Log::info($th);
 
-            return responseError($th, "Error al obtener las marcas.... ");
+            return responseError("Error al obtener las marcas.... ");
         }
     }
 
@@ -72,7 +72,7 @@ class BrandDashboardController extends Controller
 
             Log::info($th);
 
-            return responseError($th, "Error al crear la marca.... ");
+            return responseError("Error al crear la marca.... ");
         }
     }
 

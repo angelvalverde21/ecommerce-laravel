@@ -35,7 +35,7 @@ class CourierDashboardController extends Controller
 
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . 'Couriers activos');
+            return responseError('Error al obtener ' . 'Couriers activos');
         }
     }
 
@@ -46,7 +46,7 @@ class CourierDashboardController extends Controller
             return responsePaginateOk($this->courierService->active($store, 25), 'Courier activos obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . 'Courier activos');
+            return responseError('Error al obtener ' . 'Courier activos');
         }
     }
 
@@ -57,7 +57,7 @@ class CourierDashboardController extends Controller
             return responsePaginateOk($this->courierService->blocked($store, 25), 'Courier bloqueados obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . 'Courier bloqueados');
+            return responseError('Error al obtener ' . 'Courier bloqueados');
         }
     }
 
@@ -74,7 +74,7 @@ class CourierDashboardController extends Controller
         } catch (\Throwable $th) {
 
             Log::error($th);
-            return responseError($th, 'Error al buscar ' . $search);
+            return responseError('Error al buscar ' . $search);
         }
 
     }
@@ -141,7 +141,7 @@ class CourierDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al crear el courier.... ");
+            return responseError("Error al crear el courier.... ");
         }
     }
 
@@ -208,7 +208,7 @@ class CourierDashboardController extends Controller
             DB::rollback();
             Log::info($th);
 
-            return responseError($th, "Error al actualizar el courier...");
+            return responseError("Error al actualizar el courier...");
         }
     }
     /**
@@ -221,7 +221,7 @@ class CourierDashboardController extends Controller
             return responseOk($this->courierService->show($store, $courier_id), 'Courier obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . $courier_id);
+            return responseError('Error al obtener ' . $courier_id);
         }
     }
 

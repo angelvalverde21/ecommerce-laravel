@@ -19,13 +19,16 @@ class ManufactureDashboardController extends Controller
         //
         try {
 
-            $manufactures = $store->manufactures()->get();
+            $manufactures = $store->manufactures()
+                ->withCount('purchases')
+                ->get();
 
             return responseOk($manufactures, "Listado de manufacturas obtenido correctamente");
 
         } catch (\Throwable $th) {
+
             Log::info($th);
-            return responseError($th, "Error al obtener el listado de manufacturas");
+            return responseError("Error al obtener el listado de manufacturas");
         }
     }
 
@@ -70,7 +73,7 @@ class ManufactureDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al eliminar.... ");
+            return responseError("Error al eliminar.... ");
         }
     }
 
@@ -81,13 +84,15 @@ class ManufactureDashboardController extends Controller
     {
         try {
 
-            $manufacture = $store->manufactures()->findOrFail($manufacture_id);
-
+            $manufacture = $store->manufactures()->with('purchases')->findOrFail($manufacture_id);
+        
             return responseOk($manufacture);
 
         } catch (\Throwable $th) {
+
             Log::info($th);
-            return responseError($th, "Error al mostrar la manufactura");
+            return responseError("Error al mostrar la manufactura");
+
         }
     }
 
@@ -107,7 +112,7 @@ class ManufactureDashboardController extends Controller
         //
 
         try {
-        
+
             DB::beginTransaction();
 
             $data = $request->validate([
@@ -120,17 +125,15 @@ class ManufactureDashboardController extends Controller
             $manufacture->update($data);
 
             DB::commit();
-        
+
             return responseOk($manufacture, "Se ha actualizado correctamente la manufactura");
-        
         } catch (\Throwable $th) {
 
             Log::info($th);
-        
+
             DB::rollback();
-        
-            return responseError($th, "Error al actualizar la manufactura.... ");
-        
+
+            return responseError("Error al actualizar la manufactura.... ");
         }
     }
 

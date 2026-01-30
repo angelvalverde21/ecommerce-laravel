@@ -30,7 +30,7 @@ class EmployeeDashboardController extends Controller
 
         } catch (\Throwable $th) {
             //throw $th;
-            return responseError($th, "Ha ocurrido un error interno al obtener los datos de los empleados");
+            return responseError("Ha ocurrido un error interno al obtener los datos de los empleados");
         }
     }
 
@@ -56,7 +56,7 @@ class EmployeeDashboardController extends Controller
             return responseOk($employees, "Empleados obtenidos correctamente (search)");
         } catch (\Throwable $th) {
             Log::info($th);
-            return responseError($th, "Ha ocurrido un error interno al buscar los empleados");
+            return responseError("Ha ocurrido un error interno al buscar los empleados");
         }
     }
 
@@ -124,7 +124,7 @@ class EmployeeDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al crear el empleado.... ");
+            return responseError("Error al crear el empleado.... ");
         }
     }
 
@@ -147,7 +147,7 @@ class EmployeeDashboardController extends Controller
 
             return responseOk($user, "Empleado obtenido correctamente");
         } catch (\Throwable $th) {
-            return responseError($th, "No se pudo obtener el empleado solicitado");
+            return responseError("No se pudo obtener el empleado solicitado");
         }
     }
 
@@ -220,7 +220,7 @@ class EmployeeDashboardController extends Controller
             DB::rollback();
             Log::info($th);
 
-            return responseError($th, "Error al actualizar el empleado...");
+            return responseError("Error al actualizar el empleado...");
         }
     }
 

@@ -26,7 +26,7 @@ class UnitDashboardController extends Controller
         
             Log::error($th);
         
-            return responseError($th, "Error obtener la lista de unidades");
+            return responseError("Error obtener la lista de unidades");
         
         }
     }

@@ -5,19 +5,23 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Purchase;
 use App\Models\Store;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 use function Illuminate\Log\log;
 
 class PurchaseDashboardController extends Controller
 {
+
     /**
      * Display a listing of the resource.
      */
+
     public function index(Store $store)
     {
         //
@@ -42,93 +46,83 @@ class PurchaseDashboardController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Store $store, Request $request)
-    {
-        //
 
-        $typeMap = [
-            'batch' => \App\Models\Manufacture::class,
-            // Agrega más modelos según tu caso
+    protected function getParentModel(array $validated): Model
+    {
+        $map = [
+            'manufacture' => \App\Models\Manufacture::class,
+            // 'order' => \App\Models\Order::class,
+            // 'purchase' => \App\Models\Purchase::class,
         ];
 
+        if (! isset($map[$validated['model_type']])) {
+            throw ValidationException::withMessages([
+                'model_type' => 'Tipo de modelo no válido',
+            ]);
+        }
 
-        $resp = $request->all();
+        return $map[$validated['model_type']]::findOrFail($validated['model_id']);
+    }
 
-
-        // $rules = $this->rules;
-
-        // $this->validate($rules);
-
+    
+    public function store(Store $store, Request $request, $purchase_id)
+    {
 
         $validated = $request->validate([
-            'purchaseable_type' => ['required', Rule::in(array_keys($typeMap))],
-            'purchaseable_id' => 'required|integer',
+            'model_type' => [
+                'required',
+                Rule::in(['manufacture']) // Agrega más tipos según sea necesario
+            ],
+            'model_id' => 'required|integer',
             'name' => 'required|string|max:255',
             'quantity' => 'required|numeric',
             'unit_id' => 'required|integer|exists:units,id',
             'price' => 'required|numeric',
             'total' => 'required|numeric',
-            'section_id' => 'required|integer|exists:sections,id',
+            'section_id' => 'integer|exists:sections,id',
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
             'observations' => 'nullable|string',
         ]);
 
-
-        $modelClass = $typeMap[$validated['purchaseable_type']];
-
-        // Obtener nombre tabla para validar existencia
-        $tableName = (new $modelClass)->getTable();
-
-        $parentModel = $modelClass::where('store_id', $store->id)->findOrFail($validated['purchaseable_id']);
+        $purchase = Purchase::findOrFail($purchase_id);
 
         try {
 
-
             DB::beginTransaction();
 
-            $purchase = $parentModel->purchases()->create([
+            $purchase->update([
                 'name' => $validated['name'],
                 'quantity' => $validated['quantity'],
                 'unit_id' => $validated['unit_id'],
                 'price' => $validated['price'],
                 'total' => $validated['total'],
-                'section_id' => $validated['section_id'],
+                'section_id' => $validated['section_id'] ?? null,
                 'supplier_id' => $validated['supplier_id'] ?? null,
                 'observations' => $validated['observations'] ?? null,
                 'user_id' => Auth::guard('api')->id(),
                 // No agregues store_id ni section_id aquí si es polimórfico
             ]);
 
-
             // return redirect()->route('erp.purchases.edit', ['store' => $this->store, 'purchase' => $purchase]);
 
             DB::commit();
 
-            return responseOk($purchase->load('supplier'), "se agrego correctamente el purchase en create");
+            return responseOk($purchase, "se creo correctamente el purchase");
 
         } catch (\Throwable $th) {
 
             DB::rollback();
+
             Log::info($th);
 
-            return responseError($th, "Ha sucedido un error interno al crear el purchaseo store x");
+            return responseError("Ha sucedido un error interno al crear el purchase");
         }
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Store $store, $purchase_id)
-    {
-
-        $purchase = Purchase::with(['user, store, supplier'])->withCount('images')->find($purchase_id);
-
-        if (!$purchase) {
-            return responseError([], "Error al obtener el purchaseo x");
-        }
-
-        return responseOk($purchase, "Datos obtenidos con exito del purchaseo");
-    }
+    public function show(Store $store, $purchase_id) {}
 
     /**
      * Show the form for editing the specified resource.
@@ -141,46 +135,58 @@ class PurchaseDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Store $store, $purchase_id, Request $request)
+    public function update(Store $store, Request $request)
     {
-        // Implementa la lógica para actualizar un purchaseo existente
-        // Esto podría implicar validar los datos de la solicitud,
-        // actualizar el purchaseo en la base de datos y devolver el purchaseo actualizado.
-        try {
-            Log::info('updatex');
-            Log::info($request->all());
 
-            $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
-                'quantity' => 'nullable',
-                'unit_id' => 'nullable',
-                'price' => 'nullable',
-                'total' => 'nullable',
-                'supplier_id' => 'nullable',
-                'section_id' => 'required',
-                'user_id' => '',
-                'observations' => ''
+        $validated = $request->validate([
+            'model_type' => [
+                'required',
+                Rule::in(['manufacture']) // Agrega más tipos según sea necesario
+            ],
+            'model_id' => 'required|integer',
+            'name' => 'required|string|max:255',
+            'quantity' => 'required|numeric',
+            'unit_id' => 'required|integer|exists:units,id',
+            'price' => 'required|numeric',
+            'total' => 'required|numeric',
+            'section_id' => 'integer|exists:sections,id',
+            'supplier_id' => 'nullable|integer|exists:suppliers,id',
+            'observations' => 'nullable|string',
+        ]);
+
+        $parentModel = $this->getParentModel($validated);
+
+        try {
+
+            DB::beginTransaction();
+
+            $purchase = $parentModel->purchases()->create([
+                'name' => $validated['name'],
+                'quantity' => $validated['quantity'],
+                'unit_id' => $validated['unit_id'],
+                'price' => $validated['price'],
+                'total' => $validated['total'],
+                'section_id' => $validated['section_id'] ?? null,
+                'supplier_id' => $validated['supplier_id'] ?? null,
+                'observations' => $validated['observations'] ?? null,
+                'user_id' => Auth::guard('api')->id(),
+                // No agregues store_id ni section_id aquí si es polimórfico
             ]);
 
-            // $validatedData['store_id'] = $store->id;
-            $validatedData['user_id']  = Auth::guard('api')->id();
+            // return redirect()->route('erp.purchases.edit', ['store' => $this->store, 'purchase' => $purchase]);
 
-            $purchase = Purchase::updateOrCreate(
-                ['id' => $purchase_id],  // El campo 'id' indica si se actualiza o crea
+            DB::commit();
 
-                $validatedData
-            );
-
-            $purchase->load(['unit', 'supplier']);
-            
-            return responseOk($purchase, "Datos guardados correctamente update");
+            return responseOk($purchase, "se creo correctamente el purchase");
         } catch (\Throwable $th) {
-            //throw $th;
+
+            DB::rollback();
+
             Log::info($th);
-            return responseError("Error al guardar los datos del purchaseo desde purchase Private controller - > update", $th);
+
+            return responseError("Ha sucedido un error interno al crear el purchase");
         }
     }
-
     /**
      * Remove the specified resource from storage.
      */

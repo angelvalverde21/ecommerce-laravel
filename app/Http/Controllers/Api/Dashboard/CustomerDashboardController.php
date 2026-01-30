@@ -34,7 +34,7 @@ class CustomerDashboardController extends Controller
             return respondePaginateOk($this->service->index($store, 25), $this->name . ' obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . $this->name);
+            return responseError('Error al obtener ' . $this->name);
         }
     }
 
@@ -51,7 +51,7 @@ class CustomerDashboardController extends Controller
 
             Log::error($th);
             
-            return responseError($th, 'Error al buscar ' . $this->name);
+            return responseError('Error al buscar ' . $this->name);
 
         }
     }
@@ -66,7 +66,7 @@ class CustomerDashboardController extends Controller
             return responseOk($customers, "Clientes bloqueados obtenidos correctamente");
         } catch (\Throwable $th) {
             Log::info($th);
-            return responseError($th, "Ha ocurrido un error interno al obtener los clientes bloqueados");
+            return responseError("Ha ocurrido un error interno al obtener los clientes bloqueados");
         }
     }
 
@@ -119,7 +119,7 @@ class CustomerDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al crear el customer.... ");
+            return responseError("Error al crear el customer.... ");
         }
     }
 
@@ -140,7 +140,7 @@ class CustomerDashboardController extends Controller
 
             return responseOk($user, "Customer obtenido correctamente");
         } catch (\Throwable $th) {
-            return responseError($th, "No se pudo obtener el Customer solicitado");
+            return responseError("No se pudo obtener el Customer solicitado");
         }
     }
 
@@ -194,7 +194,7 @@ class CustomerDashboardController extends Controller
             DB::rollback();
             Log::info($th);
 
-            return responseError($th, "Error al actualizar el cliente...");
+            return responseError("Error al actualizar el cliente...");
         }
     }
 

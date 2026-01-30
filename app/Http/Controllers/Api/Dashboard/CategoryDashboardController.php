@@ -89,7 +89,7 @@ class CategoryDashboardController extends Controller
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
-            return responseError($th, "Ha ocurrido un error interno al crear la categoria");
+            return responseError("Ha ocurrido un error interno al crear la categoria");
         }
     }
 
@@ -106,7 +106,7 @@ class CategoryDashboardController extends Controller
             return responseOk($category, "Categoria obtenida correctamente (show)");
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, "Error al obtener la categoria (show)");
+            return responseError("Error al obtener la categoria (show)");
         }
     }
 
@@ -165,7 +165,7 @@ class CategoryDashboardController extends Controller
 
             Log::error($th);
 
-            return responseError($th, "Ha ocurrido un error al intentar eliminar la categoria desde el servidor");
+            return responseError("Ha ocurrido un error al intentar eliminar la categoria desde el servidor");
         }
     }
 
@@ -183,7 +183,7 @@ class CategoryDashboardController extends Controller
             return responseOk($products, "Productos obtenidos correctamente por slug: $slug");
         } catch (\Throwable $th) {
             //throw $th;
-            return responseError($th, "Error al obtener productos por slug: $slug");
+            return responseError("Error al obtener productos por slug: $slug");
         }
     }
 

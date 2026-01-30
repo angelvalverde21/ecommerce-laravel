@@ -72,7 +72,7 @@ class PurchaseOrderDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al crear la orden de compra.... ");
+            return responseError("Error al crear la orden de compra.... ");
         }
     }
 

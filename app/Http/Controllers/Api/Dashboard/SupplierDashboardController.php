@@ -34,7 +34,7 @@ class SupplierDashboardController extends Controller
             return responsePaginateOk($this->supplierService->index($store, 25), 'Suppliers activos obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . 'Suppliers activos');
+            return responseError('Error al obtener ' . 'Suppliers activos');
         }
     }
 
@@ -45,7 +45,7 @@ class SupplierDashboardController extends Controller
             return responsePaginateOk($this->supplierService->active($store, 25), 'Supplier activos obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . 'Supplier activos');
+            return responseError('Error al obtener ' . 'Supplier activos');
         }
     }
 
@@ -56,7 +56,7 @@ class SupplierDashboardController extends Controller
             return responsePaginateOk($this->supplierService->blocked($store, 25), 'Supplier bloqueados obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . 'Supplier bloqueados');
+            return responseError('Error al obtener ' . 'Supplier bloqueados');
         }
     }
 
@@ -143,7 +143,7 @@ class SupplierDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al crear el Supplier.... ");
+            return responseError("Error al crear el Supplier.... ");
         }
     }
 
@@ -205,7 +205,7 @@ class SupplierDashboardController extends Controller
             DB::rollback();
             Log::info($th);
 
-            return responseError($th, "Error al actualizar el Supplier...");
+            return responseError("Error al actualizar el Supplier...");
         }
     }
     /**
@@ -218,7 +218,7 @@ class SupplierDashboardController extends Controller
             return responseOk($this->supplierService->show($store, $supplier_id), 'Supplier obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, 'Error al obtener ' . $supplier_id);
+            return responseError('Error al obtener ' . $supplier_id);
         }
     }
 

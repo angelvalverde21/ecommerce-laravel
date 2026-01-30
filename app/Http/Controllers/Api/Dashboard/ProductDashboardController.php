@@ -46,7 +46,7 @@ class ProductDashboardController extends Controller
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
-            return responseError($th, "Ocurrio un error al traer los productos");
+            return responseError("Ocurrio un error al traer los productos");
         }
     }
 
@@ -66,7 +66,7 @@ class ProductDashboardController extends Controller
             return responseOk($products, "Datos obtenidos con exito de search");
         } catch (\Throwable $th) {
             Log::info($th);
-            return responseError($th, "Error al obtener los datos de search");
+            return responseError("Error al obtener los datos de search");
         }
 
         // $products = $store->products;
@@ -212,7 +212,7 @@ class ProductDashboardController extends Controller
             DB::rollback();
             Log::info($th);
 
-            return responseError($th, "Ha sucedido un error interno al crear el producto store x");
+            return responseError("Ha sucedido un error interno al crear el producto store x");
         }
     }
 
@@ -267,7 +267,7 @@ class ProductDashboardController extends Controller
         } catch (\Throwable $th) {
 
             Log::error($th);
-            return responseError($th, "Error al archiviar el product (destroy)");
+            return responseError("Error al archiviar el product (destroy)");
         }
     }
 }

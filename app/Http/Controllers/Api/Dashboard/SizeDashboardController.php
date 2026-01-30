@@ -35,7 +35,7 @@ class SizeDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error recibir las tallas.... ");
+            return responseError("Error recibir las tallas.... ");
         }
     }
 
@@ -134,7 +134,7 @@ class SizeDashboardController extends Controller
             return responseOk($size, "sizen eliminada correctamente (destroy)");
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, "Error al eliminar la sizen (destroy)");
+            return responseError("Error al eliminar la sizen (destroy)");
         }
     }
 
@@ -171,7 +171,7 @@ class SizeDashboardController extends Controller
 
             Log::info($th);
 
-            return responseError($th, "Error al ordenar las tallas");
+            return responseError("Error al ordenar las tallas");
         }
     }
 }

@@ -35,7 +35,7 @@ class ColorDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error recibir las tallas.... ");
+            return responseError("Error recibir las tallas.... ");
         }
     }
 
@@ -135,7 +135,7 @@ class ColorDashboardController extends Controller
             return responseOk($color, "color eliminado correctamente (destroy)");
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError($th, "Error al eliminar el color (destroy)");
+            return responseError("Error al eliminar el color (destroy)");
         }
     }
 
@@ -172,7 +172,7 @@ class ColorDashboardController extends Controller
 
             Log::info($th);
 
-            return responseError($th, "Error al ordenar las Colors");
+            return responseError("Error al ordenar las Colors");
         }
     }
 }

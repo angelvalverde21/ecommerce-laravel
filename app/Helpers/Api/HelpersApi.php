@@ -13,12 +13,11 @@ function responseOk($data = null, $message = "Datos obtenidos con exito", $statu
     return response()->json($array);
 }
 
-function responseError($error = "", $message = "Error al obtener los datos", $status = 500)
+function responseError($message = "Error al obtener los datos", $status = 500)
 {
     return response()->json([
         'status' => $status, //404 perfil no encontrado
         'success' => false,
-        'error' => $error,
         'message' => $message,
     ], $status);
 }

@@ -64,7 +64,7 @@ class OptionValueDashboardController extends Controller
             DB::rollback();
             Log::info($th);
 
-            return responseError($th, "Ha sucedido un error interno al crear el optionValue");
+            return responseError("Ha sucedido un error interno al crear el optionValue");
         }
     }
 

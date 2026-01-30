@@ -66,7 +66,7 @@ class AttributeDashboardController extends Controller
 
             DB::rollback();
         
-            return responseError($th, "Error al crear el atributo.... ");
+            return responseError("Error al crear el atributo.... ");
         
         }
 
@@ -113,7 +113,7 @@ class AttributeDashboardController extends Controller
         } catch (\Throwable $th) {
 
             Log::error($th);
-            return responseError($th, "Error al eliminar el atributo (destroy)");
+            return responseError("Error al eliminar el atributo (destroy)");
         }
     }
 

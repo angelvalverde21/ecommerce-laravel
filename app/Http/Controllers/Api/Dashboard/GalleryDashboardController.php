@@ -30,7 +30,7 @@ class GalleryDashboardController extends Controller
         
             DB::rollback();
         
-            return responseError($th, "Error al eliminar.... ");
+            return responseError("Error al eliminar.... ");
         
         }
     }

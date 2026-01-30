@@ -36,7 +36,7 @@ class DistrictDashboardController extends Controller
 
         } catch (\Throwable $th) {
             Log::info($th);
-            return responseError($th, "Error al obtener los datos de search");
+            return responseError("Error al obtener los datos de search");
         }
     }
 
@@ -68,7 +68,7 @@ class DistrictDashboardController extends Controller
 
         } catch (\Throwable $th) {
             Log::info($th);
-            return responseError($th, "Error al obtener los datos de show");
+            return responseError("Error al obtener los datos de show");
         }
     }
 

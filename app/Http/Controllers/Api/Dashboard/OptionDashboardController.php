@@ -66,7 +66,7 @@ class OptionDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError($th, "Error al crear el atributo.... ");
+            return responseError("Error al crear el atributo.... ");
         }
     }
 
