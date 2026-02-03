@@ -5,12 +5,22 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Option;
 use App\Models\store;
+use App\Services\Dashboard\Option\OptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class OptionDashboardController extends Controller
 {
+
+    protected OptionService $optionService;
+
+    public function __construct()
+    {
+        // Pasamos el modelo que vamos a usar
+        $this->optionService = new OptionService();
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -30,44 +40,20 @@ class OptionDashboardController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Store $store, $product_id,  Request $request)
+    public function store(Store $store, int $product_id, Request $request)
     {
-        $resp = $request->all();
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
 
-        Log::info('creando option0');
+        $option = $this->optionService->store(
+            $store,
+            $product_id,
+            $validated['name']
+        );
 
-        // $rules = $this->rules;
-
-        // $this->validate($rules);
-
-        $defaultOptionsByName = collect(OPTION::DEFAULT_OPTIONS)->keyBy('name');
-
-
-        try {
-
-            DB::beginTransaction();
-
-            $option = Option::create(
-                [
-                    'store_id' => $store->id,
-                    'product_id' => $product_id,
-                    'name' => $resp['name'],
-                    'label'      => $defaultOptionsByName[$resp['name']]['label'] ?? null,
-                    'sort_order' => $defaultOptionsByName[$resp['name']]['sort_order'] ?? 1,
-                ]
-            );
-
-            DB::commit();
-
-            return responseOk($option, "Se ha creado correctamente el atributo");
-        } catch (\Throwable $th) {
-
-            Log::info($th);
-
-            DB::rollback();
-
-            return responseError("Error al crear el atributo.... ");
-        }
+        //Todos los errores se manejan en CustomException y se convierten en respuestas json automaticamente
+        return responseOk($option, 'Se creó correctamente');
     }
 
     /**

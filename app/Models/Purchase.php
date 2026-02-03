@@ -12,6 +12,16 @@ class Purchase extends Model
 
     protected $guarded = ['id', 'created_at'];
 
+    protected $hidden = [
+        'purchaseable_type',
+        'purchaseable_id',
+    ];
+
+    protected $casts = [
+        'purchase_start' => 'date:Y-m-d',
+        'purchase_end' => 'date:Y-m-d',
+    ];
+
     public function purchaseable()
     {
         return $this->morphTo();
@@ -24,12 +34,11 @@ class Purchase extends Model
 
     public function supplier()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Supplier::class);
     }
 
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable')->orderBy('id', 'DESC');;
     }
-
 }

@@ -112,7 +112,6 @@ class ProductShopifyController extends Controller
             $products = $this->shopifyProductService->getSearchProducts($search);
 
             return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
-            
         } catch (\Throwable $th) {
             //throw $th;
             Log::info($th);
@@ -184,6 +183,47 @@ class ProductShopifyController extends Controller
         return responseOk([], "Precio actualizado correctamente");
     }
 
+    public function updateProductVariantPrices(Store $store, Request $request, $product_id)
+    {
+
+        Log::info($request->all());
+
+        // Validación mínima
+        $request->validate([
+            'price_etiqueta'    => 'nullable|numeric|min:0',
+            'price_oferta'      => 'nullable|numeric|min:0',
+            'price_sale'        => 'nullable|numeric|min:0',
+            'price_wholesaler'  => 'nullable|numeric|min:0',
+            'price_live'        => 'nullable|numeric|min:0',
+            'price_blackfriday' => 'nullable|numeric|min:0',
+            'price_feria'       => 'nullable|numeric|min:0',
+        ]);
+
+        // Payload (solo campos presentes), evita campos que no esten en la request
+        $data = collect($request->only([
+            'price_etiqueta',
+            'price_oferta',
+            'price_sale',
+            'price_wholesaler',
+            'price_live',
+            'price_blackfriday',
+            'price_feria',
+        ]))->filter(fn($v) => !is_null($v))
+            ->map(fn($v) => (float) $v)
+            ->toArray();
+
+        $data['updated_at'] = now();
+
+        //UNA SOLA QUERY
+        ShopifyVariant::where('shopify_product_id', $product_id)
+            ->update($data);
+
+        $variants = ShopifyVariant::where('shopify_product_id', $product_id)->get();
+
+
+        return responseOk($variants, "Precios de variantes actualizados correctamente");
+    }
+
 
     /**
      * Store a newly created resource in storage.
@@ -215,6 +255,22 @@ class ProductShopifyController extends Controller
     public function update(Request $request, string $id)
     {
         //
+    }
+
+    public function updateProductSyncStatus(Store $store, Request $request, string $product_id)
+    {
+        //
+        $request->validate([
+            'sync_status' => 'required|boolean',
+        ]);
+
+        $product = ShopifyProduct::findOrFail($product_id);
+
+        $product->update([
+            'sync_status' => $request->sync_status,
+        ]);
+
+        return responseOk($product, "Estado de sincronización del producto actualizado correctamente");
     }
 
     /**

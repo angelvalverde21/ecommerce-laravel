@@ -24,7 +24,6 @@ class ManufactureDashboardController extends Controller
                 ->get();
 
             return responseOk($manufactures, "Listado de manufacturas obtenido correctamente");
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -52,13 +51,15 @@ class ManufactureDashboardController extends Controller
             DB::beginTransaction();
 
             $data = $request->validate([
-                'product_id' => 'required|string|max:255',
+                'name' => 'required|string|max:255',
+                'quantity_total' => 'nullable|integer',
                 'budget' => 'required|numeric',
             ]);
 
             $manufacture = $store->manufactures()->create(
                 [
-                    'product_id' => $data['product_id'],
+                    'name' => $data['name'],
+                    'quantity_total' => $data['quantity_total'],
                     'budget' => $data['budget'],
                     'user_id' => Auth::id(),
                 ]
@@ -84,15 +85,20 @@ class ManufactureDashboardController extends Controller
     {
         try {
 
-            $manufacture = $store->manufactures()->with('purchases')->findOrFail($manufacture_id);
-        
-            return responseOk($manufacture);
+            $manufacture = $store->manufactures()->with(['purchases.supplier','purchases.unit',
+                'manufactureVariants.variant' => function ($q) {
+                    $q->with([
+                        'product',
+                        'optionValues',
+                    ]);
+                },
+            ])->findOrFail($manufacture_id);
 
+            return responseOk($manufacture);
         } catch (\Throwable $th) {
 
             Log::info($th);
             return responseError("Error al mostrar la manufactura");
-
         }
     }
 

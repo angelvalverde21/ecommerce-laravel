@@ -79,7 +79,8 @@ class Product extends Model
 
     public function attributes()
     {
-        return $this->hasMany(Attribute::class);
+        // return $this->hasMany(Attribute::class);
+        return $this->morphMany(Attribute::class, 'attributeable');
     }
 
 

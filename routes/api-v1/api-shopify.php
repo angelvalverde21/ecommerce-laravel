@@ -62,7 +62,10 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
         Route::prefix('{product_id}')->group(function () {
 
             Route::get('/', [ProductShopifyController::class, 'show']); //show o mostrar por id
+            Route::put('/sync-status', [ProductShopifyController::class, 'updateProductSyncStatus']); //actualizar
             Route::put('/', [ProductShopifyController::class, 'update']); //actualizar
+            Route::put('/prices', [ProductShopifyController::class, 'updateProductVariantPrices']); //actualizar las variantes de un producto
+            //  Route::put('/sync/prices', [SyncShopifyController::class, 'syncProductPrices']); //actualizar (no tiene sentido)
             Route::delete('/', [ProductShopifyController::class, 'destroy']); //borrar
 
         });

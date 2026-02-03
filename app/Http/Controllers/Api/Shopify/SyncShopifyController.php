@@ -49,6 +49,9 @@ class SyncShopifyController extends Controller
         }
     }
 
+    // Sincroniza los precios del producto
+    
+
 
     /**
      * Show the form for creating a new resource.

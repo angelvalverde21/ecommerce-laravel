@@ -23,6 +23,9 @@ return new class extends Migration
             $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el proveedor, deja el campo en null
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el usuario, deja el campo en null
             $table->foreignId('store_id')->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las compras asociadas
+            $table->dateTime('purchase_end')->nullable(); //fecha de fin de
+            $table->dateTime('purchase_start')->nullable(); //fecha de inicio de
+            
             $table->morphs('purchaseable'); //ya agrega el index
 
             $table->timestamps();

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->string('status')->nullable();
             $table->string('online_store_url')->nullable();
+            $table->boolean('sync_status')->default(true);
             // $table->text('body_html')->nullable();
             $table->timestamp('created_at_shopify')->nullable();
             $table->timestamp('updated_at_shopify')->nullable();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -98,6 +99,9 @@ class AuthApiController extends Controller
                     $user_data['email'] = $user->email;
                     $user_data['phone'] = $user->phone;
                     $user_data['roles'] = $user->getRoleNames();
+
+
+                    $store['units'] = Unit::all();
 
                     try {
 

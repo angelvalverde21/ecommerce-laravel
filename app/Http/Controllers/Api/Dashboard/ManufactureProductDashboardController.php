@@ -5,19 +5,9 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\store;
 use Illuminate\Http\Request;
-use App\Services\Dashboard\OptionValue\OptionValueService;
 
-class OptionValueDashboardController extends Controller
+class ManufactureProductDashboardController extends Controller
 {
-
-    protected OptionValueService $optionValueService;
-
-    public function __construct()
-    {
-        // Pasamos el modelo que vamos a usar
-        $this->optionValueService = new OptionValueService();
-    }
-
     /**
      * Display a listing of the resource.
      */
@@ -37,25 +27,10 @@ class OptionValueDashboardController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Store $store, Request $request)
+    public function store(Request $request)
     {
-        $validated = $request->validate([
-            'option_id' => 'required|integer',
-            'value'     => 'required|string|max:255',
-        ]);
-
-        $optionValue = $this->optionValueService->store(
-            $store,
-            $validated['option_id'],
-            $validated['value']
-        );
-
-        return responseOk(
-            $optionValue,
-            'Se agregó correctamente el optionValue'
-        );
+        //
     }
-
 
     /**
      * Display the specified resource.
@@ -63,6 +38,25 @@ class OptionValueDashboardController extends Controller
     public function show(store $store)
     {
         //
+    }
+
+    //Procesa el lote que recibira por el request
+    public function batch(Request $request, store $store, $manufacture_id)
+    {
+
+        $validaded = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.manufacture_id' => 'required|integer|exists:manufactures,id',
+            'items.*.variant_id' => 'required|integer|exists:variants,id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        foreach ($request->items as $item) {
+            $store->manufactures()->find($manufacture_id)->products()->attach(
+                
+            );
+        }
+        
     }
 
     /**

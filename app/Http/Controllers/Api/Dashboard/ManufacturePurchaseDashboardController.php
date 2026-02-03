@@ -27,26 +27,14 @@ class ManufacturePurchaseDashboardController extends Controller
         //
     }
 
+
     /**
      * Store a newly created resource in storage.
      */
+
+
     public function store(Store $store, Request $request, $manufacture_id)
     {
-        //
-
-        $typeMap = [
-            'manufacture' => \App\Models\Manufacture::class,
-            // Agrega más modelos según tu caso
-        ];
-
-
-        $resp = $request->all();
-
-
-        // $rules = $this->rules;
-
-        // $this->validate($rules);
-
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -54,43 +42,34 @@ class ManufacturePurchaseDashboardController extends Controller
             'unit_id' => 'required|integer|exists:units,id',
             'price' => 'required|numeric',
             'total' => 'required|numeric',
-            'section_id' => 'required|integer|exists:sections,id',
+            'store_id' => 'required|integer|exists:stores,id',
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
             'observations' => 'nullable|string',
         ]);
 
-
-        $modelClass = $typeMap[$validated['purchaseable_type']];
-
-        // Obtener nombre tabla para validar existencia
-        $tableName = (new $modelClass)->getTable();
-
-        $parentModel = $modelClass::where('store_id', $store->id)->findOrFail($validated['purchaseable_id']);
+        $manufacture = $store->manufactures()
+            ->findOrFail($manufacture_id);
 
         try {
 
-
             DB::beginTransaction();
 
-            $purchase = $parentModel->purchases()->create([
+            $purchase = $manufacture->purchases()->create([
                 'name' => $validated['name'],
                 'quantity' => $validated['quantity'],
                 'unit_id' => $validated['unit_id'],
                 'price' => $validated['price'],
                 'total' => $validated['total'],
-                'section_id' => $validated['section_id'],
                 'supplier_id' => $validated['supplier_id'] ?? null,
                 'observations' => $validated['observations'] ?? null,
                 'user_id' => Auth::guard('api')->id(),
                 // No agregues store_id ni section_id aquí si es polimórfico
             ]);
 
-
-            // return redirect()->route('erp.purchases.edit', ['store' => $this->store, 'purchase' => $purchase]);
-
             DB::commit();
 
             return responseOk($purchase->load('supplier'), "se agrego correctamente el purchase en create");
+            
         } catch (\Throwable $th) {
 
             DB::rollback();

@@ -11,14 +11,30 @@ use App\Models\ShopifyVariant;
 use App\Models\Size;
 use App\Models\Status;
 use App\Models\Store;
+use App\Services\Dashboard\Option\OptionService;
+use App\Services\Dashboard\OptionValue\OptionValueService;
 use App\Services\Shopify\ShopifyBaseService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use PhpParser\Node\Stmt\TryCatch;
 
 class ShopifyProductService extends ShopifyBaseService
 {
+
+    protected OptionValueService $optionValueService;
+    protected OptionService $optionService;
+
+    public function __construct(
+        OptionValueService $optionValueService,
+        OptionService $optionService
+    ) {
+        parent::__construct(); // ⚠️ importante si el padre tiene constructor
+
+        $this->optionValueService = $optionValueService;
+        $this->optionService = $optionService;
+    }
 
     public function getShopifyProducts(int $limit = 10, ?string $searchTerm = null, ?string $cursor = null): array //son los productos de shopify
     {
@@ -243,76 +259,79 @@ class ShopifyProductService extends ShopifyBaseService
         // Construir el periodo completo
     }
 
-    public function sync(Store $store): array
+    public function sync(Store $store, bool $forceRefresh = false): array
     {
+        $cacheKey = "shopify:products:store:{$store->id}";
+        $cacheTtl = now()->addHour(24); // ajusta a tu necesidad
+
         // -------------------------------------------------------------
         // 1️⃣ — QUERY GRAPHQL
         // -------------------------------------------------------------
         $queryTemplate = <<<GRAPHQL
-    {
-        products(
-            first: 100,
-            after: :cursor,
-            sortKey: CREATED_AT,
-            reverse: true
-        ) {
-            edges {
-                cursor
-                node {
-                    id
-                    title
-                    bodyHtml
-                    vendor
-                    productType
-                    handle
-                    createdAt
-                    updatedAt
-                    onlineStoreUrl
-                    status
-                    tags
-                    category {
-                        id
-                        name
-                        fullName
-                    }
-                    variants(first: 10) {
-                        edges {
-                            node {
-                                id
-                                title
-                                price
-                                compareAtPrice
-                                inventoryQuantity
-                            }
-                        }
-                    }
-                    options {
-                        id
-                        name
-                        values
-                    }
-                    images(first: 10) {
-                        edges {
-                            node {
-                                id
-                                src
-                            }
-                        }
-                    }
-                    featuredImage {
-                        id
-                        src
-                    }
-                }
-            }
-            pageInfo {
-                hasNextPage
-                hasPreviousPage
-                endCursor
-            }
-        }
-    }
-    GRAPHQL;
+                                {
+                                    products(
+                                        first: 100,
+                                        after: :cursor,
+                                        sortKey: CREATED_AT,
+                                        reverse: true
+                                    ) {
+                                        edges {
+                                            cursor
+                                            node {
+                                                id
+                                                title
+                                                bodyHtml
+                                                vendor
+                                                productType
+                                                handle
+                                                createdAt
+                                                updatedAt
+                                                onlineStoreUrl
+                                                status
+                                                tags
+                                                category {
+                                                    id
+                                                    name
+                                                    fullName
+                                                }
+                                                variants(first: 10) {
+                                                    edges {
+                                                        node {
+                                                            id
+                                                            title
+                                                            price
+                                                            compareAtPrice
+                                                            inventoryQuantity
+                                                        }
+                                                    }
+                                                }
+                                                options {
+                                                    id
+                                                    name
+                                                    values
+                                                }
+                                                images(first: 10) {
+                                                    edges {
+                                                        node {
+                                                            id
+                                                            src
+                                                        }
+                                                    }
+                                                }
+                                                featuredImage {
+                                                    id
+                                                    src
+                                                }
+                                            }
+                                        }
+                                        pageInfo {
+                                            hasNextPage
+                                            hasPreviousPage
+                                            endCursor
+                                        }
+                                    }
+                                }
+                                GRAPHQL;
 
         $queryBuilder = function (?string $cursor) use ($queryTemplate) {
             return str_replace(
@@ -323,18 +342,35 @@ class ShopifyProductService extends ShopifyBaseService
         };
 
         // -------------------------------------------------------------
-        // 2️⃣ — CONSULTA DIRECTA A SHOPIFY (SIEMPRE)
+        // 2️⃣ — CACHE / SHOPIFY
         // -------------------------------------------------------------
-        $result = $this->getDataFromShopify(
-            'products',
-            $queryBuilder,
-            ['variants']
+        $result = Cache::remember(
+            $cacheKey,
+            $cacheTtl,
+            function () use ($queryBuilder) {
+                return $this->getDataFromShopify(
+                    'products',
+                    $queryBuilder,
+                    ['variants']
+                );
+            }
         );
+
+        if ($forceRefresh) {
+
+            Cache::forget($cacheKey);
+
+            $result = $this->getDataFromShopify(
+                'products',
+                $queryBuilder,
+                ['variants']
+            );
+        }
 
         $products = collect($result['items'] ?? []);
 
         if ($products->isEmpty()) {
-            Log::warning('Shopify sync: productos vacíos');
+            Log::warning("Shopify sync: productos vacíos (store {$store->id})");
         }
 
         // -------------------------------------------------------------
@@ -345,9 +381,9 @@ class ShopifyProductService extends ShopifyBaseService
 
         return [
             'data' => json_decode(json_encode($products)),
+            'cached' => !$forceRefresh,
         ];
     }
-
 
     public function syncProductsShopify(array $products, Store $store)
     {
@@ -468,9 +504,24 @@ class ShopifyProductService extends ShopifyBaseService
                 ]
             );
 
+
+            //Como son los datos de shopify, las variantes son tallas, osea creo la opcion "talla"
+
+            try {
+                $option = $this->optionService->store($store, $product->id, 'size');
+            } catch (\Throwable $th) {
+                Log::info($th);
+            }
+
+
+
+
+
             // ----------------------------------------------
             // 2) GUARDAR VARIANTES
             // ----------------------------------------------
+
+
             foreach ($p['variants'] as $v) {
 
                 $size = Size::updateOrCreate(
@@ -484,6 +535,19 @@ class ShopifyProductService extends ShopifyBaseService
                         'product_id' => $product->id,
                     ]
                 );
+
+                //Creando las variantes
+
+                if ($option) {
+                    $this->optionValueService->store(
+                        $store,
+                        $option->id,
+                        $v['title']
+                    );
+                }
+
+
+
 
                 // $size->prices()->updateOrCreate(
                 //     ['type' => Price::ETIQUETA],
@@ -658,9 +722,12 @@ class ShopifyProductService extends ShopifyBaseService
                         "variants" => $variants  // aquí pueden venir N variantes
                     ];
 
-                    $response = $this->graphql($query, $variables)->json();
+                    if ($product->sync_status) {
+                        # code...
+                        $response = $this->graphql($query, $variables)->json();
+                        Log::info($response);
+                    }
 
-                    Log::info($response);
 
                     $counter++;
 

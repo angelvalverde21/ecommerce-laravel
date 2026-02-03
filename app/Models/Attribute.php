@@ -34,4 +34,9 @@ class Attribute extends Model
     {
         return $this->hasMany(AttributeValue::class, 'attribute_id')->orderBy('sort_order', 'ASC');
     }
+
+    public function attributeable()
+    {
+        return $this->morphTo();
+    }
 }

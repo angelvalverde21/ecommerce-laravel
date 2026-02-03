@@ -59,7 +59,7 @@ class ProductDashboardController extends Controller
 
             $search = pluralToSingular($search);
 
-            $products = $store->products()->with(['sizes', 'image'])->search($search)->limit(10)->get();
+            $products = $store->products()->with(['sizes', 'image', 'variants.product', 'variants.variant_option_values.optionValue'])->search($search)->limit(10)->get();
 
             Log::info($products);
 
@@ -77,7 +77,7 @@ class ProductDashboardController extends Controller
     {
         //
 
-        $product = $store->products()->with(['category', 'colors.sizes', 'attributes', 'options.option_values', 'variants.variant_option_values.optionValue', 'prices', 'sizes'])->find($product_id);
+        $product = $store->products()->with(['category', 'attributes', 'options.option_values', 'variants.product',  'variants.variant_option_values.optionValue'])->find($product_id);
 
         if (!$product) {
             return responseError([], "Error al obtener el producto x", 404);

@@ -55,51 +55,55 @@ class PurchaseDashboardController extends Controller
             // 'purchase' => \App\Models\Purchase::class,
         ];
 
-        if (! isset($map[$validated['model_type']])) {
+        if (! isset($map[$validated['purchaseable_type']])) {
             throw ValidationException::withMessages([
-                'model_type' => 'Tipo de modelo no válido',
+                'purchaseable_type' => 'Tipo de modelo no válido',
             ]);
         }
 
-        return $map[$validated['model_type']]::findOrFail($validated['model_id']);
+        return $map[$validated['purchaseable_type']]::findOrFail($validated['purchaseable_id']);
     }
 
-    
-    public function store(Store $store, Request $request, $purchase_id)
+
+    public function store(Store $store, Request $request)
     {
 
         $validated = $request->validate([
-            'model_type' => [
+            'purchaseable_type' => [
                 'required',
                 Rule::in(['manufacture']) // Agrega más tipos según sea necesario
             ],
-            'model_id' => 'required|integer',
+            'purchaseable_id' => 'required|integer',
             'name' => 'required|string|max:255',
             'quantity' => 'required|numeric',
             'unit_id' => 'required|integer|exists:units,id',
             'price' => 'required|numeric',
             'total' => 'required|numeric',
-            'section_id' => 'integer|exists:sections,id',
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
             'observations' => 'nullable|string',
+            'purchase_start' => 'nullable|date',
+            'purchase_end' => 'nullable|date',
         ]);
 
-        $purchase = Purchase::findOrFail($purchase_id);
+        $parentModel = $this->getParentModel($validated);
 
         try {
 
             DB::beginTransaction();
 
-            $purchase->update([
+            $purchase = $parentModel->purchases()->create([
+
                 'name' => $validated['name'],
                 'quantity' => $validated['quantity'],
                 'unit_id' => $validated['unit_id'],
                 'price' => $validated['price'],
                 'total' => $validated['total'],
-                'section_id' => $validated['section_id'] ?? null,
                 'supplier_id' => $validated['supplier_id'] ?? null,
                 'observations' => $validated['observations'] ?? null,
                 'user_id' => Auth::guard('api')->id(),
+                'purchase_start' => $validated['purchase_start'] ?? null,
+                'purchase_end' => $validated['purchase_end'] ?? null,
+                'store_id' => $store->id,
                 // No agregues store_id ni section_id aquí si es polimórfico
             ]);
 
@@ -107,14 +111,11 @@ class PurchaseDashboardController extends Controller
 
             DB::commit();
 
-            return responseOk($purchase, "se creo correctamente el purchase");
-
+            return responseOk($purchase->load('supplier.user'), "se creo correctamente el purchase");
         } catch (\Throwable $th) {
 
             DB::rollback();
-
             Log::info($th);
-
             return responseError("Ha sucedido un error interno al crear el purchase");
         }
     }
@@ -122,7 +123,18 @@ class PurchaseDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Store $store, $purchase_id) {}
+    public function show(Store $store, $purchase_id) {
+
+
+        try {
+            $purchase = $store->purchases()->with('supplier.user')->findOrFail($purchase_id);
+            return responseOk($purchase, "El purchase ha sido obtenido correctamente (dashboard)");
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError("Ha sucedido un error interno al obtener el purchase");
+        }
+
+    }
 
     /**
      * Show the form for editing the specified resource.
@@ -135,23 +147,24 @@ class PurchaseDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Store $store, Request $request)
+    public function update(Store $store, Request $request, $purchase_id)
     {
 
         $validated = $request->validate([
-            'model_type' => [
+            'purchaseable_type' => [
                 'required',
                 Rule::in(['manufacture']) // Agrega más tipos según sea necesario
             ],
-            'model_id' => 'required|integer',
+            'purchaseable_id' => 'required|integer',
             'name' => 'required|string|max:255',
             'quantity' => 'required|numeric',
             'unit_id' => 'required|integer|exists:units,id',
             'price' => 'required|numeric',
             'total' => 'required|numeric',
-            'section_id' => 'integer|exists:sections,id',
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
             'observations' => 'nullable|string',
+            'purchase_start' => 'nullable|date',
+            'purchase_end' => 'nullable|date',
         ]);
 
         $parentModel = $this->getParentModel($validated);
@@ -160,16 +173,19 @@ class PurchaseDashboardController extends Controller
 
             DB::beginTransaction();
 
-            $purchase = $parentModel->purchases()->create([
+            $purchase = $parentModel->purchases()->findOrFail($purchase_id);
+
+            $purchase->update([
+
                 'name' => $validated['name'],
                 'quantity' => $validated['quantity'],
                 'unit_id' => $validated['unit_id'],
                 'price' => $validated['price'],
                 'total' => $validated['total'],
-                'section_id' => $validated['section_id'] ?? null,
                 'supplier_id' => $validated['supplier_id'] ?? null,
                 'observations' => $validated['observations'] ?? null,
-                'user_id' => Auth::guard('api')->id(),
+                'purchase_start' => $validated['purchase_start'] ?? null,
+                'purchase_end' => $validated['purchase_end'] ?? null,
                 // No agregues store_id ni section_id aquí si es polimórfico
             ]);
 

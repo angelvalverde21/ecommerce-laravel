@@ -15,7 +15,8 @@ class OptionValueObserver
 
         $optionValue->load('option.product');
 
-        UpdateSkus($optionValue->option->product);
+        UpdateSkus($optionValue->option->product); //cuando se crea un option value, se generan las variantes del producto
+
     }
 
     /**

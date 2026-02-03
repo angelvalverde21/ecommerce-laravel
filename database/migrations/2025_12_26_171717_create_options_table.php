@@ -21,8 +21,6 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('options')
                 ->cascadeOnDelete(); //
-
-            $table->boolean('multiple')->default(false); //este campo indica si la variable entra al producto cartesiano, true indica que es multiple por ejemplo tallas tiene multples varlores, colores tambien
             $table->string('name');
             $table->string('label');
             $table->integer('sort_order')->default(0);
