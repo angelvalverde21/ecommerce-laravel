@@ -68,6 +68,7 @@ class ManufactureDashboardController extends Controller
             DB::commit();
 
             return responseOk($manufacture, "Se ha procesado correctamente");
+
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -123,7 +124,7 @@ class ManufactureDashboardController extends Controller
 
             $data = $request->validate([
                 'name' => 'required|string|max:255',
-                'budget' => 'required|numeric',
+                'budget' => 'nullable|numeric',
                 'quantity_total' => 'nullable|integer',
             ]);
 
