@@ -53,14 +53,14 @@ class ManufactureDashboardController extends Controller
             $data = $request->validate([
                 'name' => 'required|string|max:255',
                 'quantity_total' => 'nullable|integer',
-                'budget' => 'required|numeric',
+                'budget' => 'nullable|numeric',
             ]);
 
             $manufacture = $store->manufactures()->create(
                 [
                     'name' => $data['name'],
-                    'quantity_total' => $data['quantity_total'],
-                    'budget' => $data['budget'],
+                    'quantity_total' => $data['quantity_total'] ?? 0,
+                    'budget' => $data['budget'] ?? 0.00,
                     'user_id' => Auth::id(),
                 ]
             );
@@ -74,7 +74,7 @@ class ManufactureDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError("Error al eliminar.... ");
+            return responseError("Error registrar la produccion.... ");
         }
     }
 

@@ -111,7 +111,7 @@ class PurchaseDashboardController extends Controller
 
             DB::commit();
 
-            return responseOk($purchase->load('supplier.user'), "se creo correctamente el purchase");
+            return responseOk($purchase->load(['supplier.user', 'unit']), "se creo correctamente el purchase");
         } catch (\Throwable $th) {
 
             DB::rollback();
@@ -193,7 +193,8 @@ class PurchaseDashboardController extends Controller
 
             DB::commit();
 
-            return responseOk($purchase, "se creo correctamente el purchase");
+            return responseOk($purchase->load(['unit', 'supplier.user']), "se creo correctamente el purchase");
+            
         } catch (\Throwable $th) {
 
             DB::rollback();

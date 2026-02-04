@@ -66,7 +66,7 @@ class ManufactureVariantDashboardController extends Controller
                 $manufactureVariants[] = $manufactureVariant;
             }
 
-            DB::commit();
+            DB::commit(); 
 
             return responseOk(
                 $manufactureVariants,
@@ -105,6 +105,44 @@ class ManufactureVariantDashboardController extends Controller
     public function update(Request $request, store $store)
     {
         //
+    }
+    public function updateQuantity(store $store, Request $request, $manufacture_id, $manufacture_variant_id)
+    {
+        //
+
+
+        try {
+            DB::beginTransaction();
+            $validated = $request->validate([
+                'quantity' => 'required|numeric|min:0',
+            ]);
+
+            $manufacture = $store->manufactures()
+                ->findOrFail($manufacture_id);
+
+            $manufactureVariant = $manufacture->manufactureVariants()
+                ->findOrFail($manufacture_variant_id);
+
+            $manufactureVariant->update([
+
+                'quantity' => $validated['quantity'],
+
+            ]);
+
+            DB::commit();
+
+            return responseOk($manufactureVariant->load(['variant.product', 'variant.optionValues']), "Cantidad actualizada correctamente");
+            
+        } catch (\Throwable $th) {
+
+            Log::info($th);
+
+            DB::rollback();
+
+            return responseError("Error al actualizar la cantidad.... ");
+        }
+
+
     }
 
     /**

@@ -128,7 +128,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
                 Route::prefix('{manufacture_variant_id}')->group(function () {
 
                     // Route::get('/', [ManufactureVariantDashboardController::class, 'show']); //show o mostrar por id
-                    // Route::put('/', [ManufactureVariantDashboardController::class, 'update']); //actualizar
+                    Route::put('/quantity', [ManufactureVariantDashboardController::class, 'updateQuantity']); //actualizar
                     Route::delete('/', [ManufactureVariantDashboardController::class, 'destroy']); //borrar
 
                 });
