@@ -16,6 +16,7 @@ use App\Services\Dashboard\OptionValue\OptionValueService;
 use App\Services\Shopify\ShopifyBaseService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PhpParser\Node\Stmt\TryCatch;
@@ -261,77 +262,72 @@ class ShopifyProductService extends ShopifyBaseService
 
     public function sync(Store $store, bool $forceRefresh = false): array
     {
-        $cacheKey = "shopify:products:store:{$store->id}";
-        $cacheTtl = now()->addHour(24); // ajusta a tu necesidad
-
         // -------------------------------------------------------------
         // 1️⃣ — QUERY GRAPHQL
         // -------------------------------------------------------------
         $queryTemplate = <<<GRAPHQL
-                                {
-                                    products(
-                                        first: 100,
-                                        after: :cursor,
-                                        sortKey: CREATED_AT,
-                                        reverse: true
-                                    ) {
-                                        edges {
-                                            cursor
-                                            node {
-                                                id
-                                                title
-                                                bodyHtml
-                                                vendor
-                                                productType
-                                                handle
-                                                createdAt
-                                                updatedAt
-                                                onlineStoreUrl
-                                                status
-                                                tags
-                                                category {
-                                                    id
-                                                    name
-                                                    fullName
-                                                }
-                                                variants(first: 10) {
-                                                    edges {
-                                                        node {
-                                                            id
-                                                            title
-                                                            price
-                                                            compareAtPrice
-                                                            inventoryQuantity
-                                                        }
-                                                    }
-                                                }
-                                                options {
-                                                    id
-                                                    name
-                                                    values
-                                                }
-                                                images(first: 10) {
-                                                    edges {
-                                                        node {
-                                                            id
-                                                            src
-                                                        }
-                                                    }
-                                                }
-                                                featuredImage {
-                                                    id
-                                                    src
-                                                }
-                                            }
-                                        }
-                                        pageInfo {
-                                            hasNextPage
-                                            hasPreviousPage
-                                            endCursor
+                {
+                    products(
+                        first: 100,
+                        after: :cursor,
+                        sortKey: CREATED_AT,
+                    ) {
+                        edges {
+                            cursor
+                            node {
+                                id
+                                title
+                                vendor
+                                productType
+                                handle
+                                createdAt
+                                updatedAt
+                                onlineStoreUrl
+                                status
+                                tags
+                                category {
+                                    id
+                                    name
+                                    fullName
+                                }
+                                variants(first: 10) {
+                                    edges {
+                                        node {
+                                            id
+                                            title
+                                            price
+                                            compareAtPrice
+                                            inventoryQuantity
                                         }
                                     }
                                 }
-                                GRAPHQL;
+                                options {
+                                    id
+                                    name
+                                    values
+                                }
+                                images(first: 10) {
+                                    edges {
+                                        node {
+                                            id
+                                            src
+                                        }
+                                    }
+                                }
+                                featuredImage {
+                                    id
+                                    src
+                                }
+                            }
+                        }
+                        pageInfo {
+                            hasNextPage
+                            hasPreviousPage
+                            endCursor
+                        }
+                    }
+                }
+                GRAPHQL;
 
         $queryBuilder = function (?string $cursor) use ($queryTemplate) {
             return str_replace(
@@ -342,30 +338,13 @@ class ShopifyProductService extends ShopifyBaseService
         };
 
         // -------------------------------------------------------------
-        // 2️⃣ — CACHE / SHOPIFY
+        // 2️⃣ — SHOPIFY (SIN CACHE)
         // -------------------------------------------------------------
-        $result = Cache::remember(
-            $cacheKey,
-            $cacheTtl,
-            function () use ($queryBuilder) {
-                return $this->getDataFromShopify(
-                    'products',
-                    $queryBuilder,
-                    ['variants']
-                );
-            }
+        $result = $this->getDataFromShopify(
+            'products',
+            $queryBuilder,
+            ['variants']
         );
-
-        if ($forceRefresh) {
-
-            Cache::forget($cacheKey);
-
-            $result = $this->getDataFromShopify(
-                'products',
-                $queryBuilder,
-                ['variants']
-            );
-        }
 
         $products = collect($result['items'] ?? []);
 
@@ -381,62 +360,58 @@ class ShopifyProductService extends ShopifyBaseService
 
         return [
             'data' => json_decode(json_encode($products)),
-            'cached' => !$forceRefresh,
+            'cached' => false,
         ];
     }
 
+
     public function syncProductsShopify(array $products, Store $store)
     {
+        collect($products)->chunk(10)->each(function ($chunk) use ($store) {
 
-        $i = 0;
+            DB::transaction(function () use ($chunk) {
 
-        foreach ($products as $p) {
+                foreach ($chunk as $p) {
 
-            $i++;
+                    // ----------------------------------------------
+                    // 1) PRODUCTO SHOPIFY
+                    // ----------------------------------------------
+                    $productModel = ShopifyProduct::updateOrCreate(
+                        [
+                            'shopify_product_id' => $p['id'],
+                        ],
+                        [
+                            'title' => $p['title'],
+                            'image' => $p['featuredImage']['src'] ?? null,
+                            'status' => $p['status'] ?? null,
+                            'online_store_url' => $p['onlineStoreUrl'] ?? null,
+                            'created_at_shopify' => Carbon::parse($p['createdAt']),
+                            'updated_at_shopify' => Carbon::parse($p['updatedAt']),
+                        ]
+                    );
 
-            if ($i <= 1) {
-                Log::info($p);
-            }
+                    // ----------------------------------------------
+                    // 2) VARIANTES
+                    // ----------------------------------------------
+                    foreach ($p['variants'] as $v) {
 
-            // ----------------------------------------------
-            // 1) GUARDAR / ACTUALIZAR PRODUCTO
-            // ----------------------------------------------
-            $productModel = ShopifyProduct::updateOrCreate(
-                [
-                    'shopify_product_id' => $p['id'], // GID
-                ],
-                [
-                    'title' => $p['title'],
-                    'image' => $p['featuredImage']['src'] ?? null,
-                    'status' => $p['status'] ?? null,
-                    'online_store_url' => $p['onlineStoreUrl'] ?? null,
-
-                    // Conversión obligatoria
-                    'created_at_shopify' => Carbon::parse($p['createdAt'])->toDateTimeString(),
-                    'updated_at_shopify' => Carbon::parse($p['updatedAt'])->toDateTimeString(),
-                ]
-            );
-
-            // ----------------------------------------------
-            // 2) GUARDAR VARIANTES
-            // ----------------------------------------------
-            foreach ($p['variants'] as $v) {
-
-                ShopifyVariant::updateOrCreate(
-                    [
-                        'shopify_variant_id' => $v['id'], // GID
-                    ],
-                    [
-                        'shopify_product_id' => $productModel->id, // relación LOCAL
-                        'title' => $v['title'],
-                        'sku' => $v['sku'] ?? null,
-                        'price_etiqueta' => $v['compareAtPrice'],
-                        'price_oferta' => $v['price'],
-                        'quantity' => $v['quantity'] ?? 0,
-                    ]
-                );
-            }
-        }
+                        ShopifyVariant::updateOrCreate(
+                            [
+                                'shopify_variant_id' => $v['id'],
+                            ],
+                            [
+                                'shopify_product_id' => $productModel->id,
+                                'title' => $v['title'],
+                                'sku' => $v['sku'] ?? null,
+                                'price_etiqueta' => (float) $v['compareAtPrice'],
+                                'price_oferta' => (float) $v['price'],
+                                'quantity' => (int) ($v['quantity'] ?? 0),
+                            ]
+                        );
+                    }
+                }
+            });
+        });
 
         return [
             'synced' => count($products),
@@ -446,131 +421,121 @@ class ShopifyProductService extends ShopifyBaseService
 
     public function syncProductsErp(array $products, Store $store)
     {
-        foreach ($products as $p) {
+        collect($products)->chunk(10)->each(function ($chunk) use ($store) {
 
-            // ----------------------------------------------
-            // 1) GUARDAR / ACTUALIZAR LA CATEGORIA
-            // ----------------------------------------------
+            DB::transaction(function () use ($chunk, $store) {
 
-            $category = Category::updateOrCreate(
-                [
-                    'origin' => $p['category']['id'] ?? null // GID
-                ],
-                [
-                    'name' => $p['category']['name'] ?? "Predeterminado",
-                    'full_name' => $p['category']['fullName'] ?? "Predeterminado",
-                    'status' => 1,
-                    'is_color' => 0,
-                    'is_size' => 1,
-                    'slug' => Str::slug($p['category']['name'] ?? "Predeterminado"),
-                    'user_id' => auth()->id(),
-                    'store_id' => $store->id,
-                ]
-            );
+                foreach ($chunk as $p) {
 
-
-            // ----------------------------------------------
-            // 1) GUARDAR / ACTUALIZAR PRODUCTO
-            // ----------------------------------------------
-
-            $product = Product::updateOrCreate(
-                [
-                    'origin'   => $p['id'],
-                    'store_id' => $store->id
-                ],
-                [
-                    'name' => $p['title'],
-                    'status' => $this->mapShopifyStatus($p['status'] ?? null),
-                    'slug' => Str::slug($p['title']) . '-' . $store->id,
-                    'online_store_url' => $p['onlineStoreUrl'] ?? null,
-                    'user_id' => auth()->id(),
-                    'store_id' => $store->id,
-                    'category_id' => $category->id,
-                    // Conversión obligatoria
-                    'created_at' => Carbon::parse($p['createdAt'])->toDateTimeString(),
-                    'updated_at' => Carbon::parse($p['updatedAt'])->toDateTimeString(),
-                ]
-            );
-
-            $src = $p['featuredImage']['src'] ?? null;
-
-            $product->images()->create(
-                [
-                    'title' => $p['title'] ?? null,
-                    'name' => $src ?? null,
-                    'thumbnail' => shopify_image_by_height($src, 300),
-                    'medium'    => shopify_image_by_height($src, 800),
-                    'large'     => shopify_image_by_height($src, 1200),
-                ]
-            );
-
-
-            //Como son los datos de shopify, las variantes son tallas, osea creo la opcion "talla"
-
-            try {
-                $option = $this->optionService->store($store, $product->id, 'size');
-            } catch (\Throwable $th) {
-                Log::info($th);
-            }
-
-
-
-
-
-            // ----------------------------------------------
-            // 2) GUARDAR VARIANTES
-            // ----------------------------------------------
-
-
-            foreach ($p['variants'] as $v) {
-
-                $size = Size::updateOrCreate(
-                    [
-                        'origin' => $v['id'], // GID
-                    ],
-                    [
-                        'name' => $v['title'],
-                        'sort_order' => 0,
-                        'quantity' => $v['quantity'] ?? 0,
-                        'product_id' => $product->id,
-                    ]
-                );
-
-                //Creando las variantes
-
-                if ($option) {
-                    $this->optionValueService->store(
-                        $store,
-                        $option->id,
-                        $v['title']
+                    // ----------------------------------------------
+                    // 1) CATEGORÍA
+                    // ----------------------------------------------
+                    $category = Category::updateOrCreate(
+                        [
+                            'origin' => $p['category']['id'] ?? null,
+                            'store_id' => $store->id,
+                        ],
+                        [
+                            'name' => $p['category']['name'] ?? 'Predeterminado',
+                            'full_name' => $p['category']['fullName'] ?? 'Predeterminado',
+                            'status' => 1,
+                            'is_color' => 0,
+                            'is_size' => 1,
+                            'slug' => Str::slug($p['category']['name'] ?? 'predeterminado'),
+                            'user_id' => auth()->id(),
+                        ]
                     );
+
+                    // ----------------------------------------------
+                    // 2) PRODUCTO
+                    // ----------------------------------------------
+                    $product = Product::updateOrCreate(
+                        [
+                            'origin' => $p['id'],
+                            'store_id' => $store->id,
+                        ],
+                        [
+                            'name' => $p['title'],
+                            'status' => $this->mapShopifyStatus($p['status'] ?? null),
+                            'slug' => Str::slug($p['title']) . '-' . $store->id,
+                            'online_store_url' => $p['onlineStoreUrl'] ?? null,
+                            'user_id' => auth()->id(),
+                            'category_id' => $category->id,
+                            'created_at' => Carbon::parse($p['createdAt']),
+                            'updated_at' => Carbon::parse($p['updatedAt']),
+                        ]
+                    );
+
+                    // ----------------------------------------------
+                    // 3) IMAGEN (una sola, evitar duplicados)
+                    // ----------------------------------------------
+                    $src = $p['featuredImage']['src'] ?? null;
+
+                    if ($src && !$product->images()->exists()) {
+                        $product->images()->create([
+                            'title' => $p['title'],
+                            'name' => $src,
+                            'thumbnail' => shopify_image_by_height($src, 300),
+                            'medium'    => shopify_image_by_height($src, 800),
+                            'large'     => shopify_image_by_height($src, 1200),
+                        ]);
+                    }
+
+                    // ----------------------------------------------
+                    // 4) OPCIÓN SIZE (una vez)
+                    // ----------------------------------------------
+                    $option = null;
+                    try {
+                        $option = $this->optionService->store($store, $product->id, 'size');
+                    } catch (\Throwable $e) {
+                        // ya existe → ignorar
+                    }
+
+                    // ----------------------------------------------
+                    // 5) VARIANTES
+                    // ----------------------------------------------
+                    foreach ($p['variants'] as $v) {
+
+                        $size = Size::updateOrCreate(
+                            [
+                                'origin' => $v['id'],
+                                'product_id' => $product->id,
+                            ],
+                            [
+                                'name' => $v['title'],
+                                'sort_order' => 0,
+                                'quantity' => (int) ($v['quantity'] ?? 0),
+                            ]
+                        );
+
+                        if ($option) {
+                            $this->optionValueService->store(
+                                $store,
+                                $option->id,
+                                $v['title']
+                            );
+                        }
+
+                        $size->prices()->updateOrCreate(
+                            ['name' => Price::ETIQUETA],
+                            ['value' => (float) $v['compareAtPrice']]
+                        );
+
+                        $size->prices()->updateOrCreate(
+                            ['name' => Price::OFERTA],
+                            ['value' => (float) $v['price']]
+                        );
+                    }
                 }
-
-
-
-
-                // $size->prices()->updateOrCreate(
-                //     ['type' => Price::ETIQUETA],
-                //     ['value' => (float) $v['compareAtPrice']]
-                // );
-
-                $size->prices()->updateOrCreate(
-                    ['name' => Price::ETIQUETA], //el primero se usa para evitar duplicados
-                    ['value' => (float) $v['compareAtPrice']]
-                );
-
-                $size->prices()->updateOrCreate(
-                    ['name' =>  Price::OFERTA], //el primero se usa para evitar duplicados
-                    ['value' => (float) $v['price']]
-                );
-            }
-        }
+            });
+        });
 
         return [
             'synced' => count($products),
             'status' => 'OK'
         ];
     }
+
 
     private function mapShopifyStatus(?string $status): int
     {
@@ -588,7 +553,7 @@ class ShopifyProductService extends ShopifyBaseService
         int $page = 1
     ) {
         $page = max(1, $page);
-        return ShopifyProduct::where('status', $status)
+        return ShopifyProduct::where('status', $status)->orderBy('id', 'desc')
             ->with('variants')
             ->paginate($perPage, ['*'], 'page', $page)
             ->withQueryString();
@@ -599,7 +564,7 @@ class ShopifyProductService extends ShopifyBaseService
     {
 
         //consulta a nuestra base de datos
-        return ShopifyProduct::with('variants')
+        return ShopifyProduct::with('variants')->orderBy('id', 'desc')
             ->when($search, function ($query) use ($search) {
                 $query->where('title', 'like', "%{$search}%");
             })
