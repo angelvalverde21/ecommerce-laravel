@@ -17,6 +17,7 @@ class Image extends Model
     const DIR_BATCH = "batches";
     const DIR_ROOT = 'images';
     const DIR_PRODUCT = 'products';
+    const DIR_PAYMENT = 'payments';
 
     protected $appends = [
         'url_thumbnail',

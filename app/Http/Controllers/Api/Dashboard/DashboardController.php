@@ -24,7 +24,6 @@ class DashboardController extends Controller
 
         //Mas rapida
 
-
         try {
             $stats = DB::table('purchases')
                 ->selectRaw('(SELECT SUM(total) FROM purchases) as sum_total_purchases')

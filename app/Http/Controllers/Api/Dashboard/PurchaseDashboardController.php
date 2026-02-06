@@ -207,8 +207,21 @@ class PurchaseDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy($store, string $id)
     {
-        //
+
+        try {
+
+            $purchase = Purchase::findOrFail($id);
+
+            $purchase->delete();
+
+            return responseOk($purchase, "El purchase ha sido eliminado correctamente");
+
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError("Ha sucedido un error interno al eliminar el purchase");
+        }
+
     }
 }

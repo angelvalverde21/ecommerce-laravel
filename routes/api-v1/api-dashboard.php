@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Dashboard\CustomerDashboardController;
 use App\Http\Controllers\Api\Dashboard\DistrictDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\GalleryDashboardController;
+use App\Http\Controllers\Api\Dashboard\images\ImagePaymentController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
 use App\Http\Controllers\Api\Dashboard\ManufactureDashboardController;
 use App\Http\Controllers\Api\Dashboard\OptionDashboardController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Api\Dashboard\OptionValueDashboardController;
 use App\Http\Controllers\Api\Dashboard\PriceDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureVariantDashboardController;
+use App\Http\Controllers\Api\Dashboard\PaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\RoleDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
@@ -31,7 +33,7 @@ use Illuminate\Support\Facades\Route;
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
 // });
-
+// http://erp.test/api/v1/dashboard/sorelle/payments/1/images
 Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'])->group(function () {
 
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
@@ -132,7 +134,6 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
                     Route::delete('/', [ManufactureVariantDashboardController::class, 'destroy']); //borrar
 
                 });
-
             });
         });
     });
@@ -399,6 +400,34 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::get('/', [PurchaseDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [PurchaseDashboardController::class, 'update']); //actualizar
             Route::delete('/', [PurchaseDashboardController::class, 'destroy']); //borrar
+
+        });
+    });
+
+    Route::prefix('payments')->group(function () {
+
+        Route::get('/', [PaymentDashboardController::class, 'index']); //Listar
+        Route::post('/', [PaymentDashboardController::class, 'store']); //create
+
+        Route::prefix('{payment_id}')->group(function () {
+
+            Route::get('/', [PaymentDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [PaymentDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [PaymentDashboardController::class, 'destroy']); //borrar
+
+            Route::prefix('images')->group(function () {
+
+                Route::get('/', [ImagePaymentController::class, 'index']); //Listar
+                Route::post('/', [ImagePaymentController::class, 'store']); //create
+
+                Route::prefix('{image_id}')->group(function () {
+
+                    Route::get('/', [ImagePaymentController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [ImagePaymentController::class, 'update']); //actualizar
+                    Route::delete('/', [ImagePaymentController::class, 'destroy']); //borrar
+
+                });
+            });
 
         });
     });

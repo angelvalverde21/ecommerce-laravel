@@ -41,4 +41,13 @@ class Manufacture extends Model
             ->withPivot('quantity')
             ->withTimestamps();
     }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function payments(){
+        return $this->morphMany(Payment::class, 'paymentable');
+    }
 }

@@ -62,10 +62,10 @@ class AddressDashboardController extends Controller
                 'district_id' => $validated['district_id'],
             ]);
 
-
             DB::commit();
 
             return responseOk($address->load('district.province.department'), "Se ha procesado correctamente la creacion del courier");
+            
         } catch (\Throwable $th) {
 
             Log::info($th);

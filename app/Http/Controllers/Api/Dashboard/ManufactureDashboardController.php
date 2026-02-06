@@ -19,7 +19,7 @@ class ManufactureDashboardController extends Controller
         //
         try {
 
-            $manufactures = $store->manufactures()
+            $manufactures = $store->manufactures()->with(['user'])
                 ->withCount('purchases')
                 ->get();
 
@@ -86,14 +86,17 @@ class ManufactureDashboardController extends Controller
     {
         try {
 
-            $manufacture = $store->manufactures()->with(['purchases.supplier','purchases.unit',
+            $manufacture = $store->manufactures()->with(['purchases.supplier','purchases.unit', 'payments',
                 'manufactureVariants.variant' => function ($q) {
                     $q->with([
                         'product',
                         'optionValues',
                     ]);
                 },
-            ])->findOrFail($manufacture_id);
+            ])
+            ->withSum('manufactureVariants as quantity_total', 'quantity')
+            ->withSum('purchases as purchase_total', 'total')
+            ->findOrFail($manufacture_id);
 
             return responseOk($manufacture);
         } catch (\Throwable $th) {
