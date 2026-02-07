@@ -27,7 +27,6 @@ class EmployeeDashboardController extends Controller
             );
 
             return responseOk($employees, 'Employees obtenidos correctamente');
-
         } catch (\Throwable $th) {
             //throw $th;
             return responseError("Ha ocurrido un error interno al obtener los datos de los empleados");
@@ -42,14 +41,14 @@ class EmployeeDashboardController extends Controller
         }
 
         try {
-            $employees = User::whereHas('employee')
-                ->with('employee')
-                ->where(function ($query) use ($search) {
-                    $query->where('name', 'LIKE', '%' . $search . '%')
-                        ->orWhere('email', 'LIKE', '%' . $search . '%')
-                        ->orWhere('phone', 'LIKE', '%' . $search . '%')
-                        ->orWhere('document_number', 'LIKE', '%' . $search . '%');
-                })
+
+            $employees = Employee::whereHas('user', function ($query) use ($search) {
+                $query->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhere('phone', 'LIKE', "%{$search}%")
+                    ->orWhere('document_number', 'LIKE', "%{$search}%");
+            })
+                ->with('user') // anidado
                 ->limit(10)
                 ->get();
 

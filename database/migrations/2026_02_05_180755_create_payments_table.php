@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
             $table->decimal('amount', 10, 2);
+            $table->string('comment')->nullable();
             $table->enum('method', [
                 'cash',
                 'yape',

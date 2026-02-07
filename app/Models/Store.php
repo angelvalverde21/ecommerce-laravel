@@ -96,4 +96,13 @@ class Store extends Model
     public function manufactures(){
         return $this->hasMany(Manufacture::class);
     }
+
+    public function pettyCashes()
+    {
+        return $this->hasMany(PettyCash::class);
+    }
+
+    public function gateways(){
+        return $this->hasMany(Gateway::class);  
+    }
 }

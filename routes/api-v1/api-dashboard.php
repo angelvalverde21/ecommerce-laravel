@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Dashboard\CustomerDashboardController;
 use App\Http\Controllers\Api\Dashboard\DistrictDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\GalleryDashboardController;
+use App\Http\Controllers\Api\Dashboard\GatewayDashboardController;
 use App\Http\Controllers\Api\Dashboard\images\ImagePaymentController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
 use App\Http\Controllers\Api\Dashboard\ManufactureDashboardController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\Dashboard\PriceDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureVariantDashboardController;
 use App\Http\Controllers\Api\Dashboard\PaymentDashboardController;
+use App\Http\Controllers\Api\Dashboard\PettyCashDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\RoleDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
@@ -430,5 +432,36 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             });
 
         });
+    });
+
+    Route::prefix('petty-cashes')->group(function () {
+    
+        Route::get('/', [PettyCashDashboardController::class, 'index']); //Listar
+        Route::post('/', [PettyCashDashboardController::class, 'store']); //create
+    
+        Route::prefix('{petty_cash_id}')->group(function () {
+    
+            Route::get('/', [PettyCashDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [PettyCashDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [PettyCashDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
+    });
+
+
+    Route::prefix('gateways')->group(function () {
+    
+        Route::get('/', [GatewayDashboardController::class, 'index']); //Listar
+        Route::post('/', [GatewayDashboardController::class, 'store']); //create
+    
+        Route::prefix('{gateway_id}')->group(function () {
+    
+            Route::get('/', [GatewayDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [GatewayDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [GatewayDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 });
