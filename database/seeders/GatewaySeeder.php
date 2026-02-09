@@ -13,5 +13,19 @@ class GatewaySeeder extends Seeder
     public function run(): void
     {
         //
+
+        
+        // $gateways = [
+
+        //         'cash',
+        //         'yape',
+        //         'plin',
+        //         'credit_card',
+        //         'bank_transfer',
+        //         'paypal',
+        //         'cash'
+
+        // ]
+
     }
 }

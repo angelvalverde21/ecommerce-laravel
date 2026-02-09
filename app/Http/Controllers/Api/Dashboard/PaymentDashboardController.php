@@ -85,10 +85,14 @@ class PaymentDashboardController extends Controller
             // DB::commit();
 
             return responseOk($payment, "El pago ha sido registrado correctamente.");
+
         } catch (\Exception $e) {
+
             // DB::rollBack();
             Log::info($e);
+
             return responseError("Error al crear el pago");
+
         }
     }
 
@@ -113,6 +117,7 @@ class PaymentDashboardController extends Controller
      */
     public function update(Store $store, Request $request, $payment_id)
     {
+
         $validated = $request->validate([
             'paymentable_type' => [
                 'required',
@@ -148,7 +153,6 @@ class PaymentDashboardController extends Controller
         }
     }
 
-
     /**
      * Remove the specified resource from storage.
      */
@@ -166,4 +170,5 @@ class PaymentDashboardController extends Controller
             return responseError("Error al eliminar el pago");
         }
     }
+    
 }
