@@ -7,15 +7,31 @@ use Illuminate\Database\Eloquent\Model;
 class PettyCash extends Model
 {
     //
-    public function payments(){
+
+    protected $guarded = ['id', 'created_at'];
+
+    public function payments()
+    {
         return $this->morphMany(Payment::class, 'paymentable');
     }
 
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
 
-     public function store(){
+    public function store()
+    {
         return $this->belongsTo(Store::class);
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    public function gateway()
+    {
+        return $this->belongsTo(Gateway::class);
     }
 }

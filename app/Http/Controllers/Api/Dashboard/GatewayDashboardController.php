@@ -57,7 +57,7 @@ class GatewayDashboardController extends Controller
 
             $gateway = $store->gateways()->create(
                 [
-                    'name' => Str::slug($validated['title']),
+                    'name' => Str::slug($validated['title'], '_'),
                     'title' => $validated['title'],
                 ]
             );

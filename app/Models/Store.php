@@ -49,24 +49,31 @@ class Store extends Model
 
     }
 
-    public function suppliers()
-    {
-        return $this->hasManyThrough(Supplier::class, User::class);
-    }
-    
-    public function customers()
-    {
-        return $this->hasManyThrough(Customer::class, User::class);
-    }
-    
+    // public function suppliers()
+    // {
+    //     return $this->hasManyThrough(Supplier::class, User::class);
+    // }
+
+    // public function customers()
+    // {
+    //     return $this->hasManyThrough(Customer::class, User::class);
+    // }
+
+    // public function employees()
+    // {
+    //     return $this->hasManyThrough(Employee::class, User::class);
+    // }
+
     public function employees()
     {
-        return $this->hasManyThrough(Employee::class, User::class);
+        return Employee::whereHas('user.stores', function ($q) {
+            $q->where('stores.id', $this->id);
+        })->with('user');
     }
 
     public function users()
     {
-        return $this->belongsToMany(User::class);
+        return $this->belongsToMany(User::class, 'store_user');
     }
 
     public function purchases()
@@ -93,7 +100,8 @@ class Store extends Model
         return \App\Models\Option::DEFAULT_OPTIONS;
     }
 
-    public function manufactures(){
+    public function manufactures()
+    {
         return $this->hasMany(Manufacture::class);
     }
 
@@ -102,7 +110,8 @@ class Store extends Model
         return $this->hasMany(PettyCash::class);
     }
 
-    public function gateways(){
-        return $this->hasMany(Gateway::class);  
+    public function gateways()
+    {
+        return $this->hasMany(Gateway::class);
     }
 }

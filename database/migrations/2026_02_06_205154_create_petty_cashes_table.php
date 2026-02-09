@@ -20,9 +20,12 @@ return new class extends Migration
                 ->constrained()
                 ->nullOnDelete();
 
-            $table->foreignId('employe_id')
+            $table->foreignId('employee_id')
+                ->nullable()
                 ->constrained()
-                ->cascadeOnDelete(); // responsable
+                ->nullOnDelete(); // responsable
+
+            $table->foreignId('gateway_id')->nullable()->constrained()->nullOnDelete('cascade');
 
             $table->decimal('amount_assigned', 12, 2);
             $table->decimal('balance', 12, 2);
@@ -33,9 +36,8 @@ return new class extends Migration
             $table->timestamp('closed_at')->nullable();
 
             // Reglas de integridad útiles
-            $table->unique(['store_id', 'employe_id'], 'unique_open_petty_cash_per_employe');
+            $table->unique(['store_id', 'employee_id'], 'unique_open_petty_cash_per_employee');
             $table->timestamps();
-
         });
     }
 

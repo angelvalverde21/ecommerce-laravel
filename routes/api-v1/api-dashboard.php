@@ -144,23 +144,6 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
     Route::prefix('users')->group(function () {
 
-        //usuarios que son empleados
-        Route::prefix('employees')->group(function () {
-
-            Route::get('/', [EmployeeDashboardController::class, 'index']); //Listar
-            Route::get('/blocked', [EmployeeDashboardController::class, 'blocked']); //Listar
-            Route::get('/search/{search?}', [EmployeeDashboardController::class, 'search']); //buscar
-            Route::post('/', [EmployeeDashboardController::class, 'store']); //create
-
-            Route::prefix('{employee_id}')->group(function () {
-
-                Route::get('/', [EmployeeDashboardController::class, 'show']); //show o mostrar por id
-                Route::put('/', [EmployeeDashboardController::class, 'update']); //actualizar
-                Route::delete('/', [EmployeeDashboardController::class, 'destroy']); //borrar
-
-            });
-        });
-
         //Usuarios que son clientes        
         Route::prefix('customers')->group(function () {
 
@@ -193,6 +176,24 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         //Esto se encuentra dentro de user porque quiere decir que "un user tiene un perfil de employees (empleado)"
     });
+
+    //usuarios que son empleados
+    Route::prefix('employees')->group(function () {
+
+        Route::get('/', [EmployeeDashboardController::class, 'index']); //Listar
+        Route::get('/blocked', [EmployeeDashboardController::class, 'blocked']); //Listar
+        Route::get('/search/{search?}', [EmployeeDashboardController::class, 'search']); //buscar
+        Route::post('/', [EmployeeDashboardController::class, 'store']); //create
+
+        Route::prefix('{employee_id}')->group(function () {
+
+            Route::get('/', [EmployeeDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [EmployeeDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [EmployeeDashboardController::class, 'destroy']); //borrar
+
+        });
+    });
+
 
     Route::prefix('couriers')->group(function () {
 
@@ -430,38 +431,35 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 });
             });
-
         });
     });
 
-    Route::prefix('petty-cashes')->group(function () {
-    
+    Route::prefix('pettycashes')->group(function () {
+
         Route::get('/', [PettyCashDashboardController::class, 'index']); //Listar
         Route::post('/', [PettyCashDashboardController::class, 'store']); //create
-    
+
         Route::prefix('{petty_cash_id}')->group(function () {
-    
+
             Route::get('/', [PettyCashDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [PettyCashDashboardController::class, 'update']); //actualizar
             Route::delete('/', [PettyCashDashboardController::class, 'destroy']); //borrar
-    
+
         });
-    
     });
 
 
     Route::prefix('gateways')->group(function () {
-    
+
         Route::get('/', [GatewayDashboardController::class, 'index']); //Listar
         Route::post('/', [GatewayDashboardController::class, 'store']); //create
-    
+
         Route::prefix('{gateway_id}')->group(function () {
-    
+
             Route::get('/', [GatewayDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [GatewayDashboardController::class, 'update']); //actualizar
             Route::delete('/', [GatewayDashboardController::class, 'destroy']); //borrar
-    
+
         });
-    
     });
 });

@@ -7,6 +7,8 @@ use App\Models\Store;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PettyCashDashboardController extends Controller
 {
@@ -16,6 +18,9 @@ class PettyCashDashboardController extends Controller
     public function index(Store $store)
     {
         //
+        $pettyCash = $store->pettyCashes()->with(['employee.user', 'gateway'])->get();
+
+        return responseOk($pettyCash, 'Caja chica obtenida correctamente');
     }
 
     /**
@@ -32,41 +37,72 @@ class PettyCashDashboardController extends Controller
     public function store(Store $store, Request $request)
     {
         //
-        $request->validate([
-            'employe_id' => 'required|exists:employes,id',
-            'amount_assigned' => 'required|numeric|min:0',
-            'method' => 'required|in:cash,yape,plin,credit_card,bank_transfer,paypal',
-        ]);
+        try {
 
-        $pettyCash = $store->pettyCashes()->create(
-            [
-                'employe_id' => $request->employe_id,
-                'amount_assigned' => $request->amount_assigned,
-                'balance' => $request->amount_assigned,
-                'opened_at' => now(),
-            ]
-        );
+            DB::beginTransaction();
 
-        $pettyCash->payments()->create(
-            [
-                'store_id' => $store->id,
-                'user_id' => Auth::id(),
-                'amount' => $request->amount_assigned,
-                'method' => $request->method,
-                'status' => 'paid',
-                'date' => now(),
-                'comment' => 'Apertura de caja chica',
-                'direction' => 'in',
-            ]
-        );
+            $request->validate([
+                'employee_id' => 'required|exists:employees,id',
+                'amount_assigned' => 'required|numeric|min:0',
+                'gateway_id' => 'required|exists:gateways,id',
+            ]);
+
+            $pettyCash = $store->pettyCashes()->create(
+                [
+                    'employee_id' => $request->employee_id,
+                    'gateway_id' => $request->gateway_id,
+                    'amount_assigned' => $request->amount_assigned,
+                    'balance' => $request->amount_assigned,
+                    'opened_at' => now(),
+                ]
+            );
+
+            $pettyCash->payments()->create(
+                [
+                    'store_id' => $store->id,
+                    'user_id' => Auth::id(),
+                    'amount' => $request->amount_assigned,
+                    'gateway_id' => $request->gateway_id,
+                    'status' => 'paid',
+                    'date' => now(),
+                    'comment' => 'Apertura de caja chica',
+                    'direction' => 'in',
+                ]
+            );
+
+            DB::commit();
+
+            return responseOk($pettyCash, "Se ha procesado correctamente");
+        } catch (\Throwable $th) {
+
+            Log::info($th);
+
+            DB::rollback();
+
+            return responseError("Error al eliminar.... ");
+        }
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Store $store)
+    public function show(Store $store, $petty_cash_id)
     {
         //
+
+        try {
+        
+            $petty_cash = $store->pettyCashes()->with(['employee.user', 'gateway'])->findOrFail($petty_cash_id);
+        
+            return responseOk($petty_cash, "Se ha procesado correctamente");
+        
+        } catch (\Throwable $th) {
+        
+            Log::info($th);
+        
+            return responseError("Error al eliminar.... ");
+        
+        }
     }
 
     /**
@@ -80,9 +116,42 @@ class PettyCashDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Store $store)
+    public function update(Request $request, Store $store, $petty_cash_id)
     {
         //
+        try {
+        
+            DB::beginTransaction();
+
+            $petty_cash = $store->pettyCashes()->findOrFail($petty_cash_id);
+
+            $request->validate([
+                'employee_id' => 'required|exists:employees,id',
+                'amount_assigned' => 'required|numeric|min:0',
+                'gateway_id' => 'required|exists:gateways,id',
+            ]);
+
+            $petty_cash->update(
+                [
+                    'employee_id' => $request->employee_id,
+                    'gateway_id' => $request->gateway_id,
+                    'amount_assigned' => $request->amount_assigned,
+                ]
+            );
+
+            DB::commit();
+
+            return responseOk($petty_cash, "Se ha actualizado correctamente la caja chica");
+
+        } catch (\Throwable $th) {
+        
+            Log::info($th);
+        
+            DB::rollback();
+
+            return responseError("Error actualizar la caja chica.... ");
+
+        }
     }
 
     /**

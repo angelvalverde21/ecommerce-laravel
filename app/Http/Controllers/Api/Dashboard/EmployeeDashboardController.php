@@ -22,13 +22,16 @@ class EmployeeDashboardController extends Controller
         //
         try {
 
-            $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar supplier->user en el front sino todo plano
-                $store->employees()->get()
-            );
+            $employees = $store->employees()->with('user')->get();
+            
+            // $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar supplier->user en el front sino todo plano
+            //     $store->employees()->get()
+            // );
 
             return responseOk($employees, 'Employees obtenidos correctamente');
         } catch (\Throwable $th) {
             //throw $th;
+            Log::info($th);
             return responseError("Ha ocurrido un error interno al obtener los datos de los empleados");
         }
     }
