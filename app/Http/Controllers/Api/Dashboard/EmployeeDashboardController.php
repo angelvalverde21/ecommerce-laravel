@@ -141,16 +141,17 @@ class EmployeeDashboardController extends Controller
     public function show(Store $store, $employed_id)
     {
         try {
+            
             // Obtener usuario con employee y roles
-            $user = User::whereHas('employee')
-                ->with(['employee', 'roles'])
-                ->findOrFail($employed_id);
-
+            $employee = Employee::with('user.roles')->findOrFail($employed_id);
+  
             // --- ELIMINAR RELACIÓN ORIGINAL ---
-            $rolesOnlyNames = $user->roles->pluck('name');
+            $rolesOnlyNames = $employee->user->roles->pluck('name');
 
-            unset($user->roles);             // quita la relación de Eloquent
-            $user->setRelation('roles', $rolesOnlyNames); // asigna array limpio
+            unset($employee->user->roles);             // quita la relación de Eloquent
+            $employee->user->setRelation('roles', $rolesOnlyNames); // asigna array limpio
+
+            return responseOk($employee, "Empleado obtenido correctamente");
 
             return responseOk($user, "Empleado obtenido correctamente");
         } catch (\Throwable $th) {

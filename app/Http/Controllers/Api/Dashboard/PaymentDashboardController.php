@@ -60,7 +60,7 @@ class PaymentDashboardController extends Controller
                 Rule::in(['manufacture']) // Agrega más tipos según sea necesario
             ],
             'paymentable_id' => 'required|integer',
-            'method' => 'required|string|max:255',
+            'gateway_id' => 'required|integer|max:255',
             'amount' => 'required|numeric',
             'direction' => 'required|string|max:255',
             'date' => 'required|date',
@@ -75,7 +75,7 @@ class PaymentDashboardController extends Controller
             $payment = $parentModel->payments()->create([
                 'store_id' => $store->id,
                 'user_id' => Auth::id(),
-                'method' => $validated['method'],
+                'gateway_id' => $validated['gateway_id'],
                 'amount' => $validated['amount'],
                 'direction' => $validated['direction'],
                 'status' => 'paid',
@@ -84,7 +84,7 @@ class PaymentDashboardController extends Controller
 
             // DB::commit();
 
-            return responseOk($payment, "El pago ha sido registrado correctamente.");
+            return responseOk($payment->load('gateway'), "El pago ha sido registrado correctamente.");
 
         } catch (\Exception $e) {
 
@@ -124,7 +124,7 @@ class PaymentDashboardController extends Controller
                 Rule::in(['manufacture']) // Agrega más tipos según sea necesario
             ],
             'paymentable_id' => 'required|integer',
-            'method' => 'required|string|max:255',
+            'gateway_id' => 'required|integer|max:255',
             'amount' => 'required|numeric',
             'date' => 'required',
             'direction' => 'required|string|max:255',
@@ -137,7 +137,7 @@ class PaymentDashboardController extends Controller
             // DB::beginTransaction();
 
             $payment->update([
-                'method' => $validated['method'],
+                'gateway_id' => $validated['gateway_id'],
                 'amount' => $validated['amount'],
                 'direction' => $validated['direction'],
                 'date' => $validated['date'],
@@ -145,7 +145,8 @@ class PaymentDashboardController extends Controller
 
             // DB::commit();
 
-            return responseOk($payment, "El pago ha sido actualizado correctamente.");
+            return responseOk($payment->load('gateway'), "El pago ha sido actualizado correctamente.");
+            
         } catch (\Exception $e) {
             // DB::rollBack();
             Log::info($e);

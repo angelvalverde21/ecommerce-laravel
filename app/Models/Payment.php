@@ -97,6 +97,16 @@ class Payment extends Model
         return $this->morphMany(Image::class, 'imageable');
     }
 
+    public function gateway()
+    {
+        return $this->belongsTo(Gateway::class);
+    }
+
+    protected $casts = [
+        'date' => 'date:Y-m-d'
+    ];
+
+
     // public function getStatusAttribute()
     // {
     //     return Payment::STATUS;

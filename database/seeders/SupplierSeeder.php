@@ -227,10 +227,12 @@ class SupplierSeeder extends Seeder
                 'document_number' => $supplier['document_number'],
                 'password' => bcrypt($supplier['phone']),
             ]);
-
+            
             $user->stores()->attach($supplier['store_id']); // Asignar el usuario a la tienda correspondiente
 
-            $user->addresses()->create([
+            $supplierResp = $user->supplier()->create(); //Crear el Supplier relacionado al user
+
+            $supplierResp->addresses()->create([
                 'name' => $supplier['name'],
                 'identity_id' => 1,
                 'document_number' => $supplier['document_number'],
@@ -248,7 +250,6 @@ class SupplierSeeder extends Seeder
             ]);
 
             //Luego relaciono el usuario con el supplier
-            $supplier = $user->supplier()->create();
         }
     }
 }

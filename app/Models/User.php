@@ -78,7 +78,10 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->hasOne(Courier::class);
     }
 
-    
+    public function identity()
+    {
+        return $this->belongsTo(Identity::class);
+    }
 
     public function customer()
     {

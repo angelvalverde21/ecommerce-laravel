@@ -17,6 +17,12 @@ class Address extends Model
         'otro' => 'Otro',
     ];
 
+    protected $hidden = [
+        'addressable_type',
+        'addressable_id',
+    ];
+
+
     protected $guarded = ['id', 'created_at'];
 
     public function district()
@@ -29,9 +35,9 @@ class Address extends Model
         return $this->morphTo();
     }
 
-    public function identity(){
+    public function identity()
+    {
 
         return $this->belongsTo(Identity::class);
-        
     }
 }

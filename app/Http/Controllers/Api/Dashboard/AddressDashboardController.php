@@ -6,12 +6,35 @@ use App\Http\Controllers\Controller;
 use App\Models\Address;
 use App\Models\store;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AddressDashboardController extends Controller
 {
+
+    protected function getParentModel(array $validated): Model
+    {
+        $map = [
+            'customer' => \App\Models\Customer::class,
+            'supplier' => \App\Models\Supplier::class,
+            'employee' => \App\Models\Employee::class,
+            // 'order' => \App\Models\Order::class,
+            // 'purchase' => \App\Models\Purchase::class,
+        ];
+
+        if (! isset($map[$validated['addressable_type']])) { //ojo addressable_type viene del request (angular), no es un campo de la tabla addresses
+            throw ValidationException::withMessages([
+                'addressable_type' => 'Tipo de modelo no válido',
+            ]);
+        }
+
+        return $map[$validated['addressable_type']]::findOrFail($validated['addressable_id']);
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -39,9 +62,15 @@ class AddressDashboardController extends Controller
             DB::beginTransaction();
 
             $validated = $request->validate([
+                'addressable_type' => [
+                    'required',
+                    Rule::in(['customer', 'supplier', 'employee']) // Agrega más tipos según sea necesario
+                ],
+                'addressable_id' => 'required|integer',
                 'name'            => 'required|string|max:255',
                 'phone'           => 'required',
                 'document_number' => 'nullable|string|max:11',
+                'identity_id'       => 'nullable|number|max:11',
                 'primary'            => 'required|string|max:255',
                 'secondary'            => 'nullable|string|max:255',
                 'references'  => 'nullable|string|max:255',
@@ -49,13 +78,13 @@ class AddressDashboardController extends Controller
                 'user_id' => 'required|max:11',
             ]);
 
-            $user = User::findOrFail($request->user_id);
+            $parentModel = $this->getParentModel($validated); // Esto valida que el modelo padre exista, si no existe lanza una excepción
 
-            // 1. CREAR USUARIO
-            $address = $user->addresses()->create([
-                'name'            => $validated['name'],
-                'phone'           => $validated['phone'],
+            $address = $parentModel->addresses()->create([
+                'name' => $validated['name'],
+                'phone' => $validated['phone'],
                 'document_number' => $validated['document_number'],
+                'identity_id' => $validated['identity_id'],
                 'primary' => $validated['primary'],
                 'secondary' => $validated['secondary'],
                 'references' => $validated['references'],
@@ -65,7 +94,7 @@ class AddressDashboardController extends Controller
             DB::commit();
 
             return responseOk($address->load('district.province.department'), "Se ha procesado correctamente la creacion del courier");
-            
+
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -104,33 +133,36 @@ class AddressDashboardController extends Controller
             DB::beginTransaction();
 
             $validated = $request->validate([
+
+                'addressable_type' => [
+                    'required',
+                    Rule::in(['customer', 'supplier', 'employee']) // Agrega más tipos según sea necesario
+                ],
+                'addressable_id' => 'required|integer',
                 'name'             => 'required|string|max:255',
                 'phone'            => 'required',
                 'document_number'  => 'nullable|string|max:11',
+                'identity_id'      => 'nullable|integer|max:11',
                 'primary'          => 'required|string|max:255',
                 'secondary'        => 'nullable|string|max:255',
                 'references'       => 'nullable|string|max:255',
-                'district_id'      => 'required',
-                'user_id'          => 'required|integer',
+                'district_id'      => 'required'
+
             ]);
 
-            // 1. Usuario dueño
-            $user = $store->users()
-                ->where('user_id', $validated['user_id'])
-                ->firstOrFail();
+            $parentModel = $this->getParentModel($validated);
+
+            $address = $parentModel->addresses()->findOrFail($address_id); // Esto valida que la dirección exista y que pertenezca al modelo padre, si no existe lanza una excepción
 
             // 2. Dirección que pertenece al usuario (esto garantiza que la direccion es del usuario en cuestion)
             // $address = Address::findOrFail($validated['address_id']); es peligroso porque no asegura la consistencia de los datos
-
-            $address = $user->addresses()
-                ->where('id', $address_id)
-                ->firstOrFail();
 
             // 3. Update
             $address->update([
                 'name'            => $validated['name'],
                 'phone'           => $validated['phone'],
                 'document_number' => $validated['document_number'],
+                'identity_id'       => $validated['identity_id'],
                 'primary'         => $validated['primary'],
                 'secondary'       => $validated['secondary'],
                 'references'      => $validated['references'],

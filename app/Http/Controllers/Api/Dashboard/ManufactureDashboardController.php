@@ -86,7 +86,7 @@ class ManufactureDashboardController extends Controller
     {
         try {
 
-            $manufacture = $store->manufactures()->with(['purchases.supplier','purchases.unit', 'payments',
+            $manufacture = $store->manufactures()->with(['purchases.supplier','purchases.unit', 'payments.gateway',
                 'manufactureVariants.variant' => function ($q) {
                     $q->with([
                         'product',

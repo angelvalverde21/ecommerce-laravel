@@ -31,7 +31,16 @@ class SupplierDashboardController extends Controller
         try {
 
             //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
-            return responsePaginateOk($this->supplierService->index($store, 25), 'Suppliers activos obtenidos correctamente');
+            $suppliers = Supplier::with('user') //entity_id=1 quiere decir para los usuarios registrados con dni
+                ->whereHas('user', function ($q) use ($store) {
+                    $q->whereHas('stores', function ($sq) use ($store) {
+                        $sq->where('stores.id', $store->id);
+                    });
+                })
+                ->get();
+
+            return responseOk($suppliers, 'Datos de proveedores obtenidos correctamente');
+
         } catch (\Throwable $th) {
             Log::error($th);
             return responseError('Error al obtener ' . 'Suppliers activos');
@@ -168,7 +177,7 @@ class SupplierDashboardController extends Controller
                     Rule::unique('users', 'email')->ignore($supplier->user->id),
                 ],
                 'phone'           => 'sometimes|nullable|string|max:20',
-                'identity'       => 'nullable|string|max:20',
+                'identity_id'       => 'nullable|integer|max:20',
                 'document_number' => 'nullable|string|max:20',
                 'status'          => 'sometimes|required|in:0,1',
                 'is_cash_on_delivery' => 'sometimes|nullable|boolean',
@@ -185,7 +194,7 @@ class SupplierDashboardController extends Controller
                     'email'           => $validated['email'] ?? $supplier->user->email,
                     'phone'           => $validated['phone'] ?? $supplier->user->phone,
                     'document_number' => $validated['document_number'] ?? $supplier->user->document_number,
-                    'identity'       => $validated['identity'] ?? $supplier->user->identity,
+                    'identity_id'       => $validated['identity_id'] ?? $supplier->user->identity,
                     'status'          => $validated['status'] ?? $supplier->user->status,
                 ]
             );
@@ -217,7 +226,17 @@ class SupplierDashboardController extends Controller
     {
         try {
             //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
-            return responseOk($this->supplierService->show($store, $supplier_id), 'Supplier obtenidos correctamente');
+
+            $supplier = Supplier::with(['user', 'addresses.district'])
+                ->whereHas('user', function ($q) use ($store) {
+                    $q->whereHas('stores', function ($sq) use ($store) {
+                        $sq->where('stores.id', $store->id);
+                    });
+                })
+                ->findOrFail($supplier_id);
+
+            return responseOk($supplier, 'Supplier obtenido correctamente');
+
         } catch (\Throwable $th) {
             Log::error($th);
             return responseError('Error al obtener ' . $supplier_id);

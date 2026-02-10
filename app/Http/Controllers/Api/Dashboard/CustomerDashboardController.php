@@ -14,27 +14,24 @@ use Illuminate\Support\Facades\Log;
 
 class CustomerDashboardController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-
-    protected UserRelatedService $service;
-    protected $name;
-
-    public function __construct()
-    {
-        // Pasamos el modelo que vamos a usar
-        $this->service = new UserRelatedService(Customer::class);
-        $this->name = 'Customers';
-    }
 
     public function index(Store $store)
     {
         try {
-            return respondePaginateOk($this->service->index($store, 25), $this->name . ' obtenidos correctamente');
+            
+            $customers = Customer::with('user') //entity_id=1 quiere decir para los usuarios registrados con dni
+                ->whereHas('user', function ($q) use ($store) {
+                    $q->whereHas('stores', function ($sq) use ($store) {
+                        $sq->where('stores.id', $store->id);
+                    });
+                })
+                ->get();
+
+            return responseOk($customers, 'Datos de clientes obtenidos correctamente');
+            
         } catch (\Throwable $th) {
             Log::error($th);
-            return responseError('Error al obtener ' . $this->name);
+            return responseError('Error al obtener los datos de clientes');
         }
     }
 
