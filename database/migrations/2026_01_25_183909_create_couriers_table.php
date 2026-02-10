@@ -19,7 +19,7 @@ return new class extends Migration
 
             //El courier acepta pago contra entrega, osea que el pago se realiza al momento de la entrega
             $table->boolean('is_cash_on_delivery')->default(false); 
-            $table->boolean('is_freight_collect')->default(false); //El courier acepta flete por cobrar, por ejemplo shalom e indriver
+            $table->boolean('is_freight_collect')->default(false); //El courier acepta flete por cobrar, por ejemplo shalom e indriver (pago en destino)
             $table->boolean('is_express_shipping')->default(false); //El courier acepta envios express (rapidos)
 
             $table->timestamps();

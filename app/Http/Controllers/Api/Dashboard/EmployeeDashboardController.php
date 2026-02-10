@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
@@ -22,8 +23,12 @@ class EmployeeDashboardController extends Controller
         //
         try {
 
-            $employees = $store->employees()->with('user')->get();
-            
+            $employees = Cache::remember(
+                "store:{$store->id}:employees",
+                now()->addMinutes(10080),
+                fn() => $store->employees()->with('user')->get()
+            );
+
             // $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar supplier->user en el front sino todo plano
             //     $store->employees()->get()
             // );

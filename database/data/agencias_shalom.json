@@ -1,7 +1,4 @@
-{
-  "success": true,
-  "message": "Lista de agencias.",
-  "data": [
+[
     {
       "ter_id": 3,
       "zona": "CHACHAPOYAS",
@@ -2775,7 +2772,7 @@
       "hora_domingo": "DOMINGOS DE 8:00 AM A 5:00 PM",
       "nombre": "LA LIBERTAD / TRUJILLO / VICTOR LARCO HERRERA / AV LARCO",
       "lugar_over": "AV LARCO",
-      "ubi_id": 130112
+      "ubi_id": 130111
     },
     {
       "ter_id": 121,
@@ -6690,7 +6687,7 @@
       "hora_domingo": null,
       "nombre": "PIURA / PIURA / 26 DE OCTUBRE / CALLE EMAÚS",
       "lugar_over": "CALLE EMAÚS",
-      "ubi_id": 200115
+      "ubi_id": 200101
     },
     {
       "ter_id": 222,
@@ -6705,7 +6702,7 @@
       "hora_domingo": "DOMINGOS - HORARIO DE 10:00 AM A 2:00 PM",
       "nombre": "PIURA / PIURA / 26 DE OCTUBRE / PARQUE INDUSTRIAL CO PIURA FUTURA",
       "lugar_over": "PARQUE INDUSTRIAL CO PIURA FUTURA",
-      "ubi_id": 200115
+      "ubi_id": 200101
     },
     {
       "ter_id": 514,
@@ -6720,7 +6717,7 @@
       "hora_domingo": "DOMINGOS DE 8:00 AM A 5:00 PM",
       "nombre": "PIURA / PIURA / 26 DE OCTUBRE / AV. GULLMAN",
       "lugar_over": "AV. GULLMAN",
-      "ubi_id": 200115
+      "ubi_id": 200101
     },
     {
       "ter_id": 543,
@@ -6735,7 +6732,7 @@
       "hora_domingo": "",
       "nombre": "PIURA / PIURA / 26 DE OCTUBRE / AAHH SANTA ROSA PIURA",
       "lugar_over": "AAHH SANTA ROSA PIURA",
-      "ubi_id": 200115
+      "ubi_id": 200101
     },
     {
       "ter_id": 370,
@@ -7980,7 +7977,7 @@
       "hora_domingo": "DOMINGOS DE 8:00 AM A 5:00 PM",
       "nombre": "UCAYALI / CORONEL PORTILLO / PUCALLPA MANANTAY / MANANTAY  AV AGUAYTIA ",
       "lugar_over": "MANANTAY  AV AGUAYTIA ",
-      "ubi_id": 250107
+      "ubi_id": 250101
     },
     {
       "ter_id": 611,
@@ -7995,7 +7992,7 @@
       "hora_domingo": "DOMINGOS DE 8:00 AM A 5:00 PM",
       "nombre": "UCAYALI / CORONEL PORTILLO / PUCALLPA MANANTAY / MANANTAY AV TUPAC AMARU",
       "lugar_over": "MANANTAY AV TUPAC AMARU",
-      "ubi_id": 250107
+      "ubi_id": 250101
     },
     {
       "ter_id": 395,
@@ -8012,5 +8009,4 @@
       "lugar_over": "AGUAYTÍA",
       "ubi_id": 250301
     }
-  ]
-}
+]

@@ -168,7 +168,8 @@ class SupplierDashboardController extends Controller
                     Rule::unique('users', 'email')->ignore($supplier->user->id),
                 ],
                 'phone'           => 'sometimes|nullable|string|max:20',
-                'document_number' => 'sometimes|nullable|string|max:20',
+                'identity'       => 'nullable|string|max:20',
+                'document_number' => 'nullable|string|max:20',
                 'status'          => 'sometimes|required|in:0,1',
                 'is_cash_on_delivery' => 'sometimes|nullable|boolean',
                 'is_freight_collect'  => 'sometimes|nullable|boolean',
@@ -184,6 +185,7 @@ class SupplierDashboardController extends Controller
                     'email'           => $validated['email'] ?? $supplier->user->email,
                     'phone'           => $validated['phone'] ?? $supplier->user->phone,
                     'document_number' => $validated['document_number'] ?? $supplier->user->document_number,
+                    'identity'       => $validated['identity'] ?? $supplier->user->identity,
                     'status'          => $validated['status'] ?? $supplier->user->status,
                 ]
             );

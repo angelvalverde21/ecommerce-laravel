@@ -28,4 +28,10 @@ class Address extends Model
     {
         return $this->morphTo();
     }
+
+    public function identity(){
+
+        return $this->belongsTo(Identity::class);
+        
+    }
 }

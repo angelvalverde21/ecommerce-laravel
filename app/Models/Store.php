@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Store extends Model
 {
@@ -114,4 +115,13 @@ class Store extends Model
     {
         return $this->hasMany(Gateway::class);
     }
+
+    // public function remember(string $suffix, int $days, callable $callback)
+    // {
+    //     return Cache::remember(
+    //         "store:{$this->id}:{$suffix}",
+    //         now()->addDays($days),
+    //         $callback
+    //     );
+    // }
 }

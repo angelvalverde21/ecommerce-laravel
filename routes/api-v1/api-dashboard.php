@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Dashboard\DistrictDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\GalleryDashboardController;
 use App\Http\Controllers\Api\Dashboard\GatewayDashboardController;
+use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
 use App\Http\Controllers\Api\Dashboard\images\ImagePaymentController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
 use App\Http\Controllers\Api\Dashboard\ManufactureDashboardController;
@@ -461,5 +462,20 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::delete('/', [GatewayDashboardController::class, 'destroy']); //borrar
 
         });
+    });
+
+    Route::prefix('identities')->group(function () {
+    
+        Route::get('/', [IdentityDashboardController::class, 'index']); //Listar
+        Route::post('/', [IdentityDashboardController::class, 'store']); //create
+    
+        Route::prefix('{identity_id}')->group(function () {
+    
+            Route::get('/', [IdentityDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [IdentityDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [IdentityDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 });

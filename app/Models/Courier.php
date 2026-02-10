@@ -27,6 +27,6 @@ class Courier extends Model
 
     public function addresses()
     {
-        return $this->user->addresses();
+        return $this->morphMany(Address::class, 'addressable');
     }
 }

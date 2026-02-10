@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -18,17 +19,20 @@ class GatewayDashboardController extends Controller
     {
         //
         try {
-        
-            $gateways = $store->gateways; // o $store->gateways()->get();
+
+            $gateways = Cache::remember(
+                "store:{$store->id}:gateways",
+                now()->addMinutes(10080),
+                fn() => $store->gateways
+            );
 
             return responseOk($gateways, "Se ha procesado correctamente");
 
         } catch (\Throwable $th) {
-        
+
             Log::info($th);
-        
+
             return responseError("Error al eliminar.... ");
-        
         }
     }
 
@@ -48,7 +52,7 @@ class GatewayDashboardController extends Controller
         //
 
         try {
-        
+
             DB::beginTransaction();
 
             $validated = $request->validate([
@@ -65,17 +69,14 @@ class GatewayDashboardController extends Controller
             DB::commit();
 
             return responseOk($gateway, "Se ha procesado correctamente el gateway");
-
         } catch (\Throwable $th) {
-        
+
             Log::info($th);
-        
+
             DB::rollback();
 
             return responseError("Error al crear el gateway");
-
         }
-
     }
 
     /**
@@ -85,17 +86,15 @@ class GatewayDashboardController extends Controller
     {
         //
         try {
-        
+
             $gateway = $store->gateways()->findOrFail($gateway_id);
 
             return responseOk($gateway, "Se ha procesado correctamente");
-
         } catch (\Throwable $th) {
-        
-            Log::info($th);
-        
-            return responseError("Error al obtener el gateway");
 
+            Log::info($th);
+
+            return responseError("Error al obtener el gateway");
         }
     }
 
@@ -114,7 +113,7 @@ class GatewayDashboardController extends Controller
     {
         //
         try {
-        
+
             DB::beginTransaction();
 
             $validated = $request->validate([
@@ -131,15 +130,13 @@ class GatewayDashboardController extends Controller
             DB::commit();
 
             return responseOk($gateway, "Se ha procesado correctamente la actualización del gateway");
-
         } catch (\Throwable $th) {
-        
+
             Log::info($th);
-        
+
             DB::rollback();
 
             return responseError("Error al actualizar el gateway");
-
         }
     }
 

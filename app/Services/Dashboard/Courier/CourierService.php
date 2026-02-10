@@ -19,16 +19,16 @@ class CourierService
             ->whereHas('user', function (Builder $q) use ($store, $search) {
 
                 $q->active()
-                  ->whereHas('stores', function (Builder $sq) use ($store) {
-                      $sq->where('stores.id', $store->id);
-                  });
+                    ->whereHas('stores', function (Builder $sq) use ($store) {
+                        $sq->where('stores.id', $store->id);
+                    });
 
                 if (trim($search) !== '') {
                     $q->where(function (Builder $qq) use ($search) {
                         $qq->where('name', 'like', "%{$search}%")
-                           ->orWhere('email', 'like', "%{$search}%")
-                           ->orWhere('phone', 'like', "%{$search}%")
-                           ->orWhere('document_number', 'like', "%{$search}%");
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%")
+                            ->orWhere('document_number', 'like', "%{$search}%");
                     });
                 }
             });
@@ -63,9 +63,9 @@ class CourierService
         $query = Courier::with('user')
             ->whereHas('user', function (Builder $q) use ($store) {
                 $q->active()
-                  ->whereHas('stores', function (Builder $sq) use ($store) {
-                      $sq->where('stores.id', $store->id);
-                  });
+                    ->whereHas('stores', function (Builder $sq) use ($store) {
+                        $sq->where('stores.id', $store->id);
+                    });
             });
 
         return FlatCourierUserResource::collection(
@@ -76,7 +76,7 @@ class CourierService
     /**
      * Obtener couriers bloqueados
      */
-    public function blocked(Store $store, int $perPage = 20)//Recuerda que el active o blocked estan en un Trait HasStatusScopesTrait
+    public function blocked(Store $store, int $perPage = 20) //Recuerda que el active o blocked estan en un Trait HasStatusScopesTrait
     {
         $query = Courier::blocked()
             ->whereHas('user', function (Builder $q) use ($store) {
@@ -95,18 +95,23 @@ class CourierService
      */
     public function show(Store $store, int $id)
     {
-        $courier = Courier::with('user.addresses.district')
-            ->where('id', $id)
-            ->whereHas('user', function (Builder $q) use ($store) {
-                $q->whereHas('stores', function (Builder $sq) use ($store) {
-                    $sq->where('stores.id', $store->id);
-                });
-            })
-            ->firstOrFail();
+        $courier = Courier::with([
+                        'addresses' => function ($q) {
+                            $q->with('district')
+                            ->limit(20);
+                        }
+                    ])
+                    ->where('id', $id)
+                    ->whereHas('user', function (Builder $q) use ($store) {
+                        $q->whereHas('stores', function (Builder $sq) use ($store) {
+                            $sq->where('stores.id', $store->id);
+                        });
+                    })
+                    ->firstOrFail();
 
         Log::info($courier);
 
-        return new FlatCourierUserResource($courier);
+        return $courier;
     }
 
     /**

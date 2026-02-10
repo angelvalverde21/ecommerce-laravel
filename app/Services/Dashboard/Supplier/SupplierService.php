@@ -95,14 +95,7 @@ class SupplierService
      */
     public function show(Store $store, int $id)
     {
-        $Supplier = Supplier::with('user.addresses.district')
-            ->where('id', $id)
-            ->whereHas('user', function (Builder $q) use ($store) {
-                $q->whereHas('stores', function (Builder $sq) use ($store) {
-                    $sq->where('stores.id', $store->id);
-                });
-            })
-            ->firstOrFail();
+        $Supplier = Supplier::with(['addresses.district'])->firstOrFail();
 
         Log::info($Supplier);
 

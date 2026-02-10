@@ -45,6 +45,8 @@ return new class extends Migration
             $table->string('latitud')->nullable();
             $table->string('longitud')->nullable();
             $table->string('url_maps')->nullable();
+            $table->string('reception_hours')->nullable();
+            $table->string('sunday_hours')->nullable();
 
             $table->tinyInteger('status')->default(Status::ACTIVE)->comment('Address::INACTIVE = 0, Address::ACTIVE = 1'); //desde -128 a 127
 
@@ -52,7 +54,7 @@ return new class extends Migration
 
             $table->foreignId('district_id')->constrained()->restrictOnDelete();
 
-            $table->tinyInteger('sort_order')->default(0);
+            $table->integer('sort_order')->default(0);
 
             /*
                 $table->unsignedInteger('district_id')->default(150101);

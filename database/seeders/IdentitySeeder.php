@@ -17,21 +17,21 @@ class IdentitySeeder extends Seeder
         DB::table('identities')->insert([
             [
                 'code' => 'DNI',
-                'name' => 'Documento Nacional de Identidad',
+                'name' => 'DNI - Documento Nacional de Identidad',
                 'description' => 'Documento de identidad peruano',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'code' => 'RUC',
-                'name' => 'Registro Único de Contribuyentes',
+                'name' => 'RUC - Registro Único de Contribuyentes',
                 'description' => 'Número de identificación tributaria en Perú',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'code' => 'CE',
-                'name' => 'Carné de Extranjería',
+                'name' => 'CE - Carné de Extranjería',
                 'description' => 'Documento para extranjeros residentes en Perú',
                 'created_at' => now(),
                 'updated_at' => now(),
