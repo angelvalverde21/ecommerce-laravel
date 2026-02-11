@@ -68,7 +68,6 @@ class ManufactureDashboardController extends Controller
             DB::commit();
 
             return responseOk($manufacture, "Se ha procesado correctamente");
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -86,7 +85,12 @@ class ManufactureDashboardController extends Controller
     {
         try {
 
-            $manufacture = $store->manufactures()->with(['purchases.supplier','purchases.unit', 'payments.gateway',
+            $manufacture = $store->manufactures()->with([
+                'purchases.supplier',
+                'purchases.unit',
+                'payments' => function ($p) {
+                    $p->with(['gateway', 'images']);
+                },
                 'manufactureVariants.variant' => function ($q) {
                     $q->with([
                         'product',
@@ -94,11 +98,12 @@ class ManufactureDashboardController extends Controller
                     ]);
                 },
             ])
-            ->withSum('manufactureVariants as quantity_total', 'quantity')
-            ->withSum('purchases as purchase_total', 'total')
-            ->findOrFail($manufacture_id);
+                ->withSum('manufactureVariants as quantity_total', 'quantity')
+                ->withSum('purchases as purchase_total', 'total')
+                ->findOrFail($manufacture_id);
 
             return responseOk($manufacture);
+            
         } catch (\Throwable $th) {
 
             Log::info($th);

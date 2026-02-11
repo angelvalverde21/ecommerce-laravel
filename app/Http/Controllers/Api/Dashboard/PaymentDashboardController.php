@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Image;
 use App\Models\Payment;
 use App\Models\Store;
+use App\Traits\UploadImagesTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,11 +17,13 @@ use Illuminate\Validation\ValidationException;
 class PaymentDashboardController extends Controller
 {
 
+    use UploadImagesTrait;
+
     protected function getParentModel(array $validated): Model
     {
         $map = [
             'manufacture' => \App\Models\Manufacture::class,
-            // 'order' => \App\Models\Order::class,
+            'petty_cash' => \App\Models\PettyCash::class,
             // 'purchase' => \App\Models\Purchase::class,
         ];
 
@@ -53,22 +57,29 @@ class PaymentDashboardController extends Controller
      */
     public function store(Store $store, Request $request)
     {
-        //
-        $validated = $request->validate([
-            'paymentable_type' => [
-                'required',
-                Rule::in(['manufacture']) // Agrega más tipos según sea necesario
-            ],
-            'paymentable_id' => 'required|integer',
-            'gateway_id' => 'required|integer|max:255',
-            'amount' => 'required|numeric',
-            'direction' => 'required|string|max:255',
-            'date' => 'required|date',
-        ]);
 
-        $parentModel = $this->getParentModel($validated);
+        Log::info($request);
+        // Log::info($request->allFiles());
+        // Log::info($request->headers->all());
 
         try {
+
+            //
+            $validated = $request->validate([
+                'paymentable_type' => [
+                    'required',
+                    Rule::in(['manufacture', 'petty_cash']) // Agrega más tipos según sea necesario
+                ],
+                'paymentable_id' => 'required|integer',
+                'gateway_id' => 'required|integer|max:255',
+                'amount' => 'required|numeric',
+                'direction' => 'required|string|max:255',
+                'date' => 'required|date',
+                'images' => 'array',
+                'images.*' => 'image|max:2048',
+            ]);
+
+            $parentModel = $this->getParentModel($validated);
 
             // DB::beginTransaction();
 
@@ -82,9 +93,15 @@ class PaymentDashboardController extends Controller
                 'date' => $validated['date'],
             ]);
 
+            foreach ($request->file('images') as $file) {
+                $array = $this->getSizeArray($file, Image::DIR_PAYMENT);
+                Log::info($array);
+                $payment->images()->create($array);
+            }
+            // $request['usage'] = 'images';
             // DB::commit();
 
-            return responseOk($payment->load('gateway'), "El pago ha sido registrado correctamente.");
+            return responseOk($payment->load(['gateway', 'images']), "El pago ha sido registrado correctamente.");
 
         } catch (\Exception $e) {
 
@@ -92,7 +109,6 @@ class PaymentDashboardController extends Controller
             Log::info($e);
 
             return responseError("Error al crear el pago");
-
         }
     }
 
@@ -118,19 +134,26 @@ class PaymentDashboardController extends Controller
     public function update(Store $store, Request $request, $payment_id)
     {
 
+        Log::info($request);
+        Log::info($request->all());
+        Log::info($request->allFiles());
+        Log::info($request->headers->all());
+
         $validated = $request->validate([
             'paymentable_type' => [
                 'required',
-                Rule::in(['manufacture']) // Agrega más tipos según sea necesario
+                Rule::in(['manufacture', 'petty_cash']) // Agrega más tipos según sea necesario, por ejemplo pagos de manufacture, pagos de ordenes, pagos de compras, etc
             ],
             'paymentable_id' => 'required|integer',
             'gateway_id' => 'required|integer|max:255',
             'amount' => 'required|numeric',
-            'date' => 'required',
             'direction' => 'required|string|max:255',
+            'date' => 'required|date'
         ]);
 
-        $payment = Payment::findOrFail($payment_id);
+        $parentModel = $this->getParentModel($validated);
+
+        $payment = $parentModel->payments()->findOrFail($payment_id); // Verifica que el pago pertenece al modelo padre
 
         try {
 
@@ -140,13 +163,14 @@ class PaymentDashboardController extends Controller
                 'gateway_id' => $validated['gateway_id'],
                 'amount' => $validated['amount'],
                 'direction' => $validated['direction'],
+                'status' => 'paid',
                 'date' => $validated['date'],
             ]);
 
             // DB::commit();
 
-            return responseOk($payment->load('gateway'), "El pago ha sido actualizado correctamente.");
-            
+            return responseOk($payment->load(['gateway', 'images']), "El pago ha sido actualizado correctamente.");
+
         } catch (\Exception $e) {
             // DB::rollBack();
             Log::info($e);
@@ -163,13 +187,16 @@ class PaymentDashboardController extends Controller
 
         try {
             $payment = Payment::findOrFail($payment_id);
+            
             $payment->delete();
 
             return responseOk($payment, "El pago ha sido eliminado correctamente.");
+
         } catch (\Exception $e) {
             Log::info($e);
             return responseError("Error al eliminar el pago");
+
         }
+
     }
-    
 }

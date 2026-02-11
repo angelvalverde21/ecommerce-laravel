@@ -92,7 +92,7 @@ class PettyCashDashboardController extends Controller
 
         try {
         
-            $petty_cash = $store->pettyCashes()->with(['employee.user', 'gateway'])->findOrFail($petty_cash_id);
+            $petty_cash = $store->pettyCashes()->with(['employee.user', 'gateway', 'payments.images'])->findOrFail($petty_cash_id);
         
             return responseOk($petty_cash, "Se ha procesado correctamente");
         

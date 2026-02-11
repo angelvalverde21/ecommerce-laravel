@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Dashboard\EmployeeDashboardController;
 use App\Http\Controllers\Api\Dashboard\GalleryDashboardController;
 use App\Http\Controllers\Api\Dashboard\GatewayDashboardController;
 use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
+use App\Http\Controllers\Api\Dashboard\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\images\ImagePaymentController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
 use App\Http\Controllers\Api\Dashboard\ManufactureDashboardController;
@@ -68,6 +69,21 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::delete('/', [AddressDashboardController::class, 'destroy']); //borrar
 
         });
+    });
+
+    Route::prefix('images')->group(function () {
+    
+        Route::get('/', [ImageDashboardController::class, 'index']); //Listar
+        Route::post('/', [ImageDashboardController::class, 'store']); //create
+    
+        Route::prefix('{image_id}')->group(function () {
+    
+            Route::get('/', [ImageDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [ImageDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [ImageDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 
     Route::prefix('districts')->group(function () {

@@ -455,4 +455,87 @@ trait UploadImagesTrait
             return false;
         }
     }
+
+    function uploadToDirectory($file, $dir = "", $size = 0, $link = false)
+    {
+        $originalName = $file->getClientOriginalName();
+
+        // Extraemos la extensión en minúsculas
+        $extension = Str::lower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+        // Generamos un nombre único
+        $name = md5(time() . $originalName . $dir . Str::random(10)) . '.' . $extension;
+
+        // Carpeta relativa dentro del storage público
+        $folder = ImageModel::DIR_ROOT . '/' . $dir;
+
+        // Crear carpeta si no existe
+        Storage::disk('public')->makeDirectory($folder, 0775, true);
+
+        // Ruta absoluta para Intervention
+        $file_path = Storage::disk('public')->path($folder . '/' . $name);
+
+        // Crear instancia de la imagen
+        $image = Image::read($file);
+
+
+        // Verificar y corregir orientación EXIF
+        $exifData = $image->exif();
+        if ($exifData && $exifData->has('Orientation')) {
+            switch ($exifData->has('Orientation')) {
+                case 3:
+                    $image->rotate(180);
+                    break;
+                case 6:
+                    $image->rotate(-90); // 90° antihorario
+                    break;
+                case 8:
+                    $image->rotate(90); // 90° horario
+                    break;
+            }
+        }
+
+        // Redimensionar solo si `$size > 0`
+        if ($size > 0) {
+            $width = $size;
+            $height = intval($image->height() * ($width / $image->width()));
+
+            $image->resize($width, $height, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            });
+        }
+
+        // Guardar imagen sin pérdida de calidad
+        if (in_array($extension, ['jpg', 'jpeg', 'webp'])) {
+            $image->save($file_path, 100); // Calidad máxima para JPG y WebP
+        } else {
+            $image->save($file_path); // PNG y otros formatos no pierden calidad
+        }
+
+        return $dir . '/' . $name;
+    }
+
+    function getSizeArray($file, $dir = "")
+    {
+
+        try {
+            // $name = $this->uploadImage($file, $dir); //Imagen original
+            $thumb =  $this->uploadToDirectory($file, $dir, 360);
+            $medium = $this->uploadToDirectory($file, $dir, 750);
+            $large = $this->uploadToDirectory($file, $dir); //La imagen original
+
+            $data = array(
+                'name' => $file->getClientOriginalName(),
+                'thumbnail' => $thumb,
+                'medium' => $medium,
+                'large' => $large,
+            );
+
+            return $data;
+            
+        } catch (\Throwable $th) {
+            Log::info($th);
+        }
+    }
 }

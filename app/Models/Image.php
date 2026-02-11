@@ -11,6 +11,12 @@ class Image extends Model
     /** @use HasFactory<\Database\Factories\ImageFactory> */
     use HasFactory;
 
+    protected $hidden = [
+        'imageable_type',
+        'imageable_id',
+    ];
+
+
     protected $guarded = ['id', 'created_at'];
 
     const DIR_PURCHASE = "purchases";
@@ -37,8 +43,8 @@ class Image extends Model
         if (strlen($this->thumbnail) > 1 && !(substr($this->thumbnail, 0, 4) === 'http')) {
 
             return asset(Storage::url(Image::DIR_ROOT . '/' . $this->thumbnail));
-        }else{
-            
+        } else {
+
             return $this->thumbnail;
         }
     }
@@ -49,7 +55,7 @@ class Image extends Model
         if (strlen($this->medium) > 1 && !(substr($this->thumbnail, 0, 4) === 'http')) {
 
             return asset(Storage::url(Image::DIR_ROOT . '/' . $this->medium));
-        }else{
+        } else {
             return $this->medium;
         }
     }
@@ -60,7 +66,7 @@ class Image extends Model
         if (strlen($this->large) > 1 && !(substr($this->thumbnail, 0, 4) === 'http')) {
 
             return asset(Storage::url(Image::DIR_ROOT . '/' . $this->large));
-        }else{
+        } else {
             return $this->large;
         }
     }
