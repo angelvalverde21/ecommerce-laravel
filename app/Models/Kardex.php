@@ -7,8 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class Kardex extends Model
 {
     //
-        protected $hidden = [
+
+    protected $guarded = ['id', 'created_at'];
+
+    protected $hidden = [
         'kardexable_type',
         'kardexable_id',
     ];
+
+    public function variant(){
+        return $this->belongsTo(Variant::class);
+    }
 }

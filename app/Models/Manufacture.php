@@ -47,7 +47,13 @@ class Manufacture extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function payments(){
+    public function payments()
+    {
         return $this->morphMany(Payment::class, 'paymentable');
+    }
+
+    public function kardexes()
+    {
+        return $this->morphMany(Kardex::class, 'kardexable');
     }
 }

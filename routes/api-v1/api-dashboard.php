@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
 use App\Http\Controllers\Api\Dashboard\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\images\ImagePaymentController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
+use App\Http\Controllers\Api\Dashboard\KardexDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureDashboardController;
 use App\Http\Controllers\Api\Dashboard\OptionDashboardController;
 use App\Http\Controllers\Api\Dashboard\OptionValueDashboardController;
@@ -494,4 +495,21 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         });
     
     });
+
+    Route::prefix('kardexes')->group(function () {
+    
+        Route::get('/', [KardexDashboardController::class, 'index']); //Listar
+        Route::post('/', [KardexDashboardController::class, 'store']); //create
+        Route::post('/batch', [KardexDashboardController::class, 'batch']); //create
+
+        Route::prefix('{kardex_id}')->group(function () {
+    
+            Route::get('/', [KardexDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [KardexDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [KardexDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
+    });
+
 });

@@ -86,6 +86,9 @@ class ManufactureDashboardController extends Controller
         try {
 
             $manufacture = $store->manufactures()->with([
+                'kardexes' => function ($k) {
+                    $k->with(['variant.product', 'variant.optionValues']);
+                },
                 'purchases.supplier',
                 'purchases.unit',
                 'payments' => function ($p) {
@@ -103,7 +106,7 @@ class ManufactureDashboardController extends Controller
                 ->findOrFail($manufacture_id);
 
             return responseOk($manufacture);
-            
+
         } catch (\Throwable $th) {
 
             Log::info($th);
