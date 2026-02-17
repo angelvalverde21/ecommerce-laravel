@@ -59,7 +59,7 @@ class ProductDashboardController extends Controller
 
             $search = pluralToSingular($search);
 
-            $products = $store->products()->with(['sizes', 'image', 'variants.product', 'variants.variant_option_values.optionValue'])->search($search)->limit(10)->get();
+            $products = $store->products()->with(['image', 'variants.product', 'variants.variant_option_values.optionValue'])->search($search)->limit(10)->get();
 
             Log::info($products);
 

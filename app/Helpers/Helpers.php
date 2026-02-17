@@ -588,7 +588,8 @@ function UpdateSkus(Product $product)
   $variantMap = getVariant($combinations, $product->id);
 
 
-  Log::info($variantMap);
+  Log::info("Mapa de variantes generado", $variantMap);
+  // Log::info($variantMap);
 
   if (empty($variantMap)) {
     return;
@@ -600,10 +601,11 @@ function UpdateSkus(Product $product)
         |--------------------------------------------------------------------------
         */
 
-  Variant::insertOrIgnore(
+  $variant = Variant::insertOrIgnore(
     array_column($variantMap, 'row')
   );
 
+  Log::info("Variantes insertadas (solo nuevas)", ['inserted' => $variant]);
   /*
         |--------------------------------------------------------------------------
         | 6. Obtener variantes existentes + nuevas
@@ -639,7 +641,11 @@ function UpdateSkus(Product $product)
         |--------------------------------------------------------------------------
         */
 
-  VariantOptionValue::insertOrIgnore($pivotRows);
+  if (!empty($pivotRows)) {
+      VariantOptionValue::insertOrIgnore($pivotRows);
+  } else {
+      Log::info("No hay filas de pivote para insertar");
+  }
 
-  Log::info('Fin del observer', $pivotRows);
+  // Log::info('Fin del observer', $pivotRows);
 }

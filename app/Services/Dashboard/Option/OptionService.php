@@ -31,6 +31,8 @@ class OptionService
                 ->where('store_id', $store->id)
                 ->first();
 
+            Log::info("se encontro el product: " . ($product ? 'SI' : 'NO'));
+
             if (!$product) {
                 throw new CustomException('Producto no encontrado', 404);
             }
@@ -42,6 +44,8 @@ class OptionService
                 ->exists();
 
             if (!$exists) {
+
+                Log::info("No se encontró la opción, se creará una nueva.");
 
                 // 3️⃣ Obtener defaults seguros
                 $defaults = collect(Option::DEFAULT_OPTIONS)
@@ -56,8 +60,9 @@ class OptionService
                     'label'      => $defaults['label'] ?? null,
                     'sort_order' => $defaults['sort_order'] ?? 1,
                 ]);
-
             } else {
+
+                Log::info("La opción ya existe para este producto, no se creará una nueva.");
 
                 return false;
                 // throw new CustomException('La opción ya existe para este producto', 409);
@@ -67,8 +72,9 @@ class OptionService
             DB::commit();
 
             return $option;
-
         } catch (\Throwable $e) {
+
+            Log::info("Error al crear la opción: " . $e->getMessage());
 
             DB::rollBack();
 

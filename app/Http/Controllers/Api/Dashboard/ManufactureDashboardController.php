@@ -20,7 +20,8 @@ class ManufactureDashboardController extends Controller
         try {
 
             $manufactures = $store->manufactures()->with(['user'])
-                ->withCount('purchases')
+                ->withSum('purchases', 'total')
+                ->withSum('manufactureVariants', 'quantity')
                 ->get();
 
             return responseOk($manufactures, "Listado de manufacturas obtenido correctamente");
