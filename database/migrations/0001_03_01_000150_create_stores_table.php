@@ -29,6 +29,8 @@ return new class extends Migration
         });
     }
 
+    //$store->product->commit
+
     /**
      * Reverse the migrations.
      */

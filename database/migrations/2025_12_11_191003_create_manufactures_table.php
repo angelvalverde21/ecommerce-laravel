@@ -18,7 +18,9 @@ return new class extends Migration
             // $table->integer('total')->default(0);
             $table->integer('quantity_total')->default(0); // Total producidos
             $table->integer('quantity_failures')->default(0); // Merma o malogrados
-            $table->decimal('cost', 10, 2)->default(0.00); // Costo de producción
+            $table->enum('type', ['order', 'production'])->default('order'); // Para indicar si es una orden de compra para manufactura (order) o una orden de producción interna (production)    
+            $table->decimal('cost', 10, 2)->default(0.00); // Costo de producción calculado entre todo lo gastado y dividido entre lo producido
+            $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete(); //En caso sea una orden de compra para manufactura, se asigna el proveedor, en caso contrario se deja nulo y se asume que es una orden de producción interna (donde se tendra purchases y cada purchase es tiene un proveedor)
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las manufacturas asociadas
             // $table->foreignId('section_id')->nullable()->constrained('sections')->cascadeOnDelete();

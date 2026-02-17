@@ -587,7 +587,6 @@ function UpdateSkus(Product $product)
 
   $variantMap = getVariant($combinations, $product->id);
 
-
   Log::info($variantMap);
 
   if (empty($variantMap)) {

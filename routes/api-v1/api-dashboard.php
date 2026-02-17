@@ -24,8 +24,10 @@ use App\Http\Controllers\Api\Dashboard\OptionValueDashboardController;
 use App\Http\Controllers\Api\Dashboard\PriceDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureVariantDashboardController;
+use App\Http\Controllers\Api\Dashboard\OrderManufactureDashboardController;
 use App\Http\Controllers\Api\Dashboard\PaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\PettyCashDashboardController;
+use App\Http\Controllers\Api\Dashboard\ProductionDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\RoleDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
@@ -73,18 +75,17 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('images')->group(function () {
-    
+
         Route::get('/', [ImageDashboardController::class, 'index']); //Listar
         Route::post('/', [ImageDashboardController::class, 'store']); //create
-    
+
         Route::prefix('{image_id}')->group(function () {
-    
+
             Route::get('/', [ImageDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [ImageDashboardController::class, 'update']); //actualizar
             Route::delete('/', [ImageDashboardController::class, 'destroy']); //borrar
-    
+
         });
-    
     });
 
     Route::prefix('districts')->group(function () {
@@ -123,6 +124,36 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::get('/', [ManufactureDashboardController::class, 'index']); //Listar
         Route::post('/', [ManufactureDashboardController::class, 'store']); //create
         Route::get('/search/{search?}', [ManufactureDashboardController::class, 'search']); //buscar
+
+        Route::prefix('productions')->group(function () {
+
+            Route::get('/', [ProductionDashboardController::class, 'index']); //Listar
+            Route::post('/', [ProductionDashboardController::class, 'store']); //create
+            Route::get('/search/{search?}', [ProductionDashboardController::class, 'search']); //buscar
+
+            Route::prefix('{production_id}')->group(function () {
+
+                Route::get('/', [ProductionDashboardController::class, 'show']); //show o mostrar por id
+                Route::put('/', [ProductionDashboardController::class, 'update']); //actualizar
+                Route::delete('/', [ProductionDashboardController::class, 'destroy']); //borrar
+
+            });
+        });
+
+        Route::prefix('orders')->group(function () {
+
+            Route::get('/', [OrderManufactureDashboardController::class, 'index']); //Listar
+            Route::post('/', [OrderManufactureDashboardController::class, 'store']); //create
+            Route::get('/search/{search?}', [OrderManufactureDashboardController::class, 'search']); //buscar
+
+            Route::prefix('{order_id}')->group(function () {
+
+                Route::get('/', [OrderManufactureDashboardController::class, 'show']); //show o mostrar por id
+                Route::put('/', [OrderManufactureDashboardController::class, 'update']); //actualizar
+                Route::delete('/', [OrderManufactureDashboardController::class, 'destroy']); //borrar
+
+            });
+        });
 
         Route::prefix('{manufacture_id}')->group(function () {
 
@@ -482,34 +513,31 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('identities')->group(function () {
-    
+
         Route::get('/', [IdentityDashboardController::class, 'index']); //Listar
         Route::post('/', [IdentityDashboardController::class, 'store']); //create
-    
+
         Route::prefix('{identity_id}')->group(function () {
-    
+
             Route::get('/', [IdentityDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [IdentityDashboardController::class, 'update']); //actualizar
             Route::delete('/', [IdentityDashboardController::class, 'destroy']); //borrar
-    
+
         });
-    
     });
 
     Route::prefix('kardexes')->group(function () {
-    
+
         Route::get('/', [KardexDashboardController::class, 'index']); //Listar
         Route::post('/', [KardexDashboardController::class, 'store']); //create
         Route::post('/batch', [KardexDashboardController::class, 'batch']); //create
 
         Route::prefix('{kardex_id}')->group(function () {
-    
+
             Route::get('/', [KardexDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [KardexDashboardController::class, 'update']); //actualizar
             Route::delete('/', [KardexDashboardController::class, 'destroy']); //borrar
-    
-        });
-    
-    });
 
+        });
+    });
 });

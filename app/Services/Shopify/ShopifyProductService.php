@@ -132,6 +132,7 @@ class ShopifyProductService extends ShopifyBaseService
             // 'pageInfo'   => $result['pageInfo'] ?? null,
             // 'lastCursor' => $result['lastCursor'] ?? null,
         ];
+        
     }
 
     public function sync_(Store $store): array
@@ -371,29 +372,29 @@ class ShopifyProductService extends ShopifyBaseService
 
             DB::transaction(function () use ($chunk) {
 
-                foreach ($chunk as $p) {
+                foreach ($chunk as $product_shopify) {
 
                     // ----------------------------------------------
                     // 1) PRODUCTO SHOPIFY
                     // ----------------------------------------------
                     $productModel = ShopifyProduct::updateOrCreate(
                         [
-                            'shopify_product_id' => $p['id'],
+                            'shopify_product_id' => $product_shopify['id'],
                         ],
                         [
-                            'title' => $p['title'],
-                            'image' => $p['featuredImage']['src'] ?? null,
-                            'status' => $p['status'] ?? null,
-                            'online_store_url' => $p['onlineStoreUrl'] ?? null,
-                            'created_at_shopify' => Carbon::parse($p['createdAt']),
-                            'updated_at_shopify' => Carbon::parse($p['updatedAt']),
+                            'title' => $product_shopify['title'],
+                            'image' => $product_shopify['featuredImage']['src'] ?? null,
+                            'status' => $product_shopify['status'] ?? null,
+                            'online_store_url' => $product_shopify['onlineStoreUrl'] ?? null,
+                            'created_at_shopify' => Carbon::parse($product_shopify['createdAt']),
+                            'updated_at_shopify' => Carbon::parse($product_shopify['updatedAt']),
                         ]
                     );
 
                     // ----------------------------------------------
                     // 2) VARIANTES
                     // ----------------------------------------------
-                    foreach ($p['variants'] as $v) {
+                    foreach ($product_shopify['variants'] as $v) {
 
                         ShopifyVariant::updateOrCreate(
                             [
@@ -425,23 +426,23 @@ class ShopifyProductService extends ShopifyBaseService
 
             DB::transaction(function () use ($chunk, $store) {
 
-                foreach ($chunk as $p) {
+                foreach ($chunk as $product_shopify) {
 
                     // ----------------------------------------------
                     // 1) CATEGORÍA
                     // ----------------------------------------------
                     $category = Category::updateOrCreate(
                         [
-                            'origin' => $p['category']['id'] ?? null,
+                            'origin' => $product_shopify['category']['id'] ?? null,
                             'store_id' => $store->id,
                         ],
                         [
-                            'name' => $p['category']['name'] ?? 'Predeterminado',
-                            'full_name' => $p['category']['fullName'] ?? 'Predeterminado',
+                            'name' => $product_shopify['category']['name'] ?? 'Predeterminado',
+                            'full_name' => $product_shopify['category']['fullName'] ?? 'Predeterminado',
                             'status' => 1,
                             'is_color' => 0,
                             'is_size' => 1,
-                            'slug' => Str::slug($p['category']['name'] ?? 'predeterminado'),
+                            'slug' => Str::slug($product_shopify['category']['name'] ?? 'predeterminado'),
                             'user_id' => auth()->id(),
                         ]
                     );
@@ -451,29 +452,29 @@ class ShopifyProductService extends ShopifyBaseService
                     // ----------------------------------------------
                     $product = Product::updateOrCreate(
                         [
-                            'origin' => $p['id'],
+                            'origin' => $product_shopify['id'],
                             'store_id' => $store->id,
                         ],
                         [
-                            'name' => $p['title'],
-                            'status' => $this->mapShopifyStatus($p['status'] ?? null),
-                            'slug' => Str::slug($p['title']) . '-' . $store->id,
-                            'online_store_url' => $p['onlineStoreUrl'] ?? null,
+                            'name' => $product_shopify['title'],
+                            'status' => $this->mapShopifyStatus($product_shopify['status'] ?? null),
+                            'slug' => Str::slug($product_shopify['title']) . '-' . $store->id,
+                            'online_store_url' => $product_shopify['onlineStoreUrl'] ?? null,
                             'user_id' => auth()->id(),
                             'category_id' => $category->id,
-                            'created_at' => Carbon::parse($p['createdAt']),
-                            'updated_at' => Carbon::parse($p['updatedAt']),
+                            'created_at' => Carbon::parse($product_shopify['createdAt']),
+                            'updated_at' => Carbon::parse($product_shopify['updatedAt']),
                         ]
                     );
 
                     // ----------------------------------------------
                     // 3) IMAGEN (una sola, evitar duplicados)
                     // ----------------------------------------------
-                    $src = $p['featuredImage']['src'] ?? null;
+                    $src = $product_shopify['featuredImage']['src'] ?? null;
 
                     if ($src && !$product->images()->exists()) {
                         $product->images()->create([
-                            'title' => $p['title'],
+                            'title' => $product_shopify['title'],
                             'name' => $src,
                             'thumbnail' => shopify_image_by_height($src, 300),
                             'medium'    => shopify_image_by_height($src, 800),
@@ -484,46 +485,22 @@ class ShopifyProductService extends ShopifyBaseService
                     // ----------------------------------------------
                     // 4) OPCIÓN SIZE (una vez)
                     // ----------------------------------------------
-                    $option = null;
-                    try {
-                        $option = $this->optionService->store($store, $product->id, 'size');
-                    } catch (\Throwable $e) {
-                        // ya existe → ignorar
-                    }
+
+                    //Como este shopify solo tiene size, creamos manualmente esa opcion
+                    $option = $this->optionService->store($store, $product->id, 'size');
 
                     // ----------------------------------------------
                     // 5) VARIANTES
                     // ----------------------------------------------
-                    foreach ($p['variants'] as $v) {
+                    foreach ($product_shopify['variants'] as $variant_shopify) {
 
-                        $size = Size::updateOrCreate(
-                            [
-                                'origin' => $v['id'],
-                                'product_id' => $product->id,
-                            ],
-                            [
-                                'name' => $v['title'],
-                                'sort_order' => 0,
-                                'quantity' => (int) ($v['quantity'] ?? 0),
-                            ]
-                        );
+                        Log::info("Sincronizando opción para variante");
+                        Log::info($variant_shopify);
 
-                        if ($option) {
-                            $this->optionValueService->store(
-                                $store,
-                                $option->id,
-                                $v['title']
-                            );
-                        }
-
-                        $size->prices()->updateOrCreate(
-                            ['name' => Price::ETIQUETA],
-                            ['value' => (float) $v['compareAtPrice']]
-                        );
-
-                        $size->prices()->updateOrCreate(
-                            ['name' => Price::OFERTA],
-                            ['value' => (float) $v['price']]
+                        $this->optionValueService->store(
+                            $store,
+                            $option->id,
+                            $variant_shopify['title']
                         );
                     }
                 }

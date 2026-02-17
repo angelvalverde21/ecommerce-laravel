@@ -19,8 +19,10 @@ class ManufactureDashboardController extends Controller
         //
         try {
 
-            $manufactures = $store->manufactures()->with(['user'])
-                ->withCount('purchases')
+            $manufactures = $store->manufactures()
+                ->with(['user'])
+                ->withSum('manufactureVariants as sum_products', 'quantity')
+                ->withSum('purchases as sum_purchases', 'total')
                 ->get();
 
             return responseOk($manufactures, "Listado de manufacturas obtenido correctamente");
@@ -54,6 +56,8 @@ class ManufactureDashboardController extends Controller
                 'name' => 'required|string|max:255',
                 'quantity_total' => 'nullable|integer',
                 'budget' => 'nullable|numeric',
+                'supplier_id' => 'nullable|exists:suppliers,id',
+                'type' => 'required|string|max:255',
             ]);
 
             $manufacture = $store->manufactures()->create(
@@ -62,6 +66,8 @@ class ManufactureDashboardController extends Controller
                     'quantity_total' => $data['quantity_total'] ?? 0,
                     'budget' => $data['budget'] ?? 0.00,
                     'user_id' => Auth::id(),
+                    'type' => $data['type'],
+                    'supplier_id' => $data['supplier_id'],
                 ]
             );
 
@@ -106,7 +112,6 @@ class ManufactureDashboardController extends Controller
                 ->findOrFail($manufacture_id);
 
             return responseOk($manufacture);
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -120,6 +125,36 @@ class ManufactureDashboardController extends Controller
     public function edit(Store $store)
     {
         //
+    }
+
+    public function search(Store $store, Request $request, $search)
+    {
+        //
+        if (trim($search) === '') {
+            return $this->index($store, $request);
+        }
+
+        try {
+            // $products = $store->productDetails($warehouse)->get();
+
+            $search = pluralToSingular($search);
+
+            $result = $store->manufactures()
+                ->with(['user'])
+                ->withSum('manufactureVariants as sum_products', 'quantity')
+                ->withSum('purchases as sum_purchases', 'total')
+                ->search($search)->limit(10)->get();
+
+            Log::info($result);
+
+            return responseOk($result, "Datos obtenidos con exito de search");
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError("Error al obtener los datos de search");
+        }
+
+        // $products = $store->products;
+
     }
 
     /**
