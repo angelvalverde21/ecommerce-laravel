@@ -587,9 +587,7 @@ function UpdateSkus(Product $product)
 
   $variantMap = getVariant($combinations, $product->id);
 
-
-  Log::info("Mapa de variantes generado", $variantMap);
-  // Log::info($variantMap);
+  Log::info($variantMap);
 
   if (empty($variantMap)) {
     return;

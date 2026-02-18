@@ -19,20 +19,26 @@ class OptionObserver
 
         DB::transaction(function () use ($option) {
 
+            //si se ha agregado una nueva opción, se archivan las variantes activas del producto, 
+            //para luego generar nuevas variantes con la nueva opción
+
             Variant::where('product_id', $option->product_id)
                 ->where('status', Status::ACTIVE)
                 ->update([
                     'status' => Status::ARCHIVED,
                 ]);
 
+            // Aquí se pueden generar nuevas variantes con la nueva opción
+
             $option->load(['product', 'option_values']);
 
             if ($option->option_values->isEmpty()) {
                 Log::info('Options sin option_values, no se generan variantes');
                 return;
+            }else{
+                UpdateSkus($option->product);
             }
 
-            UpdateSkus($option->product);
             
         });
     }

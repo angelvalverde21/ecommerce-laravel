@@ -11,12 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('manufacture_variant', function (Blueprint $table) {
+        Schema::create('syncs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('manufacture_id')->constrained()->onDelete('cascade');
-            $table->foreignId('variant_id')->constrained()->onDelete('cascade');
-            $table->integer('quantity')->default(1);
-            $table->decimal('price', 10, 2)->default(0.00);
+            $table->morphs('syncable');
             $table->timestamps();
         });
     }
@@ -26,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('manufacture_variant');
+        Schema::dropIfExists('syncs');
     }
 };

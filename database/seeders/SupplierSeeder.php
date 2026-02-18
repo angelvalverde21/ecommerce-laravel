@@ -21,6 +21,30 @@ class SupplierSeeder extends Seeder
         $suppliers = [
             [
                 'id' => 1,
+                'name' => 'Sra Lalo',
+                'address' => 'ATE',
+                'email' => null,
+                'store_id' => 1,
+                'phone' => '991323072',
+                'identity_id' => 1,
+                'document_number' => null,
+                'created_at' => '2025-08-12 06:47:25',
+                'updated_at' => '2025-08-12 06:47:25',
+            ],
+            [
+                'id' => 2,
+                'name' => 'Sr Carlos Bossy Girls',
+                'address' => 'Huachipa',
+                'email' => null,
+                'store_id' => 1,
+                'phone' => '964295916',
+                'identity_id' => 1,
+                'document_number' => null,
+                'created_at' => '2025-08-12 06:47:25',
+                'updated_at' => '2025-08-12 06:47:25',
+            ],
+            [
+                'id' => 3,
                 'name' => 'Sra Padid',
                 'address' => 'San Pedro Piso 10',
                 'email' => null,
@@ -32,7 +56,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-12 06:47:25',
             ],
             [
-                'id' => 2,
+                'id' => 4,
                 'name' => 'Yoni',
                 'address' => 'Mercado la Polvora 3er piso',
                 'email' => null,
@@ -44,7 +68,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-12 06:47:25',
             ],
             [
-                'id' => 3,
+                'id' => 5,
                 'name' => 'Flotex (Alejandro)',
                 'address' => 'Jr. Antonio Bazo 1070, La Victoria',
                 'email' => null,
@@ -56,7 +80,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-12 06:47:25',
             ],
             [
-                'id' => 4,
+                'id' => 6,
                 'name' => 'Comercial Reynaldo',
                 'address' => 'Galeria Sucre 1er Piso',
                 'email' => null,
@@ -68,7 +92,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-12 06:47:25',
             ],
             [
-                'id' => 5,
+                'id' => 7,
                 'name' => 'Elmer',
                 'address' => 'Parinacochas con humbolt',
                 'email' => null,
@@ -80,7 +104,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-12 06:47:25',
             ],
             [
-                'id' => 6,
+                'id' => 8,
                 'name' => 'Cecilia Import Export Matias EIRL',
                 'address' => 'Galeria La victoria Interior C221',
                 'email' => null,
@@ -92,7 +116,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-12 06:47:25',
             ],
             [
-                'id' => 7,
+                'id' => 9,
                 'name' => 'Leoncia Roque',
                 'address' => 'Galeria Leo',
                 'email' => null,
@@ -104,7 +128,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-12 06:47:25',
             ],
             [
-                'id' => 8,
+                'id' => 10,
                 'name' => 'Martin Paiva',
                 'address' => 'Galeria San Pedro 0316 (Sotano 3)',
                 'email' => null,
@@ -116,7 +140,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-12 06:47:25',
             ],
             [
-                'id' => 9,
+                'id' => 11,
                 'name' => 'textil delgado',
                 'address' => 'giribaldi 555 ( galería casas )  interior  211',
                 'email' => null,
@@ -128,7 +152,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-13 05:04:17',
             ],
             [
-                'id' => 10,
+                'id' => 12,
                 'name' => 'yafeth',
                 'address' => 'giribaldi 566 ( galería casas) interior 410',
                 'email' => null,
@@ -140,7 +164,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-13 05:24:24',
             ],
             [
-                'id' => 11,
+                'id' => 13,
                 'name' => 'textiles camello',
                 'address' => 'giribaldi 566 ( galería casas) interior 104',
                 'email' => null,
@@ -152,7 +176,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-13 05:46:58',
             ],
             [
-                'id' => 12,
+                'id' => 14,
                 'name' => 'Bianca',
                 'address' => 'Antonio bazo 727 interior 03',
                 'email' => null,
@@ -164,7 +188,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-13 05:54:08',
             ],
             [
-                'id' => 13,
+                'id' => 15,
                 'name' => 'servicio multiagujas y ojal',
                 'address' => 'galería San Pedro tienda 0211',
                 'email' => null,
@@ -176,7 +200,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-13 05:57:59',
             ],
             [
-                'id' => 14,
+                'id' => 16,
                 'name' => 'señora rosa',
                 'address' => 'casa',
                 'email' => null,
@@ -188,7 +212,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-15 08:49:26',
             ],
             [
-                'id' => 15,
+                'id' => 17,
                 'name' => 'señor floridez',
                 'address' => 'san Pedro tienda 733',
                 'email' => null,
@@ -200,7 +224,7 @@ class SupplierSeeder extends Seeder
                 'updated_at' => '2025-08-15 08:54:36',
             ],
             [
-                'id' => 16,
+                'id' => 18,
                 'name' => 'señora elástico',
                 'address' => 'galería la victoria tienda 02',
                 'email' => null,
@@ -227,7 +251,7 @@ class SupplierSeeder extends Seeder
                 'document_number' => $supplier['document_number'],
                 'password' => bcrypt($supplier['phone']),
             ]);
-            
+
             $user->stores()->attach($supplier['store_id']); // Asignar el usuario a la tienda correspondiente
 
             $supplierResp = $user->supplier()->create(); //Crear el Supplier relacionado al user

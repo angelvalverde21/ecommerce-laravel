@@ -22,7 +22,7 @@ return new class extends Migration
             $table->integer('quantity')->default(0);
 
             $table->enum('direction', ['in', 'out'])->default('in');
-            $table->string('description')->nullable();
+            $table->string('comment')->nullable();
 
 
             $table->index('product_id');

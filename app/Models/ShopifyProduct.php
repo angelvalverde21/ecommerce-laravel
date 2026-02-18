@@ -15,4 +15,9 @@ class ShopifyProduct extends Model
     {
         return $this->hasMany(ShopifyVariant::class, 'shopify_product_id');
     }
+
+    public function syncs()
+    {
+        return $this->morphMany(Sync::class, 'syncable');
+    }
 }

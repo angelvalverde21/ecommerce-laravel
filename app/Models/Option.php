@@ -22,6 +22,17 @@ class Option extends Model
 
     ];
 
+    const DEFAULT = [
+        'color' => [
+            'label' => 'Colores',
+            'sort_order' => 1,
+        ],
+        'size' => [
+            'label' => 'Tallas',
+            'sort_order' => 2,
+        ],
+    ];
+
     protected $guarded = ['id', 'created_at'];
 
     public function product()
@@ -30,6 +41,11 @@ class Option extends Model
     }
 
     public function option_values()
+    {
+        return $this->hasMany(OptionValue::class);
+    }
+
+    public function optionValues() //Relación con camelCase para seguir convenciones de Laravel, se dejara por mientras mientras cambiamos todas las relaciones a camelCase
     {
         return $this->hasMany(OptionValue::class);
     }

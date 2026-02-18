@@ -15,7 +15,6 @@ use App\Services\Dashboard\Option\OptionService;
 use App\Services\Dashboard\OptionValue\OptionValueService;
 use App\Services\Shopify\ShopifyBaseService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -133,6 +132,7 @@ class ShopifyProductService extends ShopifyBaseService
             // 'pageInfo'   => $result['pageInfo'] ?? null,
             // 'lastCursor' => $result['lastCursor'] ?? null,
         ];
+        
     }
 
     public function sync_(Store $store): array
@@ -372,41 +372,41 @@ class ShopifyProductService extends ShopifyBaseService
 
             DB::transaction(function () use ($chunk) {
 
-                foreach ($chunk as $product) {
+                foreach ($chunk as $product_shopify) {
 
                     // ----------------------------------------------
                     // 1) PRODUCTO SHOPIFY
                     // ----------------------------------------------
                     $productModel = ShopifyProduct::updateOrCreate(
                         [
-                            'shopify_product_id' => $product['id'],
+                            'shopify_product_id' => $product_shopify['id'],
                         ],
                         [
-                            'title' => $product['title'],
-                            'image' => $product['featuredImage']['src'] ?? null,
-                            'status' => $product['status'] ?? null,
-                            'online_store_url' => $product['onlineStoreUrl'] ?? null,
-                            'created_at_shopify' => Carbon::parse($product['createdAt']),
-                            'updated_at_shopify' => Carbon::parse($product['updatedAt']),
+                            'title' => $product_shopify['title'],
+                            'image' => $product_shopify['featuredImage']['src'] ?? null,
+                            'status' => $product_shopify['status'] ?? null,
+                            'online_store_url' => $product_shopify['onlineStoreUrl'] ?? null,
+                            'created_at_shopify' => Carbon::parse($product_shopify['createdAt']),
+                            'updated_at_shopify' => Carbon::parse($product_shopify['updatedAt']),
                         ]
                     );
 
                     // ----------------------------------------------
                     // 2) VARIANTES
                     // ----------------------------------------------
-                    foreach ($product['variants'] as $variant) {
+                    foreach ($product_shopify['variants'] as $v) {
 
                         ShopifyVariant::updateOrCreate(
                             [
-                                'shopify_variant_id' => $variant['id'],
+                                'shopify_variant_id' => $v['id'],
                             ],
                             [
                                 'shopify_product_id' => $productModel->id,
-                                'title' => $variant['title'],
-                                'sku' => $variant['sku'] ?? null,
-                                'price_etiqueta' => (float) $variant['compareAtPrice'],
-                                'price_oferta' => (float) $variant['price'],
-                                'quantity' => (int) ($variant['quantity'] ?? 0),
+                                'title' => $v['title'],
+                                'sku' => $v['sku'] ?? null,
+                                'price_etiqueta' => (float) $v['compareAtPrice'],
+                                'price_oferta' => (float) $v['price'],
+                                'quantity' => (int) ($v['quantity'] ?? 0),
                             ]
                         );
                     }
@@ -424,116 +424,87 @@ class ShopifyProductService extends ShopifyBaseService
     {
         collect($products)->chunk(10)->each(function ($chunk) use ($store) {
 
-            DB::beginTransaction();
+            DB::transaction(function () use ($chunk, $store) {
 
-            try {
-
-                Log::info("🚀 INICIO TRANSACCIÓN");
-
-                foreach ($chunk as $p) {
+                foreach ($chunk as $product_shopify) {
 
                     // ----------------------------------------------
                     // 1) CATEGORÍA
                     // ----------------------------------------------
                     $category = Category::updateOrCreate(
                         [
-                            'origin' => $p['category']['id'] ?? null,
+                            'origin' => $product_shopify['category']['id'] ?? null,
                             'store_id' => $store->id,
                         ],
                         [
-                            'name' => $p['category']['name'] ?? 'Predeterminado',
-                            'full_name' => $p['category']['fullName'] ?? 'Predeterminado',
+                            'name' => $product_shopify['category']['name'] ?? 'Predeterminado',
+                            'full_name' => $product_shopify['category']['fullName'] ?? 'Predeterminado',
                             'status' => 1,
                             'is_color' => 0,
                             'is_size' => 1,
-                            'slug' => Str::slug($p['category']['name'] ?? 'predeterminado'),
-                            'user_id' => Auth::id(),
+                            'slug' => Str::slug($product_shopify['category']['name'] ?? 'predeterminado'),
+                            'user_id' => auth()->id(),
                         ]
                     );
-
-                    Log::info("Categoría procesada ID: {$category->id}");
 
                     // ----------------------------------------------
                     // 2) PRODUCTO
                     // ----------------------------------------------
                     $product = Product::updateOrCreate(
                         [
-                            'origin' => $p['id'],
+                            'origin' => $product_shopify['id'],
                             'store_id' => $store->id,
                         ],
                         [
-                            'name' => $p['title'],
-                            'status' => $this->mapShopifyStatus($p['status'] ?? null),
-                            'slug' => Str::slug($p['title']) . '-' . $store->id,
-                            'online_store_url' => $p['onlineStoreUrl'] ?? null,
-                            'user_id' => Auth::id(),
+                            'name' => $product_shopify['title'],
+                            'status' => $this->mapShopifyStatus($product_shopify['status'] ?? null),
+                            'slug' => Str::slug($product_shopify['title']) . '-' . $store->id,
+                            'online_store_url' => $product_shopify['onlineStoreUrl'] ?? null,
+                            'user_id' => auth()->id(),
                             'category_id' => $category->id,
-                            'created_at' => !empty($p['createdAt']) ? Carbon::parse($p['createdAt']) : now(),
-                            'updated_at' => !empty($p['updatedAt']) ? Carbon::parse($p['updatedAt']) : now(),
+                            'created_at' => Carbon::parse($product_shopify['createdAt']),
+                            'updated_at' => Carbon::parse($product_shopify['updatedAt']),
                         ]
                     );
 
-                    Log::info("Producto procesado ID: {$product->id}");
-
                     // ----------------------------------------------
-                    // 3) IMAGEN
+                    // 3) IMAGEN (una sola, evitar duplicados)
                     // ----------------------------------------------
-                    $src = $p['featuredImage']['src'] ?? null;
+                    $src = $product_shopify['featuredImage']['src'] ?? null;
 
                     if ($src && !$product->images()->exists()) {
-
-                        $image = $product->images()->create([
-                            'title' => $p['title'],
+                        $product->images()->create([
+                            'title' => $product_shopify['title'],
                             'name' => $src,
                             'thumbnail' => shopify_image_by_height($src, 300),
                             'medium'    => shopify_image_by_height($src, 800),
                             'large'     => shopify_image_by_height($src, 1200),
                         ]);
-
-                        Log::info("Imagen procesada para el producto ID: {$image->id}");
-                    }else{
-                        Log::info("No se procesó imagen para el producto ID: {$product->id} (src: {$src})");
                     }
 
-
                     // ----------------------------------------------
-                    // 4) OPCIÓN SIZE
+                    // 4) OPCIÓN SIZE (una vez)
                     // ----------------------------------------------
-                    $option = null;
 
-                    try {
-                        $option = $this->optionService->store($store, $product->id, 'size');
-                        Log::info("Opción size procesada para el producto ID: {$product->id}");
-                    } catch (\Throwable $e) {
-                        Log::info("Error opción size: " . $e->getMessage());
-                    }
+                    //Como este shopify solo tiene size, creamos manualmente esa opcion
+                    $option = $this->optionService->store($store, $product->id, 'size');
 
                     // ----------------------------------------------
                     // 5) VARIANTES
                     // ----------------------------------------------
-                    foreach ($p['variants'] as $v) {
+                    foreach ($product_shopify['variants'] as $variant_shopify) {
 
-                        Log::info("Procesando variante {$v['title']}");
+                        Log::info("Sincronizando opción para variante");
+                        Log::info($variant_shopify);
 
-                        if ($option) {
-                            $this->optionValueService->store(
-                                $store,
-                                $option->id,
-                                $v['title']
-                            );
-                        }
+                        $this->optionValueService->store(
+                            $store,
+                            $option->id,
+                            $variant_shopify['title']
+                        );
                     }
                 }
-
-                DB::commit();
-                Log::info("COMMIT EJECUTADO");
-            } catch (\Throwable $th) {
-
-                DB::rollBack();
-                Log::error("ROLLBACK EJECUTADO");
-                Log::error($th->getMessage());
-                Log::error($th->getTraceAsString());
-            }
+            });
         });
 
         return [
