@@ -98,7 +98,7 @@ class ManufactureDashboardController extends Controller
 
             $manufacture = $store->manufactures()->with([
                 'kardexes' => function ($k) {
-                    $k->with(['variant.product', 'variant.optionValues']);
+                    $k->with(['variant.product.image', 'variant.optionValues']);
                 },
                 'purchases.supplier',
                 'purchases.unit',
