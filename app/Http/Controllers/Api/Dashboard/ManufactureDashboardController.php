@@ -102,6 +102,7 @@ class ManufactureDashboardController extends Controller
                 },
                 'purchases.supplier',
                 'purchases.unit',
+                'user',
                 'payments' => function ($p) {
                     $p->with(['gateway', 'images']);
                 },
