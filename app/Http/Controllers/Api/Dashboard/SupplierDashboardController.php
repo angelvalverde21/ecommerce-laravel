@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\Dashboard\Supplier\SupplierService;
 use App\Services\Dashboard\Supplier\FlatSupplierUserResource;
 use App\Services\Dashboard\UserRelatedService;
+use Illuminate\Auth\Events\Validated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -28,72 +29,49 @@ class SupplierDashboardController extends Controller
 
     public function index(Store $store)
     {
-        try {
-
-            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
-            $suppliers = Supplier::with('user') //entity_id=1 quiere decir para los usuarios registrados con dni
-                ->whereHas('user', function ($q) use ($store) {
-                    $q->whereHas('stores', function ($sq) use ($store) {
-                        $sq->where('stores.id', $store->id);
-                    });
-                })
-                ->get();
-
-            return responseOk($suppliers, 'Datos de proveedores obtenidos correctamente');
-
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return responseError('Error al obtener ' . 'Suppliers activos');
-        }
+        return $this->supplierService->index($store, 25);
     }
 
     public function active(Store $store)
     {
-        try {
-            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
-            return responsePaginateOk($this->supplierService->active($store, 25), 'Supplier activos obtenidos correctamente');
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return responseError('Error al obtener ' . 'Supplier activos');
-        }
+        return $this->supplierService->active($store, 25);
     }
 
     public function blocked(Store $store)
     {
-        try {
-            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
-            return responsePaginateOk($this->supplierService->blocked($store, 25), 'Supplier bloqueados obtenidos correctamente');
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return responseError('Error al obtener ' . 'Supplier bloqueados');
-        }
+        return $this->supplierService->blocked($store, 25);
     }
 
-    public function search(Store $store, string $search = '')
+    // public function search(Store $store, string $search = '')
+    // {
+    //     try {
+
+    //         $search = trim($search);
+
+    //         if ($search === '') {
+    //             $suppliers = $this->supplierService->index($store, 100);
+    //         } else {
+    //             $suppliers = $this->supplierService->search($store, $search, 100);
+    //         }
+
+    //         return responsePaginateOk(
+    //             $suppliers,
+    //             'Suppliers obtenidos correctamente'
+    //         );
+    //     } catch (\Throwable $th) {
+
+    //         Log::error($th);
+
+    //         return responseError(
+    //             $th,
+    //             'Error al buscar suppliers'
+    //         );
+    //     }
+    // }
+
+    public function search(Store $store, Request $request)
     {
-        try {
-
-            $search = trim($search);
-
-            if ($search === '') {
-                $suppliers = $this->supplierService->index($store, 100);
-            } else {
-                $suppliers = $this->supplierService->search($store, $search, 100);
-            }
-
-            return responsePaginateOk(
-                $suppliers,
-                'Suppliers obtenidos correctamente'
-            );
-        } catch (\Throwable $th) {
-
-            Log::error($th);
-
-            return responseError(
-                $th,
-                'Error al buscar suppliers'
-            );
-        }
+        return $this->supplierService->search($store, $request);
     }
 
     /**
@@ -224,23 +202,7 @@ class SupplierDashboardController extends Controller
      */
     public function show(Store $store, $supplier_id)
     {
-        try {
-            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
-
-            $supplier = Supplier::with(['user', 'addresses.district'])
-                ->whereHas('user', function ($q) use ($store) {
-                    $q->whereHas('stores', function ($sq) use ($store) {
-                        $sq->where('stores.id', $store->id);
-                    });
-                })
-                ->findOrFail($supplier_id);
-
-            return responseOk($supplier, 'Supplier obtenido correctamente');
-
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return responseError('Error al obtener ' . $supplier_id);
-        }
+        return responseOk($this->supplierService->show($store, $supplier_id), "Supplier obtenido correctamente");
     }
 
     /**

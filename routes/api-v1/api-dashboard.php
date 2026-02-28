@@ -107,7 +107,9 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         Route::get('/', [SupplierDashboardController::class, 'index']); //Listar
         Route::get('/blocked', [SupplierDashboardController::class, 'blocked']); //Listar
-        Route::get('/search/{search?}', [SupplierDashboardController::class, 'search']); //buscar
+        Route::post('/search', [SupplierDashboardController::class, 'search']); //buscar
+        // Route::get('/search/{search?}', [SupplierDashboardController::class, 'search']); //buscar
+        // Route::post('/search', [SupplierDashboardController::class, 'searchPost']); //buscar
         Route::post('/', [SupplierDashboardController::class, 'store']); //create
 
         Route::prefix('{supplier_id}')->group(function () {
@@ -231,14 +233,18 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         Route::get('/', [EmployeeDashboardController::class, 'index']); //Listar
         Route::get('/blocked', [EmployeeDashboardController::class, 'blocked']); //Listar
-        Route::get('/search/{search?}', [EmployeeDashboardController::class, 'search']); //buscar
+        // Route::get('/search/{search?}', [EmployeeDashboardController::class, 'search']); //buscar
+        Route::post('/search', [EmployeeDashboardController::class, 'search']); //buscar
         Route::post('/', [EmployeeDashboardController::class, 'store']); //create
 
         Route::prefix('{employee_id}')->group(function () {
 
             Route::get('/', [EmployeeDashboardController::class, 'show']); //show o mostrar por id
+            Route::get('/orders', [EmployeeDashboardController::class, 'orders']); //show o mostrar por id
             Route::put('/', [EmployeeDashboardController::class, 'update']); //actualizar
             Route::delete('/', [EmployeeDashboardController::class, 'destroy']); //borrar
+
+
 
         });
     });
@@ -277,7 +283,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         Route::get('/setup', [ProductDashboardController::class, 'setup']); //Listar
         Route::get('/', [ProductDashboardController::class, 'index']); //Listar
-        Route::get('/search/{search}', [ProductDashboardController::class, 'search']); //Listar
+        Route::post('/search', [ProductDashboardController::class, 'search']); //Listar
         Route::post('/', [ProductDashboardController::class, 'store']); //create
 
         Route::prefix('{product_id}')->group(function () {

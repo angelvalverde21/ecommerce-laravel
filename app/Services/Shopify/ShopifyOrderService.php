@@ -904,6 +904,216 @@ class ShopifyOrderService extends ShopifyBaseService
         // return $result;
     }
 
+    public function getOrdersYen(int $limit = 20, $cursor = null): array
+    {
+        Log::info('getOrdersPrepared');
+
+        // Asegurar límite mínimo
+        $limit = max(1, $limit);
+
+        // -------------------------------------------------------------
+        // 1️⃣ — Sub-queries para evitar repetición
+        // -------------------------------------------------------------
+        $shippingLinesQuery   = $this->shippingLinesQuery();
+        $shippingAddressQuery = $this->shippingAddressQuery();
+        $customerQuery        = $this->customerQuery();
+        $itemsQuery           = $this->itemsQuery();
+        $eventsQuery          = $this->eventsQuery();
+
+        // -------------------------------------------------------------
+        // 2️⃣ — GraphQL Template SIN FECHAS, usando LIMIT
+        // -------------------------------------------------------------
+        $queryTemplate = <<<GRAPHQL
+                                {
+                                    orders(
+                                        first: :limit,
+                                        sortKey: CREATED_AT,
+                                        reverse: true,
+                                        query: "financial_status:paid  tag:JENNIFER cancelled_at:null fulfillment_status:fulfilled created_at:>=2026-01-07 created_at:<=2026-02-06",
+                                        after: :cursor
+                                    ) {
+                                        pageInfo {
+                                            hasNextPage
+                                            endCursor
+                                        }
+                                        edges {
+                                            cursor
+                                            node {
+                                                id
+                                                name
+                                                createdAt
+                                                updatedAt
+                                                processedAt
+                                                sourceName
+                                                displayFinancialStatus
+                                                displayFulfillmentStatus
+                                                note
+                                                fulfillmentOrders(first: 20) {
+                                                    edges {
+                                                        node {
+                                                            id
+                                                            status
+                                                            createdAt
+                                                            requestStatus
+                                                            updatedAt
+                                                        }
+                                                    }
+                                                }
+                                                totalPriceSet {
+                                                    shopMoney {
+                                                        amount
+                                                        currencyCode
+                                                    }
+                                                }
+                                                $itemsQuery
+                                            }
+                                        }
+                                    }
+                                }
+                            GRAPHQL;
+
+        // -------------------------------------------------------------
+        // Reemplazo dinámico únicamente para cursor y limit
+        // -------------------------------------------------------------
+        $queryBuilder = function (?string $cursor) use ($queryTemplate, $limit) {
+            return str_replace(
+                [':limit', ':cursor'],
+                [
+                    $limit,
+                    $cursor ? "\"$cursor\"" : 'null'
+                ],
+                $queryTemplate
+            );
+        };
+
+        // -------------------------------------------------------------
+        // 4️⃣ — Ejecutar contra Shopify
+        // -------------------------------------------------------------
+
+        $response = $this->graphql($queryBuilder($cursor));
+
+
+        // Log::info($result['items'] ?? []);
+        $result = GraphQLResponseHelper::normalizeEntity(
+            $response,
+            'orders',
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+        );
+
+        return [
+            'orders'     => json_decode(json_encode($result['items'])),
+            'pageInfo'   => $result['pageInfo'] ?? null,
+            'lastCursor' => $result['lastCursor'] ?? null,
+        ];
+
+        // return $result;
+    }
+
+    public function getOrdersByTag($tag, int $limit = 20, $cursor = null): array
+    {
+        Log::info('getOrdersSearch');
+
+        // Asegurar límite mínimo
+        $limit = max(1, $limit);
+
+        // -------------------------------------------------------------
+        // 1️⃣ — Sub-queries para evitar repetición
+        // -------------------------------------------------------------
+        $shippingLinesQuery   = $this->shippingLinesQuery();
+        $shippingAddressQuery = $this->shippingAddressQuery();
+        $customerQuery        = $this->customerQuery();
+        $itemsQuery           = $this->itemsQuery();
+        $eventsQuery          = $this->eventsQuery();
+
+        // -------------------------------------------------------------
+        // 2️⃣ — GraphQL Template SIN FECHAS, usando LIMIT
+        // -------------------------------------------------------------
+        $queryTemplate = <<<GRAPHQL
+                                {
+                                    orders(
+                                        first: :limit,
+                                        sortKey: CREATED_AT,
+                                        reverse: true,
+                                        query: "financial_status:paid  tag:$tag cancelled_at:null fulfillment_status:fulfilled created_at:>=2026-01-07 created_at:<=2026-02-06",
+                                        after: :cursor
+                                    ) {
+                                        pageInfo {
+                                            hasNextPage
+                                            endCursor
+                                        }
+                                        edges {
+                                            cursor
+                                            node {
+                                                id
+                                                name
+                                                createdAt
+                                                updatedAt
+                                                processedAt
+                                                sourceName
+                                                displayFinancialStatus
+                                                displayFulfillmentStatus
+                                                note
+                                                fulfillmentOrders(first: 20) {
+                                                    edges {
+                                                        node {
+                                                            id
+                                                            status
+                                                            createdAt
+                                                            requestStatus
+                                                            updatedAt
+                                                        }
+                                                    }
+                                                }
+                                                totalPriceSet {
+                                                    shopMoney {
+                                                        amount
+                                                        currencyCode
+                                                    }
+                                                }
+                                                $itemsQuery
+                                            }
+                                        }
+                                    }
+                                }
+                            GRAPHQL;
+
+        // -------------------------------------------------------------
+        // Reemplazo dinámico únicamente para cursor y limit
+        // -------------------------------------------------------------
+        $queryBuilder = function (?string $cursor) use ($queryTemplate, $limit) {
+            return str_replace(
+                [':limit', ':cursor'],
+                [
+                    $limit,
+                    $cursor ? "\"$cursor\"" : 'null'
+                ],
+                $queryTemplate
+            );
+        };
+
+        // -------------------------------------------------------------
+        // 4️⃣ — Ejecutar contra Shopify
+        // -------------------------------------------------------------
+
+        $response = $this->graphql($queryBuilder($cursor));
+
+
+        // Log::info($result['items'] ?? []);
+        $result = GraphQLResponseHelper::normalizeEntity(
+            $response,
+            'orders',
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+        );
+
+        return [
+            'data'     => json_decode(json_encode($result['items'])),
+            'pageInfo'   => $result['pageInfo'] ?? null,
+            'lastCursor' => $result['lastCursor'] ?? null,
+        ];
+
+        // return $result;
+    }
+
     public function getSearchOrders(int $limit = 20, $cursor = null, $search = null): array
     {
         Log::info('getSearchOrders');

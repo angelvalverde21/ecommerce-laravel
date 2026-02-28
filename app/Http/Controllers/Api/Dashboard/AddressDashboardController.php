@@ -70,7 +70,7 @@ class AddressDashboardController extends Controller
                 'name'            => 'required|string|max:255',
                 'phone'           => 'required',
                 'document_number' => 'nullable|string|max:11',
-                'identity_id'       => 'nullable|number|max:11',
+                'identity_id'       => 'nullable|integer|max:11',
                 'primary'            => 'required|string|max:255',
                 'secondary'            => 'nullable|string|max:255',
                 'references'  => 'nullable|string|max:255',

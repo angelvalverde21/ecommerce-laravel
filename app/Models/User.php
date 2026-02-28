@@ -68,6 +68,10 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->belongsToMany(Store::class);
     }
 
+    public function suppliers(){
+        return $this->hasMany(Supplier::class);
+    }
+
     public function employee()
     {
         return $this->hasOne(Employee::class);

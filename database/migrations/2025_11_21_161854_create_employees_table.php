@@ -16,10 +16,12 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete(); // Si se elimina el usuario, se eliminan los empleados asociados (la relacion 1 a 1)
-            
+
             // Campos del empleado
             $table->decimal('salary', 10, 2)->nullable();
-            $table->date('date_entry')->nullable();
+            $table->tinyInteger('comission')->nullable();
+            // $table->date('date_entry')->nullable();
+            $table->string('tag_search')->nullable(); //telefono de trabajo (del empleado)
             $table->string('phone')->nullable(); //telefono de trabajo (del empleado)
             $table->timestamps();
         });

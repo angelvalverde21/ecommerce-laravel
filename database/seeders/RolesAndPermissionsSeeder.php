@@ -83,6 +83,12 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             [
                 'id'    => 3,
+                'name'  => 'admin',
+                'title' => 'Administrador',
+                'permissions' => $allPermissions,
+            ],
+            [
+                'id'    => 4,
                 'name'  => 'quality_control',
                 'title' => 'Control de calidad',
                 'permissions' => [
@@ -92,7 +98,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ],
             ],
             [
-                'id'    => 4,
+                'id'    => 5    ,
                 'name'  => 'production',
                 'title' => 'Producción',
                 'permissions' => [
@@ -124,8 +130,8 @@ class RolesAndPermissionsSeeder extends Seeder
             ],
             [
                 'id'    => 8,
-                'name'  => 'content_maker',
-                'title' => 'Creador de contenido',
+                'name'  => 'marketing',
+                'title' => 'Marketing',
                 'permissions' => [
                     'crear publicaciones',
                     'editar publicaciones',
@@ -198,6 +204,6 @@ class RolesAndPermissionsSeeder extends Seeder
             $role->syncPermissions($snakePermissions);
         }
 
-        $this->command->info('✅ Roles y permisos creados respetando name + title');
+        $this->command->info('Roles y permisos creados respetando name + title');
     }
 }

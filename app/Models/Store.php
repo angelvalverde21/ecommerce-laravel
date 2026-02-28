@@ -116,6 +116,25 @@ class Store extends Model
         return $this->hasMany(Gateway::class);
     }
 
+    public function suppliers()
+    {
+        return Supplier::whereHas('user.stores', function ($query) {
+            $query->where('stores.id', $this->id);
+        });
+    }
+
+    // public function suppliers()
+    // {
+    //     return $this->hasManyThrough(
+    //         Supplier::class,  // Modelo final
+    //         User::class,      // Modelo intermedio
+    //         'store_id',       // FK en users (relaciona con stores.id)
+    //         'user_id',        // FK en suppliers (relaciona con users.id)
+    //         'id',             // PK en stores
+    //         'id'              // PK en users
+    //     );
+    // }
+
     // public function remember(string $suffix, int $days, callable $callback)
     // {
     //     return Cache::remember(

@@ -8,6 +8,7 @@ use App\Models\Option;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Variant;
+use App\Services\Dashboard\Product\ProductService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,12 @@ use Illuminate\Support\Str;
 
 class ProductDashboardController extends Controller
 {
-    //
+    protected $productService;
+
+    public function __construct(ProductService $productService)
+    {
+        $this->productService = $productService;
+    }
 
     public function setup(Store $store)
     {
@@ -35,41 +41,17 @@ class ProductDashboardController extends Controller
     }
     public function index(Store $store, Request $request)
     {
-        // Implementa la lógica para recuperar y devolver productos para el panel de control
-        // Esto podría implicar consultar la base de datos por productos relacionados con la tienda
-        // y devolverlos en un formato paginado o como una colección.
 
-        try {
-            Log::info('exito');
-            //selectFields esta en el modelo Product
-            return responseOk($store->products()->with('category')->get(), "El listado de productos private ha sido obtenido correctamente (dashboard)");
-        } catch (\Throwable $th) {
-            //throw $th;
-            Log::info($th);
-            return responseError("Ocurrio un error al traer los productos");
-        }
+        // Log::info($request->all());
+
+       return $this->productService->index($store); //se envia el page desde el request de angular, el perPage si esta definido por defecto en el servicio
     }
 
-    public function search(Store $store, $search)
+    public function search(Store $store, Request $request)
     {
         //
 
-        try {
-            // $products = $store->productDetails($warehouse)->get();
-
-            $search = pluralToSingular($search);
-
-            $products = $store->products()->with(['image', 'variants.product', 'variants.variant_option_values.optionValue'])->search($search)->limit(10)->get();
-
-            Log::info($products);
-
-            return responseOk($products, "Datos obtenidos con exito de search");
-        } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError("Error al obtener los datos de search");
-        }
-
-        // $products = $store->products;
+        return $this->productService->search($store, $request); //se envia el page desde el request de angular, el perPage si esta definido por defecto en el servicio
 
     }
 

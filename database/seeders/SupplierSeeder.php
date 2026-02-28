@@ -254,7 +254,11 @@ class SupplierSeeder extends Seeder
 
             $user->stores()->attach($supplier['store_id']); // Asignar el usuario a la tienda correspondiente
 
-            $supplierResp = $user->supplier()->create(); //Crear el Supplier relacionado al user
+            $supplierResp = $user->supplier()->create(
+                [
+                    // 'data_entry' => $user['created_at'],
+                ]
+            ); //Crear el Supplier relacionado al user
 
             $supplierResp->addresses()->create([
                 'name' => $supplier['name'],

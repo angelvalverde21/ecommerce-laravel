@@ -7,10 +7,12 @@ use App\Http\Resources\FlatUserResource;
 use App\Models\Employee;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Dashboard\Employee\EmployeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
 class EmployeeDashboardController extends Controller
@@ -18,18 +20,24 @@ class EmployeeDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
+    protected EmployeeService $employeeService;
+
+    public function __construct()
+    {
+        // Pasamos el modelo que vamos a usar
+        $this->employeeService = new EmployeeService();
+    }
+
+    //  getOrdersByTag
+
     public function index(Store $store)
     {
         //
         try {
 
-            $employees = Cache::remember(
-                "store:{$store->id}:employees",
-                now()->addMinutes(10080),
-                fn() => $store->employees()->with('user')->get()
-            );
+            $employees = $store->employees()->with('user.roles')->get();
 
-            // $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar supplier->user en el front sino todo plano
+            // $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar Employee->user en el front sino todo plano
             //     $store->employees()->get()
             // );
 
@@ -41,8 +49,18 @@ class EmployeeDashboardController extends Controller
         }
     }
 
-    public function search(Store $store, $search = "")
+    public function search(Store $store, Request $request)
     {
+        $validated = $request->validate([
+            'search'     => 'required|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date'   => 'nullable|date|after_or_equal:start_date',
+
+        ]);
+
+        $search     = $validated['search'];
+        $startDate  = $validated['start_date'] ?? null;
+        $endDate    = $validated['end_date'] ?? null;
 
         if (trim($search) === '' || $search === null) {
             return $this->index($store);
@@ -50,13 +68,23 @@ class EmployeeDashboardController extends Controller
 
         try {
 
-            $employees = Employee::whereHas('user', function ($query) use ($search) {
+            $query = Employee::whereHas('user', function ($query) use ($search) {
                 $query->where('name', 'LIKE', "%{$search}%")
                     ->orWhere('email', 'LIKE', "%{$search}%")
                     ->orWhere('phone', 'LIKE', "%{$search}%")
                     ->orWhere('document_number', 'LIKE', "%{$search}%");
             })
-                ->with('user') // anidado
+                ->with('user');
+
+            // 🔥 Si ambas fechas existen → aplicar between
+            if ($startDate && $endDate) {
+                $query->whereBetween('created_at', [
+                    $startDate . ' 00:00:00',
+                    $endDate   . ' 23:59:59'
+                ]);
+            }
+
+            $employees = $query
                 ->limit(10)
                 ->get();
 
@@ -93,6 +121,8 @@ class EmployeeDashboardController extends Controller
                 'phone'           => 'nullable|string|max:20',
                 'document_number' => 'nullable|string|max:20',
                 'salary'          => 'nullable|numeric|min:0',
+                'comission'       => 'nullable|numeric|min:0|max:100',
+                'tag_sales'       => 'nullable|string|max:100',
                 'roles'           => 'required|array|min:1',
                 'roles.*'         => 'string|exists:roles,name',
             ]);
@@ -106,6 +136,7 @@ class EmployeeDashboardController extends Controller
                 'phone'           => $validated['phone'],
                 'document_number' => $validated['document_number'],
                 'identity_id'     => $validated['identity_id'],
+                'comission'       => $validated['comission'] ?? null,
                 'password'        => bcrypt($validated['document_number']),
             ]);
 
@@ -115,6 +146,7 @@ class EmployeeDashboardController extends Controller
                 [
                     'salary'     => $validated['salary'] ?? null,
                     'date_entry' => now(), // FECHA DE CREACIÓN DEL REGISTRO
+                    'tag_sales' => $validated['tag_sales'] ?? null,
                 ]
             );
 
@@ -141,10 +173,10 @@ class EmployeeDashboardController extends Controller
     public function show(Store $store, $employed_id)
     {
         try {
-            
+
             // Obtener usuario con employee y roles
             $employee = Employee::with('user.roles')->findOrFail($employed_id);
-  
+
             // --- ELIMINAR RELACIÓN ORIGINAL ---
             $rolesOnlyNames = $employee->user->roles->pluck('name');
 
@@ -174,52 +206,58 @@ class EmployeeDashboardController extends Controller
     {
         try {
 
-            $user = User::findOrFail($employed_id);
+            $employee = Employee::with('user')->findOrFail($employed_id);
 
-            // ⭐ VALIDACIÓN FLEXIBLE (update parcial o completo)
+            Log::info($employee);
+
+            //VALIDACIÓN FLEXIBLE (update parcial o completo)
             $validated = $request->validate([
                 'name'            => 'sometimes|required|string|max:255',
-                'email'           => "sometimes|required|email|unique:users,email,$employed_id",
+                'email'           => ["sometimes", "required", "email", Rule::unique('users', 'email')->ignore($employee->user->id)],
                 'phone'           => 'sometimes|nullable|string|max:20',
                 'document_number' => 'sometimes|nullable|string|max:20',
-                'salary'          => 'sometimes|nullable|numeric|min:0',
+                'status'          => 'sometimes|required|in:0,1',
+                'tag_sales'       => 'nullable|string|max:100',
                 'roles'           => 'sometimes|required|array|min:1',
                 'roles.*'         => 'string|exists:roles,name',
-                'status'          => 'sometimes|required|in:0,1',
+                'comission'       => 'sometimes|nullable|numeric|min:0|max:100', //employee comission
+                'salary'          => 'sometimes|nullable|numeric|min:0', //employee salary
             ]);
 
             DB::beginTransaction();
 
             // ⭐ 1. Actualizar USER (solo campos presentes)
-            $user->update($validated);
 
-            // ⭐ 2. Actualizar EMPLOYEE si llega salary
-            if ($request->has('salary')) {
-                $employee = $user->employee;
+            $employee->update(
+                [
+                    'comission' => $validated['comission'] ?? null, //actualiza comision del empleado si llega
+                    'salary'    => $validated['salary'] ?? null, //actualiza salario del empleado si llega
+                    'tag_sales' => $validated['tag_sales'] ?? null, //actualiza tag_sales del empleado si llega
+                ]
+            );
 
-                if (!$employee) {
-                    // Si aún no existe relación employee
-                    $employee = Employee::create([
-                        'user_id'    => $user->id,
-                        'salary'     => $validated['salary'] ?? null,
-                        'date_entry' => now(),
-                    ]);
-                } else {
-                    $employee->update([
-                        'salary' => $validated['salary'] ?? null
-                    ]);
-                }
-            }
+
+            $employee->user->update(
+                [
+                    'name'            => $validated['name'] ?? null,
+                    'email'           => $validated['email'] ?? null,
+                    'phone'           => $validated['phone'] ?? null,
+                    'document_number' => $validated['document_number'] ?? null,
+                    'status'          => $validated['status'] ?? null,
+                ]
+            );
+
 
             // ⭐ 3. Actualizar ROLES si llegan
             if ($request->has('roles')) {
-                $user->syncRoles($validated['roles']);
+                $employee->user->syncRoles($validated['roles']);
             }
+
 
             DB::commit();
 
             return responseOk(
-                $user->load('roles', 'employee'),
+                $employee->load('user.roles'),
                 "Empleado actualizado correctamente",
                 200
             );
@@ -236,8 +274,13 @@ class EmployeeDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Store $store)
+    public function orders(Store $store, Request $request)
     {
-        //
+
+        $tag = $request->input('tag', 'AYLIN');
+        $limit = $request->input('limit', 25);
+        $cursor = $request->input('cursor', null);
+
+        return $this->employeeService->getOrdersByTag($tag, $limit, $cursor);
     }
 }

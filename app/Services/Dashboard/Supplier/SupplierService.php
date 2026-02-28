@@ -7,35 +7,54 @@ use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 
 class SupplierService
 {
     /**
      * Buscar Suppliers relacionados a un store con filtro
      */
-    public function search(Store $store, string $search, int $perPage = 50)
+    public function search(Store $store, Request $request, int $perPage = 20)
     {
-        $query = Supplier::with('user')
-            ->whereHas('user', function (Builder $q) use ($store, $search) {
 
-                $q->active()
-                  ->whereHas('stores', function (Builder $sq) use ($store) {
-                      $sq->where('stores.id', $store->id);
-                  });
+        $search = $request->input('search', '');
 
-                if (trim($search) !== '') {
-                    $q->where(function (Builder $qq) use ($search) {
-                        $qq->where('name', 'like', "%{$search}%")
-                           ->orWhere('email', 'like', "%{$search}%")
-                           ->orWhere('phone', 'like', "%{$search}%")
-                           ->orWhere('document_number', 'like', "%{$search}%");
-                    });
-                }
-            });
+        if (trim($search) === '' || $search === null) {
+            Log::info("se ejectutó la búsqueda sin término de búsqueda, se devolverá el listado completo de Suppliers para el store con id: {$store->id}");
+            return $this->index($store);
+        }
 
-        return FlatSupplierUserResource::collection(
-            $query->paginate($perPage)
-        );
+        $validated = $request->validate([
+            'search'     => 'required|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date'   => 'nullable|date|after_or_equal:start_date',
+
+        ]);
+
+        $search     = $validated['search'];
+        $startDate  = $validated['start_date'] ?? null;
+        $endDate    = $validated['end_date'] ?? null;
+
+        $query = $store->suppliers()
+            ->whereHas('user', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%{$search}%")
+                        ->orWhere('email', 'LIKE', "%{$search}%")
+                        ->orWhere('phone', 'LIKE', "%{$search}%")
+                        ->orWhere('document_number', 'LIKE', "%{$search}%");
+                });
+            })
+            ->with('user');
+
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('suppliers.created_at', [
+                $startDate . ' 00:00:00',
+                $endDate   . ' 23:59:59'
+            ]);
+        }
+
+        return $query->paginate($perPage);
     }
 
     /**
@@ -43,63 +62,50 @@ class SupplierService
      */
     public function index(Store $store, int $perPage = 20)
     {
-        $query = Supplier::with(['user'])
-            ->whereHas('user', function (Builder $q) use ($store) {
-                $q->whereHas('stores', function (Builder $sq) use ($store) {
-                    $sq->where('stores.id', $store->id);
-                });
-            });
+        //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Supplier
 
-        return FlatSupplierUserResource::collection(
-            $query->paginate($perPage)
-        );
+        return $store->suppliers()
+            ->with('user')
+            ->paginate($perPage)->withQueryString();
     }
 
     /**
      * Obtener Suppliers activos
      */
-    public function active(Store $store, int $perPage = 20) //Recuerda que el active o bloqued estan en un Trait HasStatusScopesTrait
+    public function active(Store $store, int $perPage = 20)
     {
-        $query = Supplier::with('user')
-            ->whereHas('user', function (Builder $q) use ($store) {
-                $q->active()
-                  ->whereHas('stores', function (Builder $sq) use ($store) {
-                      $sq->where('stores.id', $store->id);
-                  });
-            });
-
-        return FlatSupplierUserResource::collection(
-            $query->paginate($perPage)
-        );
+        return $store->suppliers()
+            ->active() // ahora funciona porque el scope revisa si hay relación user
+            ->with('user')
+            ->orderByDesc('suppliers.created_at')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     /**
      * Obtener Suppliers bloqueados
      */
-    public function blocked(Store $store, int $perPage = 20)//Recuerda que el active o blocked estan en un Trait HasStatusScopesTrait
+    public function blocked(Store $store, int $perPage = 20) //Recuerda que el active o blocked estan en un Trait HasStatusScopesTrait
     {
-        $query = Supplier::blocked()
-            ->whereHas('user', function (Builder $q) use ($store) {
-                $q->whereHas('stores', function (Builder $sq) use ($store) {
-                    $sq->where('stores.id', $store->id);
-                });
-            });
-
-        return FlatSupplierUserResource::collection(
-            $query->paginate($perPage)
-        );
+        return $store->suppliers()
+            ->blocked() // ahora funciona porque el scope revisa si hay relación user
+            ->with('user')
+            ->orderByDesc('suppliers.created_at')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     /**
      * Mostrar un Supplier específico del store
      */
-    public function show(Store $store, int $id)
+    public function show(Store $store, int $supplier_id)
     {
-        $Supplier = Supplier::with(['addresses.district'])->firstOrFail();
 
-        Log::info($Supplier);
+        return $store->suppliers() // método del modelo Store que devuelve el Builder
+            ->with(['user', 'addresses.district'])
+            ->where('id', $supplier_id) // filtra el supplier específico
+            ->firstOrFail(); // 404 si no existe o no pertenece a la tienda
 
-        return new FlatSupplierUserResource($Supplier);
     }
 
     /**

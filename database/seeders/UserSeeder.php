@@ -121,11 +121,36 @@ class UserSeeder extends Seeder
 
         $user->assignRole(['sales']);
 
-        //===================== Creando el Quinto usuario =============
+        //===================== Creando el cuarto usuario =============
 
         $user = User::create(
             [
                 "id" => 5,
+                "name" => 'Marina',
+                "email" => 'marina@3b.pe',
+                "password" => bcrypt("96194064"),
+                "phone" => '961940642',
+                "document_number" => '96194064',
+                "identity_id" => 1, //dni
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+        );
+
+        Employee::create(
+            [
+                'user_id' => $user->id,
+                'salary' => 1500,
+            ]
+        );
+
+        $user->assignRole(['marketing']);
+
+        //===================== Creando el Quinto usuario =============
+
+        $user = User::create(
+            [
+                "id" => 6,
                 "name" => 'Pamela',
                 "email" => 'sorelle@3b.pe',
                 "password" => bcrypt("76935223"),
