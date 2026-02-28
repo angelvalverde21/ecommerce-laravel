@@ -90,6 +90,7 @@ class ProductionDashboardController extends Controller
                 'kardexes' => function ($k) {
                     $k->with(['variant.product.image', 'variant.optionValues']);
                 },
+                'user',
                 'purchases.supplier',
                 'purchases.unit',
                 'payments' => function ($p) {

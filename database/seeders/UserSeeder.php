@@ -169,6 +169,27 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $user->assignRole(['ceo']);
+        $user = User::create(
+            [
+                "id" => 6,
+                "name" => 'Victoria',
+                "email" => 'victoria@3b.pe',
+                "password" => bcrypt("08589234"),
+                "phone" => '907030341',
+                "document_number" => '08589234',
+                "identity_id" => 1, //dni
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+        );
+
+        Employee::create(
+            [
+                'user_id' => $user->id,
+                'salary' => 1500,
+            ]
+        );
+
+        $user->assignRole(['inventory']);
     }
 }
