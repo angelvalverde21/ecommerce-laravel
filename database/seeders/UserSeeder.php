@@ -169,5 +169,27 @@ class UserSeeder extends Seeder
             ]
         );
 
+        //===================== Creando el septimo usuario =============
+
+        $user = User::create(
+            [
+                "id" => 7,
+                "name" => 'Fiorella',
+                "email" => 'fiorella@3b.pe',
+                "password" => bcrypt("76935223"),
+                "phone" => '000000000',
+                "document_number" => '927463297',
+                "identity_id" => 1, //dni
+                "created_at" => now(),
+                "updated_at" => now(),
+            ],
+        );
+
+        Employee::create(
+            [
+                'user_id' => $user->id,
+                'salary' => 1500,
+            ]
+        );
     }
 }

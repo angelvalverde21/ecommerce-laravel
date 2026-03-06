@@ -29,7 +29,11 @@ class ReportShopifyController extends Controller
 
     public function reportBarDailys(Store $store, $days = 7)
     {
-        $report = $this->shopifyService->getReportBarOrders($days); //reporte en barras
+        $cacheKey = "report_bar_dailys_{$store->id}_{$days}";
+
+        $report = Cache::remember($cacheKey, now()->addHours(24), function () use ($days) {
+            return $this->shopifyService->getReportBarOrders($days);
+        });
 
         return response()->json($report);
     }
@@ -45,16 +49,15 @@ class ReportShopifyController extends Controller
     public function reportTopSellingProducts(Store $store, Request $request)
     {
 
-    // Días de duración del cache (por defecto 7)
+        // Días de duración del cache (por defecto 7)
 
-    // Clave única por tienda + días
-    $cacheKey = "report_top_selling_products_{$store->id}";
+        // Clave única por tienda + días
+        $cacheKey = "report_top_selling_products_{$store->id}";
 
-    $report = Cache::remember($cacheKey, now()->addHours(24), function () {
-        return $this->shopifyService->getReportTopSellingProducts();
-    });
+        $report = Cache::remember($cacheKey, now()->addHours(24), function () {
+            return $this->shopifyService->getReportTopSellingProducts();
+        });
 
-    return response()->json($report);
-
+        return response()->json($report);
     }
 }
