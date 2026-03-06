@@ -79,7 +79,7 @@ class ManufactureVariantDashboardController extends Controller
 
             DB::rollback();
 
-            return responseError("Error al eliminar.... ");
+            return responseError("Error al registrar el lote.... ");
         }
     }
 

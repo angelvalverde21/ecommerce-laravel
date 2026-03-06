@@ -43,16 +43,14 @@ class CourierService
      */
     public function index(Store $store, int $perPage = 20)
     {
-        $query = Courier::with(['user'])
+        $query = Courier::with(['user','addresses'])
             ->whereHas('user', function (Builder $q) use ($store) {
                 $q->whereHas('stores', function (Builder $sq) use ($store) {
                     $sq->where('stores.id', $store->id);
                 });
             });
 
-        return FlatCourierUserResource::collection(
-            $query->paginate($perPage)
-        );
+        return $query->paginate($perPage);
     }
 
     /**
@@ -97,8 +95,7 @@ class CourierService
     {
         $courier = Courier::with([
                         'addresses' => function ($q) {
-                            $q->with('district')
-                            ->limit(20);
+                            $q->with('district');
                         }
                     ])
                     ->where('id', $id)

@@ -28,15 +28,7 @@ class CourierDashboardController extends Controller
 
     public function index(Store $store)
     {
-        try {
-
-            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Courier
-            return responsePaginateOk($this->courierService->index($store, 25), 'Couriers activos obtenidos correctamente');
-
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return responseError('Error al obtener ' . 'Couriers activos');
-        }
+        return $this->courierService->index($store, 25);
     }
 
     public function active(Store $store)
@@ -216,13 +208,7 @@ class CourierDashboardController extends Controller
      */
     public function show(Store $store, $courier_id)
     {
-        try {
-            //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Courier
-            return responseOk($this->courierService->show($store, $courier_id), 'Courier obtenidos correctamente');
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return responseError('Error al obtener ' . $courier_id);
-        }
+        return $this->courierService->show($store, $courier_id);
     }
 
     /**

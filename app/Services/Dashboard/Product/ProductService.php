@@ -47,7 +47,7 @@ class ProductService
         $startDate  = $validated['start_date'] ?? null;
         $endDate    = $validated['end_date'] ?? null;
 
-        $query = $store->products()->with(['image', 'variants.product', 'variants.variant_option_values.optionValue'])->search($search);
+        $query = $store->products()->with(['image', 'variants.product.image', 'variants.variant_option_values.optionValue'])->search($search);
 
 
         if ($startDate && $endDate) {
@@ -59,4 +59,5 @@ class ProductService
 
         return $query->paginate($perPage);
     }
+
 }
