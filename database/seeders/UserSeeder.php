@@ -128,9 +128,9 @@ class UserSeeder extends Seeder
                 "id" => 5,
                 "name" => 'Marina',
                 "email" => 'marina@3b.pe',
-                "password" => bcrypt("96194064"),
+                "password" => bcrypt("76540879"),
                 "phone" => '961940642',
-                "document_number" => '96194064',
+                "document_number" => '76540879',
                 "identity_id" => 1, //dni
                 "created_at" => now(),
                 "updated_at" => now(),
@@ -176,9 +176,9 @@ class UserSeeder extends Seeder
                 "id" => 7,
                 "name" => 'Fiorella',
                 "email" => 'fiorella@3b.pe',
-                "password" => bcrypt("76935223"),
+                "password" => bcrypt("76037024"),
                 "phone" => '000000000',
-                "document_number" => '927463297',
+                "document_number" => '76037024',
                 "identity_id" => 1, //dni
                 "created_at" => now(),
                 "updated_at" => now(),
