@@ -14,7 +14,7 @@ class StoreUserSeeder extends Seeder
     public function run(): void
     {
         //
-                StoreUser::insert(
+        StoreUser::insert(
             [
 
                 [
@@ -56,7 +56,21 @@ class StoreUserSeeder extends Seeder
                     "created_at" => now(),
                     "updated_at" => now(),
                 ],
+                [
+                    "id" => 6,
+                    "user_id" => 6,
+                    "store_id" => 1,
+                    "created_at" => now(),
+                    "updated_at" => now(),
+                ],
 
+                [
+                    "id" => 7,
+                    "user_id" => 7,
+                    "store_id" => 1,
+                    "created_at" => now(),
+                    "updated_at" => now(),
+                ],
             ]
         );
     }

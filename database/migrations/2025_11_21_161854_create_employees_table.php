@@ -21,7 +21,7 @@ return new class extends Migration
             $table->decimal('salary', 10, 2)->nullable();
             $table->tinyInteger('comission')->nullable();
             // $table->date('date_entry')->nullable();
-            $table->string('tag_search')->nullable(); //telefono de trabajo (del empleado)
+            $table->string('tag_sales')->nullable(); //telefono de trabajo (del empleado)
             $table->string('phone')->nullable(); //telefono de trabajo (del empleado)
             $table->timestamps();
         });
