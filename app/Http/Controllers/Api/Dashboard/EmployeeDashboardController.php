@@ -283,4 +283,14 @@ class EmployeeDashboardController extends Controller
 
         return $this->employeeService->getOrdersByTag($tag, $limit, $cursor);
     }
+
+    public function ordersSearch(Store $store, Request $request)
+    {
+
+        $tag = $request->input('tag_sales', 'AYLIN');
+        $start = $request->input('start_date', null);
+        $end = $request->input('end_date', null);
+
+        return $this->employeeService->getOrdersByTagBetween($tag, $start, $end);
+    }
 }

@@ -72,11 +72,13 @@ abstract class ShopifyBaseService
             // Construir query por callback
             $query = $buildQuery($endCursor); //aqui se le pasa el cursor
 
+            Log::info($query);
+
             // Ejecutar GraphQL
             $json = $this->graphql($query)->json();
 
-            // Log::info("imprimiendo el logo de graphql");
-            // Log::info($json);
+            Log::info("imprimiendo el logo de graphql");
+            Log::info($json);
 
             // Si no hay edges → terminar
             if (empty($json['data'][$rootField]['edges'])) {
@@ -96,7 +98,7 @@ abstract class ShopifyBaseService
             Log::info($pageInfo);
 
             // Esperar medio segundo por límites Shopify
-            usleep(500000);
+            usleep(50000);
         }
 
         // Normalizar estructura final

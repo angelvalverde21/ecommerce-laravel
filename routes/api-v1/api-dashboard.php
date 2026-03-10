@@ -241,6 +241,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
             Route::get('/', [EmployeeDashboardController::class, 'show']); //show o mostrar por id
             Route::get('/orders', [EmployeeDashboardController::class, 'orders']); //show o mostrar por id
+            Route::post('/orders/search', [EmployeeDashboardController::class, 'ordersSearch']); //show o mostrar por id
             Route::put('/', [EmployeeDashboardController::class, 'update']); //actualizar
             Route::delete('/', [EmployeeDashboardController::class, 'destroy']); //borrar
 

@@ -27,4 +27,10 @@ class EmployeeService
         return $this->orderShopifyService->getOrdersByTag($tag, $limit, $cursor);
     }
     
+
+    public function getOrdersByTagBetween($tag, $start, $end): array
+    {
+        return $this->orderShopifyService->getOrdersByTagBetween($tag, $start, $end);
+    }
+    
 }

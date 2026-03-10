@@ -263,6 +263,12 @@ class ShopifyOrderService extends ShopifyBaseService
                                         currencyCode
                                     }
                                 }
+                                discountedUnitPriceSet {
+                                    shopMoney {
+                                    amount
+                                    currencyCode
+                                    }
+                                }
                                 variant {
                                     id
                                     title
@@ -357,20 +363,26 @@ class ShopifyOrderService extends ShopifyBaseService
             shippingLines(first: 1) {
                 edges {
                     node {
-                    title
-                    originalPriceSet {
-                        shopMoney {
-                        amount
-                        currencyCode
+                        title
+                        originalPriceSet {
+                            shopMoney {
+                            amount
+                            currencyCode
+                            }
+                        }
+                        discountedPriceSet {
+                            shopMoney {
+                            amount
+                            currencyCode
+                            }
                         }
                     }
-                    discountedPriceSet {
-                        shopMoney {
-                        amount
-                        currencyCode
-                        }
-                    }
-                    }
+                }
+            }
+            totalShippingPriceSet {
+                shopMoney {
+                amount
+                currencyCode
                 }
             }
         ";
@@ -1011,7 +1023,7 @@ class ShopifyOrderService extends ShopifyBaseService
 
     public function getOrdersByTag($tag, int $limit = 20, $cursor = null): array
     {
-        Log::info('getOrdersSearch');
+        Log::info('getOrdersPrepared');
 
         // Asegurar límite mínimo
         $limit = max(1, $limit);
@@ -1106,12 +1118,121 @@ class ShopifyOrderService extends ShopifyBaseService
         );
 
         return [
-            'data'     => json_decode(json_encode($result['items'])),
+            'orders'     => json_decode(json_encode($result['items'])),
             'pageInfo'   => $result['pageInfo'] ?? null,
             'lastCursor' => $result['lastCursor'] ?? null,
         ];
 
         // return $result;
+    }
+
+    public function getOrdersByTagBetween($tag, $start = null, $end = null): array
+    {
+
+        Log::info($start);
+        Log::info($end);
+
+        $start = $start ?? date('Y-m-d');
+        $end = $end ?? date('Y-m-d', strtotime('+1 month', strtotime($start)));
+        
+        Log::info('getOrdersSearch');
+
+        // Asegurar límite mínimo
+        // $limit = max(1, $limit);
+
+        // -------------------------------------------------------------
+        // 1️⃣ — Sub-queries para evitar repetición
+        // -------------------------------------------------------------
+        $shippingLinesQuery   = $this->shippingLinesQuery();
+        $shippingAddressQuery = $this->shippingAddressQuery();
+        $customerQuery        = $this->customerQuery();
+        $itemsQuery           = $this->itemsQuery();
+        $eventsQuery          = $this->eventsQuery();
+
+        // -------------------------------------------------------------
+        // 2️⃣ — GraphQL Template SIN FECHAS, usando LIMIT
+        // -------------------------------------------------------------
+        $queryTemplate = <<<GRAPHQL
+                                {
+                                    orders(
+                                        first: 50,
+                                        sortKey: CREATED_AT,
+                                        reverse: true,
+                                        query: "financial_status:paid tag::tag cancelled_at:null fulfillment_status:fulfilled created_at:>=:start created_at:<=:end",
+                                        after: :cursor
+                                    ) {
+                                        pageInfo {
+                                            hasNextPage
+                                            endCursor
+                                        }
+                                        edges {
+                                            cursor
+                                            node {
+                                                id
+                                                name
+                                                createdAt
+                                                updatedAt
+                                                tags
+                                                processedAt
+                                                sourceName
+                                                displayFinancialStatus
+                                                displayFulfillmentStatus
+                                                note
+                                                fulfillmentOrders(first: 20) {
+                                                    edges {
+                                                        node {
+                                                            id
+                                                            status
+                                                            createdAt
+                                                            requestStatus
+                                                            updatedAt
+                                                        }
+                                                    }
+                                                }
+                                                totalPriceSet {
+                                                    shopMoney {
+                                                        amount
+                                                        currencyCode
+                                                    }
+                                                }
+                                                $itemsQuery
+                                                $shippingLinesQuery
+                                            }
+                                        }
+                                    }
+                                }
+                            GRAPHQL;
+
+        // -------------------------------------------------------------
+        // 2️⃣ — QueryBuilder para reemplazar placeholders
+        // -------------------------------------------------------------
+        $queryBuilder = function (?string $cursor) use ($queryTemplate, $start, $end, $tag) {
+
+            return str_replace(
+                [':start', ':end', ':tag', ':cursor'], //Elementos a reeemplazar
+                [$start, $end, $tag, $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
+                $queryTemplate //En el template
+            );
+
+        };
+
+        // -------------------------------------------------------------
+        // 3️⃣ — Ejecutar el query builder ($queryBuilder) para traer los datos de Shopify
+        // -------------------------------------------------------------
+        $result = $this->getDataFromShopify(
+            'orders',
+            $queryBuilder,
+            ['lineItems', 'shippingLines'] //podria ser 'lineItems'
+        );
+
+        // -------------------------------------------------------------
+        // 4️⃣ — Normalizar items
+        // -------------------------------------------------------------
+        Log::info('result de getOrdersByTagBetween');
+        Log::info($result);
+
+        return $result;
+        // $orders = collect($result['items'] ?? []);
     }
 
     public function getSearchOrders(int $limit = 20, $cursor = null, $search = null): array
