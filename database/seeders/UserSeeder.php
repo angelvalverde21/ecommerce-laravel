@@ -93,6 +93,8 @@ class UserSeeder extends Seeder
             [
                 'user_id' => $user->id,
                 'salary' => 1500,
+                'tag_sales' => 'JENNIFER',
+                'comission' => 2,
             ]
         );
 
@@ -116,6 +118,8 @@ class UserSeeder extends Seeder
             [
                 'user_id' => $user->id,
                 'salary' => 1500,
+                'tag_sales' => 'AYLIN',
+                'comission' => 2,
             ]
         );
 
@@ -169,6 +173,8 @@ class UserSeeder extends Seeder
             ]
         );
 
+        $user->assignRole(['ceo']);
+
         //===================== Creando el septimo usuario =============
 
         $user = User::create(
@@ -191,5 +197,7 @@ class UserSeeder extends Seeder
                 'salary' => 1500,
             ]
         );
+
+        $user->assignRole(['packing']);
     }
 }
