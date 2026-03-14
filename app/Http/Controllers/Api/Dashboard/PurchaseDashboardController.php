@@ -67,6 +67,9 @@ class PurchaseDashboardController extends Controller
 
     public function store(Store $store, Request $request)
     {
+        Log::info($request);
+
+        return;
 
         $validated = $request->validate([
             'purchaseable_type' => [
@@ -74,11 +77,6 @@ class PurchaseDashboardController extends Controller
                 Rule::in(['manufacture']) // Agrega más tipos según sea necesario
             ],
             'purchaseable_id' => 'required|integer',
-            'name' => 'required|string|max:255',
-            'quantity' => 'required|numeric',
-            'unit_id' => 'required|integer|exists:units,id',
-            'price' => 'required|numeric',
-            'total' => 'required|numeric',
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
             'observations' => 'nullable|string',
             'purchase_start' => 'nullable|date',
@@ -92,12 +90,7 @@ class PurchaseDashboardController extends Controller
             DB::beginTransaction();
 
             $purchase = $parentModel->purchases()->create([
-
-                'name' => $validated['name'],
-                'quantity' => $validated['quantity'],
-                'unit_id' => $validated['unit_id'],
-                'price' => $validated['price'],
-                'total' => $validated['total'],
+                
                 'supplier_id' => $validated['supplier_id'] ?? null,
                 'observations' => $validated['observations'] ?? null,
                 'user_id' => Auth::guard('api')->id(),

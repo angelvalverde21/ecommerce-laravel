@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('tag_search')->nullable(); //telefono de trabajo (del empleado)
             $table->string('phone')->nullable(); //telefono de trabajo (del empleado)
             $table->timestamps();
+            
         });
     }
 

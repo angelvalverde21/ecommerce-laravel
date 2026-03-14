@@ -123,6 +123,11 @@ class Store extends Model
         });
     }
 
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
     // public function suppliers()
     // {
     //     return $this->hasManyThrough(

@@ -3,6 +3,7 @@
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
 use App\Http\Controllers\Api\Dashboard\AddressDashboardController;
+use App\Http\Controllers\Api\Dashboard\AttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
 use App\Http\Controllers\Api\Dashboard\BrandDashboardController;
 use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
@@ -446,6 +447,23 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::delete('/', [UnitDashboardController::class, 'destroy']); //borrar
 
         });
+    });
+
+
+    Route::prefix('attendances')->group(function () {
+    
+        Route::get('/', [AttendanceDashboardController::class, 'index']); //Listar
+        Route::post('/', [AttendanceDashboardController::class, 'store']); //create
+        Route::post('/upload', [AttendanceDashboardController::class, 'upload']); //create
+
+        Route::prefix('{attendance_id}')->group(function () {
+
+            Route::get('/', [AttendanceDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [AttendanceDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [AttendanceDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 
 

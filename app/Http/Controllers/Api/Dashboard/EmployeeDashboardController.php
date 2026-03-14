@@ -175,7 +175,7 @@ class EmployeeDashboardController extends Controller
         try {
 
             // Obtener usuario con employee y roles
-            $employee = Employee::with('user.roles')->findOrFail($employed_id);
+            $employee = Employee::with('user.roles', 'attendances.employee')->findOrFail($employed_id);
 
             // --- ELIMINAR RELACIÓN ORIGINAL ---
             $rolesOnlyNames = $employee->user->roles->pluck('name');

@@ -119,9 +119,7 @@ class SupplierDashboardController extends Controller
             DB::commit();
 
             return responseOk(
-                new FlatSupplierUserResource(
-                    $supplier->fresh(['user'])
-                ),
+                $supplier->fresh(['user']),
                 "Se ha procesado correctamente la creacion del Supplier"
             );
         } catch (\Throwable $th) {

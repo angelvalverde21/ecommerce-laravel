@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('suppliers', function (Blueprint $table) {
-
+        Schema::create('attendances', function (Blueprint $table) {
             $table->id();
-
-            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete(); // Si se elimina el usuario, se eliminan los suppliers asociados
-
+            $table->foreignId('store_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('employee_id')->nullable()->constrained()->nullOnDelete();
+            $table->date('date');
+            $table->time('check_in')->nullable();
+            $table->time('check_out')->nullable();
             $table->timestamps();
         });
     }
@@ -26,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('suppliers');
+        Schema::dropIfExists('attendances');
     }
 };
