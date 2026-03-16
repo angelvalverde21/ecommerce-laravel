@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 
 class EmployeeDashboardController extends Controller
 {
@@ -167,6 +169,7 @@ class EmployeeDashboardController extends Controller
         }
     }
 
+
     /**
      * Display the specified resource.
      */
@@ -174,18 +177,63 @@ class EmployeeDashboardController extends Controller
     {
         try {
 
-            // Obtener usuario con employee y roles
             $employee = Employee::with('user.roles', 'attendances.employee')->findOrFail($employed_id);
 
-            // --- ELIMINAR RELACIÓN ORIGINAL ---
+            // --- LIMPIAR ROLES ---
             $rolesOnlyNames = $employee->user->roles->pluck('name');
 
-            unset($employee->user->roles);             // quita la relación de Eloquent
-            $employee->user->setRelation('roles', $rolesOnlyNames); // asigna array limpio
+            unset($employee->user->roles);
+            $employee->user->setRelation('roles', $rolesOnlyNames);
+
+
+            // --- NORMALIZAR ASISTENCIAS ---
+
+            $attendances = $employee->attendances
+                ->keyBy(function ($attendance) {
+                    return Carbon::parse($attendance->date)->format('Y-m-d');
+                });
+
+            $dates = $employee->attendances->pluck('date')->map(fn($d) => Carbon::parse($d));
+
+            $start = $dates->min();
+            $end   = $dates->max();
+
+            $period = CarbonPeriod::create($start, $end);
+
+            $completeAttendances = [];
+
+            foreach ($period as $date) {
+
+                if ($date->dayOfWeek == Carbon::SUNDAY) {
+                    continue; // opcional si no trabajas domingo
+                }
+
+                $key = $date->format('Y-m-d');
+
+                if ($attendances->has($key)) {
+
+                    $attendance = $attendances[$key];
+                    $attendance->missing = false;
+
+                    $completeAttendances[] = $attendance;
+                } else {
+
+                    $completeAttendances[] = [
+                        'id' => null,
+                        'employee_id' => $employee->id,
+                        'check_in' => null,
+                        'check_out' => null,
+                        'date' => $key,
+                        'missing' => true
+                    ];
+                }
+            }
+
+            $employee->setRelation('attendances', collect($completeAttendances));
 
             return responseOk($employee, "Empleado obtenido correctamente");
 
-            return responseOk($user, "Empleado obtenido correctamente");
+            // return responseOk($user, "Empleado obtenido correctamente");
         } catch (\Throwable $th) {
             return responseError("No se pudo obtener el empleado solicitado");
         }
