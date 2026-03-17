@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Manufacture;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -79,38 +80,35 @@ class ProductionDashboardController extends Controller
         //
     }
 
-    /**
-     * Display the specified resource.
-     */
+
     public function show(Store $store, $production_id)
     {
         try {
 
-            $manufacture = $store->manufactures()->with([
-                'kardexes' => function ($k) {
-                    $k->with(['variant.product.image', 'variant.optionValues']);
-                },
-                'user',
-                'purchases.supplier',
-                'purchases.unit',
-                'payments' => function ($p) {
-                    $p->with(['gateway', 'images']);
-                },
-                'manufactureVariants.variant' => function ($q) {
-                    $q->with([
-                        'product',
-                        'optionValues',
-                    ]);
-                },
-            ])
+            $manufacture = $store->manufactures()
+                ->with([
+                    'kardexes.variant.product.image',
+                    'kardexes.variant.optionValues',
+                    'user',
+                    'purchases.items.unit',
+                    'purchases.supplier',
+                    'payments.gateway',
+                    'payments.images',
+                    'manufactureVariants.variant.product',
+                    'manufactureVariants.variant.optionValues',
+                ])
                 ->withSum('manufactureVariants as quantity_total', 'quantity')
-                ->withSum('purchases as purchase_total', 'total')
                 ->findOrFail($production_id);
+
+            $manufacture->purchase_total = $manufacture->purchases
+                ->flatMap->items
+                ->sum('subtotal');
 
             return responseOk($manufacture);
         } catch (\Throwable $th) {
 
-            Log::info($th);
+            Log::error($th->getMessage());
+
             return responseError("Error al mostrar la manufactura");
         }
     }

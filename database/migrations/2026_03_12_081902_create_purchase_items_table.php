@@ -23,6 +23,11 @@ return new class extends Migration
                 ->constrained()
                 ->nullOnDelete();
 
+            $table->foreignId('unit_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
+
             $table->string('sku')->nullable();
             $table->string('name');
 

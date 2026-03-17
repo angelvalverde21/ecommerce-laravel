@@ -14,12 +14,7 @@ return new class extends Migration
         Schema::create('purchases', function (Blueprint $table) {
             
             $table->id();
-            $table->string('name');
             $table->text('observations')->nullable();
-            $table->decimal('quantity', 8, 2)->nullable();
-            $table->string('unit_id');
-            $table->decimal('price', 8, 2)->nullable();
-            $table->decimal('total', 8, 2)->nullable();
             $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el proveedor, deja el campo en null
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el usuario, deja el campo en null
             $table->foreignId('store_id')->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las compras asociadas

@@ -10,7 +10,7 @@ class Purchase extends Model
     /** @use HasFactory<\Database\Factories\PurchaseFactory> */
     use HasFactory;
 
-    protected $guarded = ['id', 'created_at'];
+    protected $guarded = ['id', 'created_at', 'purchaseable_type'];
 
     protected $hidden = [
         'purchaseable_type',
@@ -27,11 +27,6 @@ class Purchase extends Model
         return $this->morphTo();
     }
 
-    public function unit()
-    {
-        return $this->belongsTo(Unit::class);
-    }
-
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
@@ -40,5 +35,9 @@ class Purchase extends Model
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable')->orderBy('id', 'DESC');;
+    }
+
+    public function items(){
+        return $this->hasMany(PurchaseItem::class);
     }
 }
