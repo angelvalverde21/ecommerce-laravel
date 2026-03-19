@@ -100,8 +100,6 @@ class ManufactureDashboardController extends Controller
                 'kardexes' => function ($k) {
                     $k->with(['variant.product.image', 'variant.optionValues']);
                 },
-                'purchases.supplier',
-                'purchases.unit',
                 'user',
                 'payments' => function ($p) {
                     $p->with(['gateway', 'images']);
@@ -113,8 +111,6 @@ class ManufactureDashboardController extends Controller
                     ]);
                 },
             ])
-                ->withSum('manufactureVariants as quantity_total', 'quantity')
-                ->withSum('purchases as purchase_total', 'total')
                 ->findOrFail($manufacture_id);
 
             return responseOk($manufacture);

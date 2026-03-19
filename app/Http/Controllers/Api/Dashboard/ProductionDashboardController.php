@@ -87,7 +87,8 @@ class ProductionDashboardController extends Controller
 
             $manufacture = $store->manufactures()
                 ->with(['purchases.items.unit', 'purchases.supplier'])
-                ->withSum('manufactureVariants', 'quantity')
+                ->withSum('kardexes as kardexes_sum_quantity', 'quantity')
+                ->withSum('manufactureVariants as variants_sum_quantity', 'quantity')
                 ->findOrFail($production_id);
 
 

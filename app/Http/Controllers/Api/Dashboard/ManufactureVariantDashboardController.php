@@ -13,9 +13,17 @@ class ManufactureVariantDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Store $store, $manufacture_id)
     {
         //
+
+        $manufactureVariants = $store->manufactures()
+            ->findOrFail($manufacture_id)
+            ->manufactureVariants()
+            ->with(['variant.product.image', 'variant.optionValues'])
+            ->get();
+
+        return responseOk($manufactureVariants, "Listado de ManufactureVariants obtenido correctamente");  
     }
 
     /**

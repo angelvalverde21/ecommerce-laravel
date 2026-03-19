@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Models\Variant;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -89,7 +90,10 @@ class KardexDashboardController extends Controller
 
                 Log::info($parentModel);
 
+                $product = Variant::findOrFail($data['variant_id'])->product;
+
                 $kardex = $parentModel->kardexes()->create([
+                    'product_id' => $product->id,
                     'variant_id' => $data['variant_id'],
                     'quantity'   => $data['quantity'],
                     'comment'    => $data['comment'],
