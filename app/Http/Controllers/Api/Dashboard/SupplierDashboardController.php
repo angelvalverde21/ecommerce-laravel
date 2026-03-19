@@ -88,22 +88,25 @@ class SupplierDashboardController extends Controller
     public function store(Store $store, Request $request)
     {
         //
+
+        Log::info($request);
+
         try {
 
             DB::beginTransaction();
 
             $validated = $request->validate([
                 'name'            => 'required|string|max:255',
-                'email'           => 'nullable|email|unique:users,email',
                 'phone'           => 'required|string|max:20',
+                'address'         => 'required|string',
                 'document_number' => 'nullable|string|max:20',
+                'district_id'     => 'required|integer|exists:districts,id',
                 'identity_id'     => 'nullable|integer|exists:identities,id',
             ]);
 
             // 1. CREAR USUARIO
             $user = User::create([
                 'name'            => $validated['name'],
-                'email'           => $validated['email'],
                 'phone'           => $validated['phone'],
                 'document_number' => $validated['document_number'],
                 'identity_id'     => $validated['identity_id'],
@@ -116,10 +119,20 @@ class SupplierDashboardController extends Controller
             // 3. CREAR Supplier
             $supplier = $user->supplier()->create(); //Crear el Supplier relacionado al user
 
+            $supplier->addresses()->create([
+                'name' => $validated['name'],
+                'identity_id' => $validated['identity_id'],
+                'document_number' => $validated['document_number'],
+                'phone' => $validated['phone'],
+                'district_id' => $validated['district_id'],
+                'primary' => $validated['address'],
+                'type' => 'Trabajo'
+            ]);
+
             DB::commit();
 
             return responseOk(
-                $supplier->fresh(['user']),
+                $supplier->fresh(['user', 'addresses']),
                 "Se ha procesado correctamente la creacion del Supplier"
             );
         } catch (\Throwable $th) {

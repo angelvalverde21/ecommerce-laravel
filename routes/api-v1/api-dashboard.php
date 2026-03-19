@@ -451,7 +451,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
 
     Route::prefix('attendances')->group(function () {
-    
+
         Route::get('/', [AttendanceDashboardController::class, 'index']); //Listar
         Route::post('/', [AttendanceDashboardController::class, 'store']); //create
         Route::post('/upload', [AttendanceDashboardController::class, 'upload']); //create
@@ -461,9 +461,8 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::get('/', [AttendanceDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [AttendanceDashboardController::class, 'update']); //actualizar
             Route::delete('/', [AttendanceDashboardController::class, 'destroy']); //borrar
-    
+
         });
-    
     });
 
 

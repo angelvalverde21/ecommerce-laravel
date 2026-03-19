@@ -20,8 +20,8 @@ class ProductionDashboardController extends Controller
 
             $manufactures = $store->manufactures()
                 ->with(['user'])
-                ->withSum('manufactureVariants as sum_products', 'quantity')
-                ->withSum('purchases as sum_purchases', 'total')
+                // ->withSum('manufactureVariants as sum_products', 'quantity')
+                // ->withSum('purchases as sum_purchases', 'total')
                 ->where('type', 'production')
                 ->get();
 
@@ -86,25 +86,23 @@ class ProductionDashboardController extends Controller
         try {
 
             $manufacture = $store->manufactures()
-                ->with([
-                    'kardexes.variant.product.image',
-                    'kardexes.variant.optionValues',
-                    'user',
-                    'purchases.items.unit',
-                    'purchases.supplier',
-                    'payments.gateway',
-                    'payments.images',
-                    'manufactureVariants.variant.product',
-                    'manufactureVariants.variant.optionValues',
-                ])
-                ->withSum('manufactureVariants as quantity_total', 'quantity')
+                ->with(['purchases.items.unit', 'purchases.supplier'])
+                ->withSum('manufactureVariants', 'quantity')
                 ->findOrFail($production_id);
 
-            $manufacture->purchase_total = $manufacture->purchases
+
+            $total = $manufacture->purchases
                 ->flatMap->items
                 ->sum('subtotal');
 
+            $manufacture->purchase_total = $total;
+
+            // $manufacture->purchase_total = $manufacture->purchases
+            //     ->flatMap->items
+            //     ->sum('subtotal');
+
             return responseOk($manufacture);
+            
         } catch (\Throwable $th) {
 
             Log::error($th->getMessage());

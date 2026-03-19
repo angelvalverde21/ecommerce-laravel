@@ -72,8 +72,7 @@ class PurchaseDashboardController extends Controller
     public function show(Store $store, $purchase_id)
     {
 
-
-        return $this->purchaseService->show($store, $purchase_id);
+        return responseOk($this->purchaseService->show($store, $purchase_id), "El purchase ha sido obtenido correctamente");
     }
 
     /**
@@ -90,7 +89,7 @@ class PurchaseDashboardController extends Controller
     public function update(Store $store, Request $request, $purchase_id)
     {
 
-        return $this->purchaseService->update($store, $request, $purchase_id);
+        return responseOk($this->purchaseService->update($store, $request, $purchase_id), "El purchase ha sido actualizado correctamente");
         
     }
     /**

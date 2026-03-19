@@ -53,6 +53,7 @@ class PurchaseService
         ]);
     }
 
+
     public function purchaseItemsValidate(Request $request): array
     {
         $validated = $request->validate([
@@ -118,6 +119,9 @@ class PurchaseService
             $purchase = $parentModel->purchases()->findOrFail($purchase_id);
 
             //Actualizando con los datos recibidos
+
+            unset($validated['purchaseable_type'], $validated['purchaseable_id']);
+
             $purchase->update($validated);
 
             // validar items
