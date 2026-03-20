@@ -22,10 +22,11 @@ class ManufactureDashboardController extends Controller
             $manufactures = $store->manufactures()
                 ->with(['user'])
                 ->withSum('manufactureVariants as sum_products', 'quantity')
-                ->withSum('purchases as sum_purchases', 'total')
+                // ->withSum('purchases as sum_purchases', 'total')
                 ->get();
 
-            return responseOk($manufactures, "Listado de manufacturas obtenido correctamente");
+            return responseOk($manufactures, "Listadox de manufacturas obtenido correctamente");
+
         } catch (\Throwable $th) {
 
             Log::info($th);
