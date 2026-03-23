@@ -1,0 +1,81 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+
+class Production extends Model
+{
+
+    protected $guarded = ['id', 'created_at'];
+
+    //
+    public function productionVariants()
+    {
+        return $this->hasMany(ProductionVariant::class);
+    }
+
+    
+    public function purchases()
+    {
+        return $this->morphMany(Purchase::class, 'purchaseable');
+    }
+
+
+    public function products()
+    {
+        //Aqui no la especificamos porque los modelos Manufacture y Product sigue la convención de Laravel
+        return $this->belongsToMany(Product::class)
+            ->withPivot('quantity')
+            ->withTimestamps();
+    }
+
+    public function variants()
+    {
+        //Aqui no la especificamos porque los modelos Manufacture y Variant sigue la convención de Laravel
+        return $this->belongsToMany(Variant::class)
+            ->withPivot('quantity')
+            ->withTimestamps();
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'paymentable');
+    }
+
+    public function kardexes()
+    {
+        return $this->morphMany(Kardex::class, 'kardexable');
+    }
+
+    public function supplier(){
+        
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function scopeSearch(Builder $query, $term)
+    {
+
+        // return $query->where('products.name', 'LIKE', '%' . $term . '%')
+        //     ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
+        // Esto da como resultado una consulta sin los parentesis
+        // WHERE products.name LIKE '%term%' OR products.tags LIKE '%term%'
+
+
+
+        //Es mejor usar esta consulta porque encapsula el query por si se concatena con otra consulta, esta no se vera afectara
+        // porque el resultado final tendra los parentesis
+        // WHERE (products.name LIKE '%term%' OR products.tags LIKE '%term%')
+
+        return $query->where(function ($query) use ($term) {
+            $query->where('manufactures.name', 'LIKE', '%' . $term . '%');
+            // ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
+        });
+    }
+}
