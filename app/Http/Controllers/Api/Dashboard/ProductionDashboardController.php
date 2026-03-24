@@ -89,7 +89,13 @@ class ProductionDashboardController extends Controller
     public function store(Store $store, Request $request)
     {
         //
-        return $this->productionService->store($store, $request);
+
+
+        $production = $this->productionService->store($store, $request);
+
+        Log::info($production);
+
+        return responseOk($production, "Producción creada correctamente");
     }
 
 
