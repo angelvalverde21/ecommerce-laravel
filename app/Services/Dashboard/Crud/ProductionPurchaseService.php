@@ -22,7 +22,7 @@ class ProductionPurchaseService
 
             $purchases = $store->productions()
             ->findOrFail($production_id)
-            ->purchases()->with(['supplier', 'items'])
+            ->purchases()->with(['supplier', 'items.unit'])
             ->orderBy('id', 'desc')
             ->get();
 
