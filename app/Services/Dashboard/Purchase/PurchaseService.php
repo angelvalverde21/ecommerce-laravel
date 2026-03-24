@@ -38,7 +38,7 @@ class PurchaseService
         $validated = $request->validate([
             'purchaseable_type' => [
                 'required',
-                Rule::in(['manufacture'])
+                Rule::in(['manufacture', 'production'])
             ],
             'purchaseable_id' => 'required|integer',
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
