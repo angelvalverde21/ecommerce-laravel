@@ -19,14 +19,13 @@ class OrderManufactureDashboardController extends Controller
             $manufactures = $store->manufactures()
                 ->with(['user'])
                 ->withSum('manufactureVariants as sum_products', 'quantity')
-                ->withSum('purchases as sum_purchases', 'total')
                 ->where('type', 'order')
                 ->get();
 
             return responseOk($manufactures, "Listado de ordenes de manufactura obtenido correctamente");
         } catch (\Throwable $th) {
 
-            // Log::info($th);
+            Log::info($th);
             return responseError("Error al obtener el listado de ordenes de manufactura");
         }
     }
@@ -104,10 +103,10 @@ class OrderManufactureDashboardController extends Controller
                 },
             ])
                 ->withSum('manufactureVariants as quantity_total', 'quantity')
-                ->withSum('purchases as purchase_total', 'total')
                 ->findOrFail($production_id);
 
             return responseOk($manufacture);
+            
         } catch (\Throwable $th) {
 
             Log::info($th);

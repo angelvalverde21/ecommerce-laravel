@@ -192,7 +192,20 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         });
     });
 
+    Route::prefix('productions')->group(function () {
 
+        Route::get('/', [ProductionDashboardController::class, 'index']); //Listar
+        Route::post('/', [ProductionDashboardController::class, 'store']); //create
+        Route::get('/search/{search?}', [ProductionDashboardController::class, 'search']); //buscar
+
+        Route::prefix('{production_id}')->group(function () {
+
+            Route::get('/', [ProductionDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [ProductionDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [ProductionDashboardController::class, 'destroy']); //borrar
+
+        });
+    });
 
     Route::prefix('users')->group(function () {
 

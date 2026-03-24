@@ -6,30 +6,41 @@ use App\Http\Controllers\Controller;
 use App\Models\Manufacture;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\Dashboard\Crud\ProductionService;
 
 class ProductionDashboardController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
+
+
+    protected ProductionService $productionService;
+
+    public function __construct()
+    {
+        // Pasamos el modelo que vamos a usar
+        $this->productionService = new ProductionService();
+    }
+
     public function index(Store $store)
     {
         //
         try {
 
-            $manufactures = $store->manufactures()
+            $productions = $store->productions()
                 ->with(['user'])
-                // ->withSum('manufactureVariants as sum_products', 'quantity')
-                // ->withSum('purchases as sum_purchases', 'total')
-                ->where('type', 'production')
+                ->withSum('productionVariants as sum_variants', 'quantity')
+                // ->withSum('Productions as sum_Productions', 'total')
                 ->get();
 
-            return responseOk($manufactures, "Listado de manufacturas obtenido correctamente");
+            return responseOk($productions, "Listado de producciones obtenido correctamente");
         } catch (\Throwable $th) {
 
             Log::info($th);
-            return responseError("Error al obtener el listado de manufacturas");
+            return responseError("Error al obtener el listado de producciones");
         }
     }
     /**
@@ -55,7 +66,7 @@ class ProductionDashboardController extends Controller
             $result = $store->manufactures()
                 ->with(['user'])
                 ->withSum('manufactureVariants as sum_products', 'quantity')
-                ->withSum('purchases as sum_purchases', 'total')
+                ->withSum('Productions as sum_Productions', 'total')
                 ->where('type', 'production')
                 ->search($search)->limit(10)->get();
 
@@ -75,9 +86,11 @@ class ProductionDashboardController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Store $store, Request $request)
     {
         //
+        return $this->productionService->store($store, $request);
+
     }
 
 
@@ -86,24 +99,23 @@ class ProductionDashboardController extends Controller
         try {
 
             $manufacture = $store->manufactures()
-                ->with(['purchases.items.unit', 'purchases.supplier'])
+                ->with(['Productions.items.unit', 'Productions.supplier'])
                 ->withSum('kardexes as kardexes_sum_quantity', 'quantity')
                 ->withSum('manufactureVariants as variants_sum_quantity', 'quantity')
                 ->findOrFail($production_id);
 
 
-            $total = $manufacture->purchases
+            $total = $manufacture->Productions
                 ->flatMap->items
                 ->sum('subtotal');
 
-            $manufacture->purchase_total = $total;
+            $manufacture->Production_total = $total;
 
-            // $manufacture->purchase_total = $manufacture->purchases
+            // $manufacture->Production_total = $manufacture->Productions
             //     ->flatMap->items
             //     ->sum('subtotal');
 
             return responseOk($manufacture);
-            
         } catch (\Throwable $th) {
 
             Log::error($th->getMessage());
