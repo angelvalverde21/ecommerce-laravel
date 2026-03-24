@@ -21,16 +21,21 @@ class ProductionPurchaseService
             Log::info($production_id);
 
             $purchases = $store->productions()
-            ->findOrFail($production_id)
-            ->purchases()->with(['supplier', 'items.unit'])
-            ->orderBy('id', 'desc')
-            ->get();
+                ->findOrFail($production_id)
+                ->purchases()->with(['supplier', 'items.unit', 'items'])
+                ->orderBy('id', 'desc')
+                ->get();
 
+            $total = $purchases
+                ->flatMap->items
+                ->sum('subtotal');
+
+            $purchases->sum_purchases = $total;
 
             Log::info($purchases);
 
             return $purchases;
-
+            
         } catch (\Throwable $th) {
 
             Log::info($th);
