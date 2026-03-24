@@ -9,10 +9,14 @@ class PurchaseItem extends Model
     //
     protected $guarded = ['id', 'created_at'];
 
-    
+
     public function unit()
     {
         return $this->belongsTo(Unit::class);
     }
 
+    public function purchase()
+    {
+        return $this->belongsTo(Purchase::class);
+    }
 }

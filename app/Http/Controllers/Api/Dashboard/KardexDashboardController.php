@@ -22,6 +22,7 @@ class KardexDashboardController extends Controller
     {
         $map = [
             'manufacture' => \App\Models\Manufacture::class,
+            'production' => \App\Models\Production::class,
             // 'order' => \App\Models\Order::class,
             // 'purchase' => \App\Models\Purchase::class,
         ];
@@ -69,7 +70,7 @@ class KardexDashboardController extends Controller
             $request->validate([
                 '*.kardexable_type' => [
                     'required',
-                    Rule::in(['manufacture'])
+                    Rule::in(['manufacture', 'production'])
                 ],
 
                 '*.kardexable_id' => [
@@ -80,7 +81,7 @@ class KardexDashboardController extends Controller
                 '*.quantity'        => ['required', 'numeric', 'min:1'],
                 '*.comment'         => ['nullable', 'string', 'max:500'],
                 '*.direction'       => ['required', 'in:in,out'],
-                '*.kardexable_type' => ['required', 'string', 'in:manufacture'],
+                '*.kardexable_type' => ['required', 'string', 'in:manufacture,production'],
                 '*.kardexable_id'   => ['required', 'integer'],
             ]);
 
