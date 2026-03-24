@@ -37,10 +37,12 @@ class ProductionDashboardController extends Controller
                 ->get();
 
             return responseOk($productions, "Listado de producciones obtenido correctamente");
+
         } catch (\Throwable $th) {
 
             Log::info($th);
             return responseError("Error al obtener el listado de producciones");
+
         }
     }
     /**
@@ -98,24 +100,21 @@ class ProductionDashboardController extends Controller
     {
         try {
 
-            $manufacture = $store->manufactures()
-                ->with(['Productions.items.unit', 'Productions.supplier'])
-                ->withSum('kardexes as kardexes_sum_quantity', 'quantity')
-                ->withSum('manufactureVariants as variants_sum_quantity', 'quantity')
+            $production = $store->productions()
                 ->findOrFail($production_id);
 
 
-            $total = $manufacture->Productions
-                ->flatMap->items
-                ->sum('subtotal');
+            // $total = $manufacture->Productions
+            //     ->flatMap->items
+            //     ->sum('subtotal');
 
-            $manufacture->Production_total = $total;
+            // $manufacture->Production_total = $total;
 
             // $manufacture->Production_total = $manufacture->Productions
             //     ->flatMap->items
             //     ->sum('subtotal');
 
-            return responseOk($manufacture);
+            return responseOk($production);
         } catch (\Throwable $th) {
 
             Log::error($th->getMessage());

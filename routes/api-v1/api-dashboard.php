@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Dashboard\OrderManufactureDashboardController;
 use App\Http\Controllers\Api\Dashboard\PaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\PettyCashDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductionDashboardController;
+use App\Http\Controllers\Api\Dashboard\ProductionPurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\RoleDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
@@ -203,6 +204,21 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::get('/', [ProductionDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [ProductionDashboardController::class, 'update']); //actualizar
             Route::delete('/', [ProductionDashboardController::class, 'destroy']); //borrar
+
+            Route::prefix('purchases')->group(function () {
+            
+                Route::get('/', [ProductionPurchaseDashboardController::class, 'index']); //Listar
+                Route::post('/', [ProductionPurchaseDashboardController::class, 'store']); //create
+            
+                Route::prefix('{ProductionPurchase_id}')->group(function () {
+            
+                    Route::get('/', [ProductionPurchaseDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [ProductionPurchaseDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [ProductionPurchaseDashboardController::class, 'destroy']); //borrar
+            
+                });
+            
+            });
 
         });
     });

@@ -20,6 +20,7 @@ class PurchaseService
     {
         $map = [
             'manufacture' => \App\Models\Manufacture::class,
+            'production' => \App\Models\Production::class,
             // 'order' => \App\Models\Order::class,
             // 'purchase' => \App\Models\Purchase::class,
         ];
