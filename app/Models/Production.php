@@ -16,7 +16,7 @@ class Production extends Model
         return $this->hasMany(ProductionVariant::class);
     }
 
-    
+
     public function purchases()
     {
         return $this->morphMany(Purchase::class, 'purchaseable');
@@ -54,8 +54,9 @@ class Production extends Model
         return $this->morphMany(Kardex::class, 'kardexable');
     }
 
-    public function supplier(){
-        
+    public function supplier()
+    {
+
         return $this->belongsTo(Supplier::class);
     }
 
@@ -77,5 +78,38 @@ class Production extends Model
             $query->where('manufactures.name', 'LIKE', '%' . $term . '%');
             // ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
         });
+    }
+
+
+    public function scopeWithFinancialSummary(Builder $query): Builder
+    {
+        return $query
+            ->select('*')
+            // compras
+            ->selectSub(function ($q) {
+                $q->from('purchase_items')
+                    ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+                    ->whereColumn('purchases.purchaseable_id', 'productions.id')
+                    ->where('purchases.purchaseable_type', self::class)
+                    ->selectRaw('COALESCE(SUM(purchase_items.subtotal), 0)');
+            }, 'sum_purchases')
+
+            // variantes
+            ->withSum('productionVariants as sum_variants', 'quantity')
+            // kardex
+            ->selectSub(function ($q) {
+                $q->from('kardexes')
+                    ->whereColumn('kardexes.kardexable_id', 'productions.id')
+                    ->where('kardexes.kardexable_type', self::class)
+                    ->selectRaw("
+                    COALESCE(SUM(
+                        CASE 
+                            WHEN direction = 'in' THEN quantity
+                            WHEN direction = 'out' THEN -quantity
+                            ELSE 0
+                        END
+                    ), 0)
+                ");
+            }, 'sum_kardexes');
     }
 }

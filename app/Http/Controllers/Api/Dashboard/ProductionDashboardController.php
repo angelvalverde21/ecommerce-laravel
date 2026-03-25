@@ -18,12 +18,12 @@ class ProductionDashboardController extends Controller
      */
 
 
-    protected ProductionService $productionService;
+    protected ProductionService $service;
 
     public function __construct()
     {
         // Pasamos el modelo que vamos a usar
-        $this->productionService = new ProductionService();
+        $this->service = new ProductionService();
     }
 
     public function index(Store $store)
@@ -60,6 +60,7 @@ class ProductionDashboardController extends Controller
         }
 
         try {
+            
             // $products = $store->productDetails($warehouse)->get();
 
             $search = pluralToSingular($search);
@@ -74,6 +75,7 @@ class ProductionDashboardController extends Controller
             Log::info($result);
 
             return responseOk($result, "Datos obtenidos de las producciones con exito de search");
+
         } catch (\Throwable $th) {
             Log::info($th);
             return responseError("Error al obtener los datos de search de las producciones");
@@ -91,8 +93,7 @@ class ProductionDashboardController extends Controller
     {
         //
 
-
-        $production = $this->productionService->store($store, $request);
+        $production = $this->service->store($store, $request);
 
         Log::info($production);
 
@@ -100,44 +101,15 @@ class ProductionDashboardController extends Controller
     }
 
 
-    public function show(Store $store, $production_id)
+    public function show(Store $store, $id)
     {
-        try {
+        $production = $this->service->show($store, $id);
 
-
-            $production = $store->productions()
-                ->select('*')
-                ->selectSub(function ($query) {
-                    $query->from('purchase_items')
-                        ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
-                        ->whereColumn('purchases.purchaseable_id', 'productions.id')
-                        ->where('purchases.purchaseable_type', \App\Models\Production::class)
-                        ->selectRaw('SUM(purchase_items.subtotal)');
-                }, 'sum_purchases')
-                ->withSum('productionVariants as sum_variants', 'quantity')
-                ->selectSub(function ($query) {
-                    $query->from('kardexes')
-                        ->whereColumn('kardexes.kardexable_id', 'productions.id')
-                        ->where('kardexes.kardexable_type', Production::class)
-                        ->selectRaw("
-                            SUM(
-                                CASE 
-                                    WHEN direction = 'in' THEN quantity
-                                    WHEN direction = 'out' THEN -quantity
-                                    ELSE 0
-                                END
-                            )
-                        ");
-                }, 'sum_kardexes')
-                ->findOrFail($production_id);
-
-            return responseOk($production, 'Producción obtenida correctamente');
-        } catch (\Throwable $th) {
-
-            Log::error($th->getMessage());
-
-            return responseError("Error al mostrar la manufactura");
+        if (!$production) {
+            return responseError("Error al obtener la producción");
         }
+
+        return responseOk($production, 'Producción obtenida correctamente');
     }
 
     /**

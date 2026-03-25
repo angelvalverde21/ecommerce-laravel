@@ -2,6 +2,7 @@
 
 namespace App\Services\Dashboard\Crud;
 
+use App\Models\Production;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,7 +33,6 @@ class ProductionService
             DB::commit();
 
             return $production;
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -40,7 +40,13 @@ class ProductionService
             DB::rollback();
 
             return null;
-
         }
+    }
+
+    public function show(Store $store, $production_id): Production
+    {
+        return $store->productions()
+            ->withFinancialSummary()
+            ->findOrFail($production_id);
     }
 }
