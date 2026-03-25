@@ -22,7 +22,7 @@ class ProductionPurchaseService
 
             $purchases = $store->productions()
                 ->findOrFail($production_id)
-                ->purchases()->with(['supplier', 'items.unit', 'items'])
+                ->purchases()->with(['supplier', 'items.unit'])
                 ->orderBy('id', 'desc')
                 ->get();
 
@@ -35,7 +35,7 @@ class ProductionPurchaseService
             Log::info($purchases);
 
             return $purchases;
-            
+
         } catch (\Throwable $th) {
 
             Log::info($th);

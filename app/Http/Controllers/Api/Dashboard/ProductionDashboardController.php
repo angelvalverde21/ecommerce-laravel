@@ -31,12 +31,13 @@ class ProductionDashboardController extends Controller
         try {
 
             $productions = $store->productions()
-                ->with(['user'])
+                ->with(['user', 'purchases.items'])
                 ->withSum('productionVariants as sum_variants', 'quantity')
                 // ->withSum('Productions as sum_Productions', 'total')
                 ->get();
 
             return responseOk($productions, "Listado de producciones obtenido correctamente");
+            
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -104,10 +105,10 @@ class ProductionDashboardController extends Controller
         try {
 
             $production = $store->productions()
-                            ->with(['purchases.items'])
-                            ->withSum('productionVariants as sum_variants', 'quantity')
-                            ->withSum('kardexes as sum_kardexes', 'quantity')
-                            ->findOrFail($production_id);
+                ->with(['purchases.items'])
+                ->withSum('productionVariants as sum_variants', 'quantity')
+                ->withSum('kardexes as sum_kardexes', 'quantity')
+                ->findOrFail($production_id);
 
 
             // $total = $manufacture->Productions
@@ -123,7 +124,6 @@ class ProductionDashboardController extends Controller
             $production->sum_purchases = $total;
 
             return responseOk($production, 'Producción obtenida correctamente');
-
         } catch (\Throwable $th) {
 
             Log::error($th->getMessage());
