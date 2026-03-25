@@ -28,21 +28,7 @@ class ProductionDashboardController extends Controller
 
     public function index(Store $store)
     {
-        //
-        try {
-
-            $productions = $store->productions()
-                ->with(['user', 'purchases.items'])
-                ->withSum('productionVariants as sum_variants', 'quantity')
-                // ->withSum('Productions as sum_Productions', 'total')
-                ->get();
-
-            return responseOk($productions, "Listado de producciones obtenido correctamente");
-        } catch (\Throwable $th) {
-
-            Log::info($th);
-            return responseError("Error al obtener el listado de producciones");
-        }
+        return responseOk($this->service->index($store), "El listado de producciones ha sido obtenido correctamente (dashboard)");
     }
     /**
      * Show the form for creating a new resource.
@@ -60,7 +46,7 @@ class ProductionDashboardController extends Controller
         }
 
         try {
-            
+
             // $products = $store->productDetails($warehouse)->get();
 
             $search = pluralToSingular($search);
@@ -75,7 +61,6 @@ class ProductionDashboardController extends Controller
             Log::info($result);
 
             return responseOk($result, "Datos obtenidos de las producciones con exito de search");
-
         } catch (\Throwable $th) {
             Log::info($th);
             return responseError("Error al obtener los datos de search de las producciones");

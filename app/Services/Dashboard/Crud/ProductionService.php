@@ -49,4 +49,12 @@ class ProductionService
             ->withFinancialSummary()
             ->findOrFail($production_id);
     }
+
+    public function index(Store $store)
+    {
+        return $store->productions()
+            ->withFinancialSummary()
+            ->with('user')
+            ->get();
+    }
 }
