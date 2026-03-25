@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Manufacture;
+use App\Models\Production;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,6 @@ class ProductionDashboardController extends Controller
                 ->get();
 
             return responseOk($productions, "Listado de producciones obtenido correctamente");
-            
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -104,24 +104,32 @@ class ProductionDashboardController extends Controller
     {
         try {
 
+
             $production = $store->productions()
-                ->with(['purchases.items'])
+                ->select('*')
+                ->selectSub(function ($query) {
+                    $query->from('purchase_items')
+                        ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+                        ->whereColumn('purchases.purchaseable_id', 'productions.id')
+                        ->where('purchases.purchaseable_type', \App\Models\Production::class)
+                        ->selectRaw('SUM(purchase_items.subtotal)');
+                }, 'sum_purchases')
                 ->withSum('productionVariants as sum_variants', 'quantity')
-                ->withSum('kardexes as sum_kardexes', 'quantity')
+                ->selectSub(function ($query) {
+                    $query->from('kardexes')
+                        ->whereColumn('kardexes.kardexable_id', 'productions.id')
+                        ->where('kardexes.kardexable_type', Production::class)
+                        ->selectRaw("
+                            SUM(
+                                CASE 
+                                    WHEN direction = 'in' THEN quantity
+                                    WHEN direction = 'out' THEN -quantity
+                                    ELSE 0
+                                END
+                            )
+                        ");
+                }, 'sum_kardexes')
                 ->findOrFail($production_id);
-
-
-            // $total = $manufacture->Productions
-            //     ->flatMap->items
-            //     ->sum('subtotal');
-
-            // $manufacture->Production_total = $total;
-
-            $total = $production->purchases
-                ->flatMap->items
-                ->sum('subtotal');
-
-            $production->sum_purchases = $total;
 
             return responseOk($production, 'Producción obtenida correctamente');
         } catch (\Throwable $th) {
