@@ -37,7 +37,13 @@ class Purchase extends Model
         return $this->morphMany(Image::class, 'imageable')->orderBy('id', 'DESC');;
     }
 
-    public function items(){
+    public function items()
+    {
         return $this->hasMany(PurchaseItem::class);
+    }
+
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'paymentable');
     }
 }

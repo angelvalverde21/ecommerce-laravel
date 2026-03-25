@@ -24,6 +24,7 @@ class PaymentDashboardController extends Controller
         $map = [
             'manufacture' => \App\Models\Manufacture::class,
             'petty_cash' => \App\Models\PettyCash::class,
+            'purchase' => \App\Models\Purchase::class,
             // 'purchase' => \App\Models\Purchase::class,
         ];
 
@@ -68,7 +69,7 @@ class PaymentDashboardController extends Controller
             $validated = $request->validate([
                 'paymentable_type' => [
                     'required',
-                    Rule::in(['manufacture', 'petty_cash']) // Agrega más tipos según sea necesario
+                    Rule::in(['manufacture', 'petty_cash', 'purchase']) // Agrega más tipos según sea necesario
                 ],
                 'paymentable_id' => 'required|integer',
                 'gateway_id' => 'required|integer|max:255',
@@ -142,7 +143,7 @@ class PaymentDashboardController extends Controller
         $validated = $request->validate([
             'paymentable_type' => [
                 'required',
-                Rule::in(['manufacture', 'petty_cash']) // Agrega más tipos según sea necesario, por ejemplo pagos de manufacture, pagos de ordenes, pagos de compras, etc
+                Rule::in(['manufacture', 'petty_cash', 'purchase']) // Agrega más tipos según sea necesario, por ejemplo pagos de manufacture, pagos de ordenes, pagos de compras, etc
             ],
             'paymentable_id' => 'required|integer',
             'gateway_id' => 'required|integer|max:255',
