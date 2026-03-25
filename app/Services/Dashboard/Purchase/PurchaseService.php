@@ -93,6 +93,7 @@ class PurchaseService
             DB::commit();
 
             return $purchase->load(['supplier.user', 'items.unit']);
+            
         } catch (\Throwable $th) {
 
             DB::rollBack();

@@ -62,7 +62,7 @@ class PurchaseDashboardController extends Controller
     {
         Log::info($request);
 
-        return $this->purchaseService->store($store, $request);
+        return respondePaginateOk($this->purchaseService->store($store, $request), "El purchase ha sido creado correctamente");
 
     }
 

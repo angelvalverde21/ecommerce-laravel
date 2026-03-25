@@ -26,12 +26,6 @@ class ProductionPurchaseService
                 ->orderBy('id', 'desc')
                 ->get();
 
-            $total = $purchases
-                ->flatMap->items
-                ->sum('subtotal');
-
-            $purchases->sum_purchases = $total;
-
             Log::info($purchases);
 
             return $purchases;

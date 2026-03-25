@@ -24,7 +24,7 @@ class ProductionPurchaseDashboardController extends Controller
     public function index(Store $store, $production_id)
     {
         //
-        return responseOk($this->productionPurchaseService->index($store, $production_id));
+        return responseOk($this->productionPurchaseService->index($store, $production_id), 'Datos obtenidos correctamente desde ProductionPurchaseDashboardController');
     }
 
     /**
