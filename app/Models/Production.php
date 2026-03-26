@@ -96,6 +96,7 @@ class Production extends Model
 
             // variantes
             ->withSum('productionVariants as sum_variants', 'quantity')
+            ->withCount('productionVariants as count_variants')
             // kardex
             ->selectSub(function ($q) {
                 $q->from('kardexes')
