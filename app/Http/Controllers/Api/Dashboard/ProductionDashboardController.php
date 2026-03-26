@@ -86,9 +86,9 @@ class ProductionDashboardController extends Controller
     }
 
 
-    public function show(Store $store, $id)
+    public function show(Store $store, $production_id)
     {
-        $production = $this->service->show($store, $id);
+        $production = $this->service->show($store, $production_id);
 
         if (!$production) {
             return responseError("Error al obtener la producción");
@@ -108,9 +108,13 @@ class ProductionDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Store $store)
+    public function update( Store $store, $production_id, Request $request)
     {
+
+        $production = $this->service->update($store, $production_id, $request);
+
         //
+        return responseOk($production, "Producción actualizada correctamente");
     }
 
     /**

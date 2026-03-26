@@ -57,4 +57,18 @@ class ProductionService
             ->with('user')
             ->get();
     }
+
+    public function update(Store $store, $production_id, Request $request)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'budget' => 'nullable|numeric',
+            'quantity_total' => 'nullable|integer',
+        ]);
+
+        $production = $store->productions()->findOrFail($production_id);
+        $production->update($data);
+
+        return $production->fresh();
+    }
 }
