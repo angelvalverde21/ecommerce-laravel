@@ -154,7 +154,7 @@ class PurchaseService
 
     public function show($store, $purchase_id)
     {
-        $purchase = $store->purchases()->with(['supplier.user', 'items.unit'])->findOrFail($purchase_id);
+        $purchase = $store->purchases()->with(['supplier.user', 'items.unit', 'payments.images'])->findOrFail($purchase_id);
         return $purchase;
     }
 
