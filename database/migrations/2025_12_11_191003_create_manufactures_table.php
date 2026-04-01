@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::create('manufactures', function (Blueprint $table) {
             $table->id();
             $table->string('name'); //nombre del proyecto de manufactura, no es del producto
-            $table->float('budget')->nullable()->default('0.00'); //presupuesto asignado al proyecto de manufatura
+            // $table->float('budget')->nullable()->default('0.00'); //presupuesto asignado al proyecto de manufatura
             // $table->integer('total')->default(0);
-            $table->integer('quantity_total')->default(0); // Total producidos
-            $table->integer('quantity_failures')->default(0); // Merma o malogrados
+            // $table->integer('quantity_total')->default(0); // Total producidos
+            // $table->integer('quantity_failures')->default(0); // Merma o malogrados
             $table->enum('type', ['order', 'production'])->default('order'); // Para indicar si es una orden de compra para manufactura (order) o una orden de producción interna (production)    
-            $table->decimal('cost', 10, 2)->default(0.00); // Costo de producción calculado entre todo lo gastado y dividido entre lo producido
+            // $table->decimal('cost', 10, 2)->default(0.00); // Costo de producción calculado entre todo lo gastado y dividido entre lo producido
             $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete(); //En caso sea una orden de compra para manufactura, se asigna el proveedor, en caso contrario se deja nulo y se asume que es una orden de producción interna (donde se tendra purchases y cada purchase es tiene un proveedor)
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); //Propietario o responsable del proyecto de manufactura, en caso se elimine el usuario, se deja nulo
             $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las manufacturas asociadas
             $table->dateTime('manufacture_end')->nullable(); //fecha de fin de manufactura
             $table->dateTime('manufacture_start')->nullable(); //fecha de inicio de manufactura

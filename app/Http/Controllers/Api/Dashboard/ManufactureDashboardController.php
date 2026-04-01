@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Services\Dashboard\Crud\ManufactureService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,14 @@ class ManufactureDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
+
+    protected $service;
+
+    public function __construct(ManufactureService $manufactureService)
+    {
+        $this->service = $manufactureService;
+    }
+
     public function index(Store $store)
     {
         //
@@ -26,7 +35,6 @@ class ManufactureDashboardController extends Controller
                 ->get();
 
             return responseOk($manufactures, "Listadox de manufacturas obtenido correctamente");
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -79,7 +87,6 @@ class ManufactureDashboardController extends Controller
             DB::commit();
 
             return responseOk($manufacture, "Se ha procesado correctamente");
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -95,31 +102,7 @@ class ManufactureDashboardController extends Controller
      */
     public function show(Store $store, $manufacture_id)
     {
-        try {
-
-            $manufacture = $store->manufactures()->with([
-                'kardexes' => function ($k) {
-                    $k->with(['variant.product.image', 'variant.optionValues']);
-                },
-                'user',
-                'payments' => function ($p) {
-                    $p->with(['gateway', 'images']);
-                },
-                'manufactureVariants.variant' => function ($q) {
-                    $q->with([
-                        'product.image',
-                        'optionValues',
-                    ]);
-                },
-            ])
-                ->findOrFail($manufacture_id);
-
-            return responseOk($manufacture);
-        } catch (\Throwable $th) {
-
-            Log::info($th);
-            return responseError("Error al mostrar la manufactura");
-        }
+        return responseOk($this->service->show($store, $manufacture_id), "Datos obtenidos con exito de la manufactura");
     }
 
     /**
@@ -178,11 +161,13 @@ class ManufactureDashboardController extends Controller
             ]);
 
             $manufacture = $store->manufactures()->findOrFail($manufacture_id);
+            
             $manufacture->update($data);
 
             DB::commit();
 
             return responseOk($manufacture, "Se ha actualizado correctamente la manufactura");
+
         } catch (\Throwable $th) {
 
             Log::info($th);

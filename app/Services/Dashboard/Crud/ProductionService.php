@@ -26,6 +26,7 @@ class ProductionService
             $production = $store->productions()->create(
                 [
                     'name' => $data['name'],
+                    'type' => 'production',
                     'user_id' => Auth::id(),
                 ]
             );

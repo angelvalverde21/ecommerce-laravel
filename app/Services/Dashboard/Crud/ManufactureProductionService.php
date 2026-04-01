@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Services\Dashboard\Crud;
+
+use App\Models\Store;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class ManufactureProductionService
+{
+
+    public function index(Store $store)
+    {
+
+        $productions = $store->manufactures()
+            ->with(['user', 'supplier'])
+            ->where('type', 'production')
+            ->get();
+
+        return $productions;
+    }
+
+    public function store(Store $store, Request $request)
+    {
+        //
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $manufacture = $store->manufactures()->create(
+            [
+                'name' => $data['name'],
+                'user_id' => Auth::id(),
+                'type' => 'production',
+            ]
+        );
+
+        return $manufacture;
+    }
+
+    public function update(Request $request, Store $store, $manufacture_id)
+    {
+        //
+
+            $data = $request->validate([
+                'name' => 'required|string|max:255',
+            ]);
+
+            $manufacture = $store->manufactures()->findOrFail($manufacture_id);
+
+            $manufacture->update($data);
+
+            return $manufacture;
+
+    }
+}
