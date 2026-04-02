@@ -14,9 +14,16 @@ class ManufacturePurchaseDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Store $store)
+    public function index(Store $store, $manufacture_id)
     {
         //
+        $purchases = $store->manufactures()
+            ->findOrFail($manufacture_id)
+            ->purchases()
+            ->with('supplier', 'items.unit') // Carga las relaciones necesarias para mostrar el nombre del supplier y el unit
+            ->get();
+
+            return responseOk($purchases, "se han obtenido correctamente los purchases del manufacture");
     }
 
     /**

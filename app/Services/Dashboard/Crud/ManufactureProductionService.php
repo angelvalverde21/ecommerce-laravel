@@ -2,6 +2,7 @@
 
 namespace App\Services\Dashboard\Crud;
 
+use App\Models\Manufacture;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,15 +45,18 @@ class ManufactureProductionService
     {
         //
 
-            $data = $request->validate([
-                'name' => 'required|string|max:255',
-            ]);
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'manufacture_start' => 'nullable|date',
+            'manufacture_end' => 'nullable|date|after_or_equal:manufacture_start',
+        ]);
 
-            $manufacture = $store->manufactures()->findOrFail($manufacture_id);
+        $manufacture = $store->manufactures()->findOrFail($manufacture_id);
 
-            $manufacture->update($data);
+        $manufacture->update($data);
 
-            return $manufacture;
-
+        return $manufacture;
     }
+
+
 }

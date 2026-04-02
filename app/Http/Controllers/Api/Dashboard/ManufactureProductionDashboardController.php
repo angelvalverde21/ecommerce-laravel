@@ -44,9 +44,15 @@ class ManufactureProductionDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Store $store)
+    public function show(Store $store, $manufacture_id)
     {
-        //
+        $manufacture = $this->service->show($store, $manufacture_id);
+
+        if (!$manufacture) {
+            return responseError("Error al obtener la producción");
+        }
+
+        return responseOk($manufacture, 'Producción obtenida correctamente');
     }
 
     /**
@@ -60,9 +66,10 @@ class ManufactureProductionDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Store $store)
+    public function update(Store $store, Request $request, $manufacture_id)
     {
         //
+        return responseOk($this->service->update($request, $store, $manufacture_id), "Manufactures Production actualizado correctamente");
     }
 
     /**
