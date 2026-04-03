@@ -157,13 +157,13 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::post('/', [ManufactureOrderDashboardController::class, 'store']); //create
             // Route::get('/search/{search?}', [ManufactureOrderDashboardController::class, 'search']); //buscar
 
-            // Route::prefix('{order_id}')->group(function () {
+            Route::prefix('{order_id}')->group(function () {
 
-            //     Route::get('/', [ManufactureOrderDashboardController::class, 'show']); //show o mostrar por id
-            //     Route::put('/', [ManufactureOrderDashboardController::class, 'update']); //actualizar
-            //     Route::delete('/', [ManufactureOrderDashboardController::class, 'destroy']); //borrar
+                // Route::get('/', [ManufactureOrderDashboardController::class, 'show']); //show o mostrar por id
+                Route::put('/', [ManufactureOrderDashboardController::class, 'update']); //actualizar
+                // Route::delete('/', [ManufactureOrderDashboardController::class, 'destroy']); //borrar
 
-            // });
+            });
         });
 
         Route::prefix('{manufacture_id}')->group(function () {
