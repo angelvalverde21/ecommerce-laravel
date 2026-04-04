@@ -15,12 +15,11 @@ class ManufactureProductionService
     public function index(Store $store)
     {
 
-        $productions = $store->manufactures()
-            ->with(['user', 'supplier'])
-            ->where('type', 'production')
+        $manufactureOrders = $store->manufactures()
+             ->withFinancialSummary()
             ->get();
 
-        return $productions;
+        return $manufactureOrders;
     }
 
     public function store(Store $store, Request $request)

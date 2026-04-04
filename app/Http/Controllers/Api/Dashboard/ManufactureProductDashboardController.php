@@ -4,16 +4,22 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\store;
+use App\Services\Dashboard\Crud\ManufactureProductionService;
 use Illuminate\Http\Request;
 
 class ManufactureProductDashboardController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+
+    protected $service;
+
+    public function __construct(ManufactureProductionService $manufactureProductService)
     {
-        //
+        $this->service = $manufactureProductService;
+    }
+
+    public function index(Store $store)
+    {
+        return responseOk($this->service->index($store));
     }
 
     /**
@@ -52,11 +58,8 @@ class ManufactureProductDashboardController extends Controller
         ]);
 
         foreach ($request->items as $item) {
-            $store->manufactures()->find($manufacture_id)->products()->attach(
-                
-            );
+            $store->manufactures()->find($manufacture_id)->products()->attach();
         }
-        
     }
 
     /**

@@ -15,8 +15,7 @@ class ManufactureOrderService
     {
 
         $manufactureOrders = $store->manufactures()
-            ->with(['user', 'supplier'])
-            ->where('type', 'order')
+             ->withFinancialSummary()
             ->get();
 
         return $manufactureOrders;
