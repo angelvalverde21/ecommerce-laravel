@@ -15,20 +15,35 @@ return new class extends Migration
 
             $table->id();
 
-            $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete('cascade');
-            $table->foreignId('variant_id')->nullable()->constrained()->nullOnDelete('cascade');
-            $table->morphs('kardexable'); // kardexable_id + kardexable_type
+            $table->foreignId('product_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
+
+            $table->foreignId('variant_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
+
+            // $table->foreignId('manufacture_variant_id')
+            //     ->default(150101)
+            //     ->constrained('manufacture_variant');
+
+            $table->unsignedBigInteger('manufacture_variant_id');
+
+            $table->foreign('manufacture_variant_id', 'fk_kdx_manvar')
+                ->references('id')
+                ->on('manufacture_variant');
+
+            $table->morphs('kardexable');
 
             $table->integer('quantity')->default(0);
 
             $table->enum('direction', ['in', 'out'])->default('in');
             $table->string('comment')->nullable();
 
-
-            $table->index('product_id');
-            $table->index('variant_id');
-
             $table->timestamps();
+            
         });
     }
 

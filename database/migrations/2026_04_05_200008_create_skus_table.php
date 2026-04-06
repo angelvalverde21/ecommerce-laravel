@@ -11,11 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('manufacture_product', function (Blueprint $table) {
+        Schema::create('skus', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('manufacture_id')->constrained()->onDelete('cascade');
-            $table->foreignId('variant_id')->constrained()->onDelete('cascade');
-            $table->integer('quantity')->default(1);
             $table->timestamps();
         });
     }
@@ -25,6 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('manufacture_product');
+        Schema::dropIfExists('skus');
     }
 };

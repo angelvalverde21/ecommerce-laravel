@@ -15,7 +15,7 @@ class ManufactureProductionService
     public function index(Store $store)
     {
 
-        $manufactureOrders = $store->manufactures()
+        $manufactureOrders = $store->manufactures()->where('type', 'production')
              ->withFinancialSummary()
             ->get();
 
