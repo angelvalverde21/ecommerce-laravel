@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class SkuSeeder extends Seeder
+class BatchItemSeeder extends Seeder
 {
     /**
      * Run the database seeds.

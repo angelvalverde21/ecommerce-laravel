@@ -7,12 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 class ManufactureVariant extends Model
 {
     //
-        protected $guarded = ['id', 'created_at'];
+    protected $guarded = ['id', 'created_at'];
 
     protected $table = 'manufacture_variant';
 
 
-    public function variant(){
+    public function variant()
+    {
         return $this->belongsTo(Variant::class);
+    }
+    public function manufacture()
+    {
+        return $this->belongsTo(Manufacture::class);
     }
 }

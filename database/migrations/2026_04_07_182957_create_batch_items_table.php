@@ -11,12 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('production_variant', function (Blueprint $table) {
+        Schema::create('batch_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('production_id')->constrained()->onDelete('cascade');
+
+            $table->foreignId('batch_id')->constrained()->onDelete('cascade');
             $table->foreignId('variant_id')->constrained()->onDelete('cascade');
-            $table->integer('quantity')->default(1);
-            $table->decimal('price', 10, 2)->default(0.00);
+
+            // $table->unsignedBigInteger('sku');
+
+            // $table->foreign('sku', 'fk_kdx_sku')
+            //     ->references('id')
+            //     ->on('variants');
+            $table->unique('variant_id');
             $table->timestamps();
         });
     }
@@ -26,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('production_variant');
+        Schema::dropIfExists('batch_items');
     }
 };

@@ -15,8 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('manufacture_id')->constrained()->onDelete('cascade');
             $table->foreignId('variant_id')->constrained()->onDelete('cascade');
-            $table->integer('quantity_init')->default(0); //stock inicial de manufacture_variant, se usara para cuando se cree la orden de compra, sera el stock maximo, por ejemplo el pedido que se le hace al proveedor
-            $table->integer('stock')->default(0); //sera el stock que se ira avanzando, un stock parcial que considera la variante y el manufacture_id, osea que se ira actualizando segun se vaya vendiendo los productos
+            $table->integer('quantity')->default(0); //stock inicial de manufacture_variant, se usara para cuando se cree la orden de compra, sera el stock maximo, por ejemplo el pedido que se le hace al proveedor
             $table->decimal('price', 10, 2)->default(0.00);
             $table->timestamps();
         });

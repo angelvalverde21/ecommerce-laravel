@@ -43,4 +43,5 @@ class Variant extends Model
     {
         return $this->hasMany(VariantOptionValue::class);
     }
+
 }

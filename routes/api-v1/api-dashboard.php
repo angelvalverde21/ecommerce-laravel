@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Dashboard\IdentityDashboardController;
 use App\Http\Controllers\Api\Dashboard\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\images\ImagePaymentController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
+use App\Http\Controllers\Api\Dashboard\InventoryDashboardController;
 use App\Http\Controllers\Api\Dashboard\KardexDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureKardexDashboardController;
@@ -25,18 +26,12 @@ use App\Http\Controllers\Api\Dashboard\OptionDashboardController;
 use App\Http\Controllers\Api\Dashboard\OptionValueDashboardController;
 use App\Http\Controllers\Api\Dashboard\PriceDashboardController;
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
-use App\Http\Controllers\Api\Dashboard\ManufactureOrderVariantDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureOrderDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureProductionDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufacturePurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureVariantDashboardController;
 use App\Http\Controllers\Api\Dashboard\PaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\PettyCashDashboardController;
-use App\Http\Controllers\Api\Dashboard\ProductionDashboardController;
-use App\Http\Controllers\Api\Dashboard\ProductionKardexDashboardController;
-use App\Http\Controllers\Api\Dashboard\ProductionPurchaseDashboardController;
-use App\Http\Controllers\Api\Dashboard\ProductionVariantDashboardController;
-use App\Http\Controllers\Api\Dashboard\ProductionReceptionDashboardController;
 use App\Http\Controllers\Api\Dashboard\PurchaseDashboardController;
 use App\Http\Controllers\Api\Dashboard\RoleDashboardController;
 use App\Http\Controllers\Api\Dashboard\SizeDashboardController;
@@ -45,7 +40,7 @@ use App\Http\Controllers\Api\Dashboard\SupplierDashboardController;
 use App\Http\Controllers\Api\Dashboard\UnitDashboardController;
 use App\Http\Controllers\Api\Dashboard\UserDashboardController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Api\Dashboard\BatchDashboardController;
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
 // });
@@ -214,6 +209,23 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 });
             });
+        });
+
+
+        Route::prefix('inventories')->group(function () {
+
+            Route::get('/', [InventoryDashboardController::class, 'index']); //Listar
+            Route::post('/', [InventoryDashboardController::class, 'store']); //create
+            Route::post('/batch', [InventoryDashboardController::class, 'batch']);
+
+            Route::prefix('inventory_id}')->group(function () {
+        
+                Route::get('/', [InventoryDashboardController::class, 'show']); //show o mostrar por id
+                Route::put('/', [InventoryDashboardController::class, 'update']); //actualizar
+                Route::delete('/', [InventoryDashboardController::class, 'destroy']); //borrar
+        
+            });
+        
         });
     });
 
@@ -646,4 +658,23 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         });
     });
+
+    Route::prefix('batches')->group(function () {
+    
+        Route::get('/', [BatchDashboardController::class, 'index']); //Listar
+        Route::post('/', [BatchDashboardController::class, 'store']); //create
+        Route::post('/batch', [BatchDashboardController::class, 'batch']); //create
+    
+        Route::prefix('{batch_id}')->group(function () {
+    
+            Route::get('/', [BatchDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [BatchDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [BatchDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
+    });
+
 });
+
+

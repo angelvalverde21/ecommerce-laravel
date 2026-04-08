@@ -153,4 +153,8 @@ class Store extends Model
     //         $callback
     //     );
     // }
+
+    public function batches(){
+        return $this->hasMany(Batch::class);
+    }
 }
