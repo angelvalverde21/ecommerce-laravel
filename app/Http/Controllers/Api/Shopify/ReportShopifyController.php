@@ -27,6 +27,16 @@ class ReportShopifyController extends Controller
         return response()->json($report);
     }
 
+    
+    public function reportCashWeekly(Store $store)
+    {
+
+        //El cache esta en el servicio
+        $report = $this->shopifyService->reportCashWeekly();
+
+        return response()->json($report);
+    }
+
     public function reportBarDailys(Store $store, $days = 7)
     {
         $cacheKey = "report_bar_dailys_{$store->id}_{$days}";

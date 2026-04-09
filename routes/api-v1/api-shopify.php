@@ -82,6 +82,7 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
         });
 
         Route::get('/month-all', [ReportShopifyController::class, 'monthAll']); //Listar
+        Route::get('/report-cash-weekly', [ReportShopifyController::class, 'reportCashWeekly']); //Listar
 
 
     });
