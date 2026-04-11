@@ -49,28 +49,28 @@
         @for ($i = 0; $i < $variant['quantity']; $i++)
             @php $current++; @endphp
 
-            <div class="label">
+            <div class="label" style="position: relative; left: 5px;">
                 <ul>
                     <li>{{ Str::upper($variant->product->name) }}</li>
                 </ul>
 
-                @php 
-                //Este archivo lo llama
-                //app\Http\Controllers\Api\Dashboard\BarcodeDashboardController.php 
+                @php
+                    //Este archivo lo llama
+                    //app\Http\Controllers\Api\Dashboard\BarcodeDashboardController.php
                 @endphp
 
                 <div style="text-align:center; margin-top:5px; margin-left:5px; margin-right:5px;">
-                    <img src="data:image/png;base64,{{ \Milon\Barcode\Facades\DNS1DFacade::getBarcodePNG(
-                        $variant['id'] . '-' . $variant['sku'],
-                        'C128',
-                        0.70, // 👈 grosor más pequeño
-                        24, // 👈 altura más pequeña
-                    ) }}"
-                        style="display:block; margin: 0 auto;">
+                    <img style="width: 100%; height: auto;"
+                        src="data:image/png;base64,{{ \Milon\Barcode\Facades\DNS1DFacade::getBarcodePNG(
+                            strtoupper($variant['id']),
+                            'C39',
+                            1.5, // más ancho
+                            30, // más alto
+                        ) }}">
                 </div>
 
                 <ul>
-                    <li>SKU: {{ $variant['id'] }}-{{ $variant['sku'] }}</li>
+                    <li>{{ strtoupper($variant['id']) }}-{{ $variant['sku'] }}</li>
                 </ul>
             </div>
 
