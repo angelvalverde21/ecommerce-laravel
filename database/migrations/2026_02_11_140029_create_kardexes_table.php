@@ -25,10 +25,6 @@ return new class extends Migration
                 ->constrained()
                 ->nullOnDelete();
 
-            $table->foreignId('batch_id')
-                ->nullable()
-                ->constrained()
-                ->nullOnDelete();
 
             // $table->foreignId('manufacture_variant_id')
             //     ->default(150101)
@@ -40,7 +36,7 @@ return new class extends Migration
             //     ->references('id')
             //     ->on('manufacture_variant');
 
-            $table->morphs('reference');
+            $table->morphs('kardexable');
 
             $table->integer('quantity')->default(0);
 
