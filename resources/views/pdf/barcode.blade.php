@@ -28,7 +28,7 @@
             margin: 0;
             padding: 0;
             font-size: 9px;
-            margin: 7px 0 0 0;
+            margin: 5px 0 0 0;
         }
 
         body {
@@ -51,7 +51,7 @@
 
             <div class="label">
                 <ul>
-                    <li>{{ $variant->product->name }}</li>
+                    <li>{{ Str::upper($variant->product->name) }}</li>
                 </ul>
 
                 @php 
@@ -64,7 +64,7 @@
                         $variant['id'] . '-' . $variant['sku'],
                         'C128',
                         0.70, // 👈 grosor más pequeño
-                        30, // 👈 altura más pequeña
+                        24, // 👈 altura más pequeña
                     ) }}"
                         style="display:block; margin: 0 auto;">
                 </div>
