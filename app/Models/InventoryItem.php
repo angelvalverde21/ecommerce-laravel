@@ -4,13 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class InventoryVariant extends Model
+class InventoryItem extends Model
 {
     //
 
-    protected $table = 'inventory_variant';
-
     protected $guarded = ['id', 'created_at'];
+    protected $table = 'inventory_items';
 
      public function inventory()
     {
@@ -22,5 +21,5 @@ class InventoryVariant extends Model
         return $this->belongsTo(Variant::class);
     }
 
-    
+
 }

@@ -5,6 +5,7 @@
 use App\Http\Controllers\Api\Dashboard\AddressDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
+use App\Http\Controllers\Api\Dashboard\BarcodeDashboardController;
 use App\Http\Controllers\Api\Dashboard\BrandDashboardController;
 use App\Http\Controllers\Api\Dashboard\CategoryDashboardController;
 use App\Http\Controllers\Api\Dashboard\ColorDashboardController;
@@ -210,22 +211,20 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
                 });
             });
         });
+    });
 
+    Route::prefix('inventories')->group(function () {
 
-        Route::prefix('inventories')->group(function () {
+        Route::get('/', [InventoryDashboardController::class, 'index']); //Listar
+        Route::post('/', [InventoryDashboardController::class, 'store']); //create
+        Route::post('/batch', [InventoryDashboardController::class, 'batch']);
 
-            Route::get('/', [InventoryDashboardController::class, 'index']); //Listar
-            Route::post('/', [InventoryDashboardController::class, 'store']); //create
-            Route::post('/batch', [InventoryDashboardController::class, 'batch']);
+        Route::prefix('{inventory_id}')->group(function () {
 
-            Route::prefix('inventory_id}')->group(function () {
-        
-                Route::get('/', [InventoryDashboardController::class, 'show']); //show o mostrar por id
-                Route::put('/', [InventoryDashboardController::class, 'update']); //actualizar
-                Route::delete('/', [InventoryDashboardController::class, 'destroy']); //borrar
-        
-            });
-        
+            Route::get('/', [InventoryDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [InventoryDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [InventoryDashboardController::class, 'destroy']); //borrar
+
         });
     });
 
@@ -660,21 +659,33 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('batches')->group(function () {
-    
+
         Route::get('/', [BatchDashboardController::class, 'index']); //Listar
         Route::post('/', [BatchDashboardController::class, 'store']); //create
         Route::post('/batch', [BatchDashboardController::class, 'batch']); //create
-    
+
         Route::prefix('{batch_id}')->group(function () {
-    
+
             Route::get('/', [BatchDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [BatchDashboardController::class, 'update']); //actualizar
             Route::delete('/', [BatchDashboardController::class, 'destroy']); //borrar
+
+        });
+    });
+
+    Route::prefix('barcodes')->group(function () {
+    
+        Route::get('/', [BarcodeDashboardController::class, 'index']); //Listar
+        Route::post('/print', [BarcodeDashboardController::class, 'print']); //Imprimir
+        Route::post('/', [BarcodeDashboardController::class, 'store']); //create
+    
+        Route::prefix('barcode_id}')->group(function () {
+    
+            Route::get('/', [BarcodeDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [BarcodeDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [BarcodeDashboardController::class, 'destroy']); //borrar
     
         });
     
     });
-
 });
-
-

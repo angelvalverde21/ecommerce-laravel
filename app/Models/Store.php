@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rules\In;
 
 class Store extends Model
 {
@@ -156,5 +157,9 @@ class Store extends Model
 
     public function batches(){
         return $this->hasMany(Batch::class);
+    }
+
+    public function inventories(){
+        return $this->hasMany(Inventory::class);
     }
 }

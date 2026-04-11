@@ -104,7 +104,7 @@ class Product extends Model
 
     public function variants()
     {
-        return $this->hasMany(Variant::class)->orderBy('sku','desc');
+        return $this->hasMany(Variant::class)->orderBy('id', 'asc');;
     }
 
     public function options()

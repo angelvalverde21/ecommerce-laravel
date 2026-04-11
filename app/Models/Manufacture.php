@@ -49,7 +49,7 @@ class Manufacture extends Model
 
     public function kardexes()
     {
-        return $this->morphMany(Kardex::class, 'kardexable');
+        return $this->morphMany(Kardex::class, 'kardexable')->orderBy('id', 'desc');;
     }
 
     public function supplier()
