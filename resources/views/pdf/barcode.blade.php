@@ -51,7 +51,7 @@
 
             <div class="label" style="position: relative; left: 5px;">
                 <ul>
-                    <li>{{ Str::upper($variant->product->name) }}</li>
+                    <li style="font-size: 8px">{{ Str::upper($variant->product->name) }}</li>
                 </ul>
 
                 @php
