@@ -78,30 +78,32 @@ class Manufacture extends Model
         });
     }
 
-public function scopeWithFinancialSummary(Builder $query): Builder
-{
-    return $query
-        ->select('*')
 
-        // compras
-        ->selectSub(function ($q) {
-            $q->from('purchase_items')
-                ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
-                ->whereColumn('purchases.purchaseable_id', 'manufactures.id')
-                ->where('purchases.purchaseable_type', self::class)
-                ->selectRaw('COALESCE(SUM(purchase_items.subtotal), 0)');
-        }, 'sum_purchases')
 
-        // variantes
-        ->withSum('manufactureVariants as sum_variants', 'quantity')
-        ->withCount('manufactureVariants as count_variants')
+    public function scopeWithFinancialSummary(Builder $query): Builder
+    {
+        return $query
+            ->select('*')
 
-        // kardex
-        ->selectSub(function ($q) {
-            $q->from('kardexes')
-                ->whereColumn('kardexes.kardexable_id', 'manufactures.id')
-                ->where('kardexes.kardexable_type', self::class)
-                ->selectRaw("
+            // compras
+            ->selectSub(function ($q) {
+                $q->from('purchase_items')
+                    ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+                    ->whereColumn('purchases.purchaseable_id', 'manufactures.id')
+                    ->where('purchases.purchaseable_type', self::class)
+                    ->selectRaw('COALESCE(SUM(purchase_items.subtotal), 0)');
+            }, 'sum_purchases')
+
+            // variantes
+            ->withSum('manufactureVariants as sum_variants', 'quantity')
+            ->withCount('manufactureVariants as count_variants')
+
+            // kardex
+            ->selectSub(function ($q) {
+                $q->from('kardexes')
+                    ->whereColumn('kardexes.kardexable_id', 'manufactures.id')
+                    ->where('kardexes.kardexable_type', self::class)
+                    ->selectRaw("
                     COALESCE(SUM(
                         CASE 
                             WHEN direction = 'in' THEN quantity
@@ -110,6 +112,11 @@ public function scopeWithFinancialSummary(Builder $query): Builder
                         END
                     ), 0)
                 ");
-        }, 'sum_kardexes');
-}
+            }, 'sum_kardexes');
+    }
+
+    public function purchases()
+    {
+        return $this->morphMany(Purchase::class, 'purchaseable');   
+    }
 }
