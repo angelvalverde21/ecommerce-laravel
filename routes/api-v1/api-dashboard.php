@@ -202,7 +202,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
                 Route::get('/', [ManufacturePurchaseDashboardController::class, 'index']); //Listar
                 Route::post('/', [ManufacturePurchaseDashboardController::class, 'store']); //create
 
-                Route::prefix('{ProductionPurchase_id}')->group(function () {
+                Route::prefix('{purchase_id}')->group(function () {
 
                     Route::get('/', [ManufacturePurchaseDashboardController::class, 'show']); //show o mostrar por id
                     Route::put('/', [ManufacturePurchaseDashboardController::class, 'update']); //actualizar

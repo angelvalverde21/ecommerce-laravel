@@ -15,6 +15,7 @@ use App\Services\Dashboard\Option\OptionService;
 use App\Services\Dashboard\OptionValue\OptionValueService;
 use App\Services\Shopify\ShopifyBaseService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -356,8 +357,8 @@ class ShopifyProductService extends ShopifyBaseService
         // -------------------------------------------------------------
         // 3️⃣ — SYNC A ERP / DB
         // -------------------------------------------------------------
-        $this->syncProductsShopify($products->toArray(), $store);
-        $this->syncProductsErp($products->toArray(), $store);
+        $this->syncProductsShopify($products->toArray(), $store); //Actualiza la tabla de productos de shopify
+        $this->syncProductsErp($products->toArray(), $store); //Actualiza la tabla de productos de nuestro ERP, con la info del producto de shopify
 
         return [
             'data' => json_decode(json_encode($products)),
@@ -443,7 +444,7 @@ class ShopifyProductService extends ShopifyBaseService
                             'is_color' => 0,
                             'is_size' => 1,
                             'slug' => Str::slug($product_shopify['category']['name'] ?? 'predeterminado'),
-                            'user_id' => auth()->id(),
+                            'user_id' => Auth::id(),
                         ]
                     );
 
@@ -460,7 +461,7 @@ class ShopifyProductService extends ShopifyBaseService
                             'status' => $this->mapShopifyStatus($product_shopify['status'] ?? null),
                             'slug' => Str::slug($product_shopify['title']) . '-' . $store->id,
                             'online_store_url' => $product_shopify['onlineStoreUrl'] ?? null,
-                            'user_id' => auth()->id(),
+                            'user_id' => Auth::id(),
                             'category_id' => $category->id,
                             'created_at' => Carbon::parse($product_shopify['createdAt']),
                             'updated_at' => Carbon::parse($product_shopify['updatedAt']),

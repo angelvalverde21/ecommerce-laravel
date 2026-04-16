@@ -63,7 +63,6 @@ class PurchaseDashboardController extends Controller
         Log::info($request);
 
         return respondePaginateOk($this->purchaseService->store($store, $request), "El purchase ha sido creado correctamente");
-
     }
 
     /**
@@ -90,21 +89,24 @@ class PurchaseDashboardController extends Controller
     {
 
         return responseOk($this->purchaseService->update($store, $request, $purchase_id), "El purchase ha sido actualizado correctamente");
-        
     }
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($store, string $id)
+    public function destroy($store, string $purchase_id)
     {
 
         try {
 
-            $purchase = Purchase::findOrFail($id);
+            DB::transaction(function () use ($purchase_id) {
+                $purchase = Purchase::findOrFail($purchase_id);
 
-            $purchase->delete();
+                $purchase->items()->delete();
+                $purchase->delete();
+            });
 
-            return responseOk($purchase, "El purchase ha sido eliminado correctamente");
+
+            return responseOk([], "El purchase ha sido eliminado correctamente");
         } catch (\Throwable $th) {
             Log::info($th);
             return responseError("Ha sucedido un error interno al eliminar el purchase");
