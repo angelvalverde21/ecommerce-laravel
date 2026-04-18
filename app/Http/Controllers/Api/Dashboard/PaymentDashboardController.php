@@ -25,6 +25,7 @@ class PaymentDashboardController extends Controller
             'manufacture' => \App\Models\Manufacture::class,
             'petty_cash' => \App\Models\PettyCash::class,
             'purchase' => \App\Models\Purchase::class,
+            'employee' => \App\Models\Employee::class,
             // 'purchase' => \App\Models\Purchase::class,
         ];
 
@@ -69,12 +70,13 @@ class PaymentDashboardController extends Controller
             $validated = $request->validate([
                 'paymentable_type' => [
                     'required',
-                    Rule::in(['manufacture', 'petty_cash', 'purchase']) // Agrega más tipos según sea necesario
+                    Rule::in(['manufacture', 'petty_cash', 'purchase', 'employee']) // Agrega más tipos según sea necesario
                 ],
                 'paymentable_id' => 'required|integer',
                 'gateway_id' => 'required|integer|max:255',
                 'amount' => 'required|numeric',
                 'direction' => 'required|string|max:255',
+                'comment' => 'nullable|string|max:255',
                 'date' => 'required|date',
                 'images' => 'array',
                 'images.*' => 'image|max:2048',
@@ -90,20 +92,23 @@ class PaymentDashboardController extends Controller
                 'gateway_id' => $validated['gateway_id'],
                 'amount' => $validated['amount'],
                 'direction' => $validated['direction'],
+                'comment' => $validated['comment'],
                 'status' => 'paid',
                 'date' => $validated['date'],
             ]);
 
-            foreach ($request->file('images') as $file) {
-                $array = $this->getSizeArray($file, Image::DIR_PAYMENT);
-                Log::info($array);
-                $payment->images()->create($array);
+            if ($request->hasFile('images')) {
+
+                foreach ($request->file('images') as $file) {
+                    $array = $this->getSizeArray($file, Image::DIR_PAYMENT);
+                    Log::info($array);
+                    $payment->images()->create($array);
+                }
             }
             // $request['usage'] = 'images';
             // DB::commit();
 
             return responseOk($payment->load(['gateway', 'images']), "El pago ha sido registrado correctamente.");
-
         } catch (\Exception $e) {
 
             // DB::rollBack();
@@ -143,12 +148,13 @@ class PaymentDashboardController extends Controller
         $validated = $request->validate([
             'paymentable_type' => [
                 'required',
-                Rule::in(['manufacture', 'petty_cash', 'purchase']) // Agrega más tipos según sea necesario, por ejemplo pagos de manufacture, pagos de ordenes, pagos de compras, etc
+                Rule::in(['manufacture', 'petty_cash', 'purchase', 'employee']) // Agrega más tipos según sea necesario, por ejemplo pagos de manufacture, pagos de ordenes, pagos de compras, etc
             ],
             'paymentable_id' => 'required|integer',
             'gateway_id' => 'required|integer|max:255',
             'amount' => 'required|numeric',
             'direction' => 'required|string|max:255',
+            'comment' => 'string|max:255',
             'date' => 'required|date'
         ]);
 
@@ -164,6 +170,7 @@ class PaymentDashboardController extends Controller
                 'gateway_id' => $validated['gateway_id'],
                 'amount' => $validated['amount'],
                 'direction' => $validated['direction'],
+                'comment' => $validated['comment'],
                 'status' => 'paid',
                 'date' => $validated['date'],
             ]);
@@ -171,7 +178,6 @@ class PaymentDashboardController extends Controller
             // DB::commit();
 
             return responseOk($payment->load(['gateway', 'images']), "El pago ha sido actualizado correctamente.");
-
         } catch (\Exception $e) {
             // DB::rollBack();
             Log::info($e);
@@ -188,16 +194,13 @@ class PaymentDashboardController extends Controller
 
         try {
             $payment = Payment::findOrFail($payment_id);
-            
+
             $payment->delete();
 
             return responseOk($payment, "El pago ha sido eliminado correctamente.");
-
         } catch (\Exception $e) {
             Log::info($e);
             return responseError("Error al eliminar el pago");
-
         }
-
     }
 }

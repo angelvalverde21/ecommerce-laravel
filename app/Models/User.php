@@ -96,4 +96,8 @@ class User extends Authenticatable implements OAuthenticatable
     {
         return $this->hasOne(Supplier::class);
     }
+
+    public function payments(){
+        return $this->hasMany(Payment::class);
+    }
 }

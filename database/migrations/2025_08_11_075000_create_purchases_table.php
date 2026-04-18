@@ -17,6 +17,10 @@ return new class extends Migration
             $table->text('observations')->nullable();
             $table->foreignId('supplier_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el proveedor, deja el campo en null
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete(); // Si se elimina el usuario, deja el campo en null
+            // $table->unsignedBigInteger('petty_cash_id');
+            // $table->foreign('petty_cash_id')
+            //     ->references('id')
+            //     ->on('petty_cashes');
             $table->foreignId('store_id')->constrained()->cascadeOnDelete(); // Si se elimina la tienda, se eliminan las compras asociadas
             $table->dateTime('purchase_end')->nullable(); //fecha de fin de
             $table->dateTime('purchase_start')->nullable(); //fecha de inicio de

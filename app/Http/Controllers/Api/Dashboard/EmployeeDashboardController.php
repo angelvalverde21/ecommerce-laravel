@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\FlatUserResource;
 use App\Models\Employee;
+use App\Models\Payment;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\Dashboard\Employee\EmployeeService;
@@ -177,7 +178,23 @@ class EmployeeDashboardController extends Controller
     {
         try {
 
-            $employee = Employee::with('user.roles', 'attendances.employee')->findOrFail($employed_id);
+            $employee = Employee::with(
+                'user.roles',
+                'attendances.employee'
+            )
+                ->addSelect([
+                    'balance' => Payment::selectRaw("
+                                COALESCE(SUM(
+                                    CASE 
+                                        WHEN direction = 'in' THEN amount
+                                        WHEN direction = 'out' THEN -amount
+                                        ELSE 0
+                                    END
+                                ),0)
+                            ")
+                        ->whereColumn('payments.user_id', 'employees.user_id')
+                ])
+                ->findOrFail($employed_id);
 
             // --- LIMPIAR ROLES ---
             $rolesOnlyNames = $employee->user->roles->pluck('name');
@@ -193,7 +210,17 @@ class EmployeeDashboardController extends Controller
                     return Carbon::parse($attendance->date)->format('Y-m-d');
                 });
 
-            $dates = $employee->attendances->pluck('date')->map(fn($d) => Carbon::parse($d));
+
+            // ✅ FIX: si no hay asistencias, devolver vacío
+            if ($employee->attendances->isEmpty()) {
+                $employee->setRelation('attendances', collect([]));
+                return responseOk($employee, "Empleado obtenido correctamente");
+            }
+
+
+            $dates = $employee->attendances
+                ->pluck('date')
+                ->map(fn($d) => Carbon::parse($d));
 
             $start = $dates->min();
             $end   = $dates->max();
@@ -205,7 +232,7 @@ class EmployeeDashboardController extends Controller
             foreach ($period as $date) {
 
                 if ($date->dayOfWeek == Carbon::SUNDAY) {
-                    continue; // opcional si no trabajas domingo
+                    continue;
                 }
 
                 $key = $date->format('Y-m-d');
@@ -235,6 +262,7 @@ class EmployeeDashboardController extends Controller
 
             // return responseOk($user, "Empleado obtenido correctamente");
         } catch (\Throwable $th) {
+            Log::info($th);
             return responseError("No se pudo obtener el empleado solicitado");
         }
     }

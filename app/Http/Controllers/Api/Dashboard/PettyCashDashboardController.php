@@ -43,32 +43,32 @@ class PettyCashDashboardController extends Controller
 
             $request->validate([
                 'employee_id' => 'required|exists:employees,id',
-                'amount_assigned' => 'required|numeric|min:0',
-                'gateway_id' => 'required|exists:gateways,id',
+                // 'amount_assigned' => 'required|numeric|min:0',
+                // 'gateway_id' => 'required|exists:gateways,id',
             ]);
 
             $pettyCash = $store->pettyCashes()->create(
                 [
                     'employee_id' => $request->employee_id,
-                    'gateway_id' => $request->gateway_id,
-                    'amount_assigned' => $request->amount_assigned,
-                    'balance' => $request->amount_assigned,
+                    // 'gateway_id' => $request->gateway_id,
+                    'amount_assigned' => 0,
+                    'balance' => 0,
                     'opened_at' => now(),
                 ]
             );
 
-            $pettyCash->payments()->create(
-                [
-                    'store_id' => $store->id,
-                    'user_id' => Auth::id(),
-                    'amount' => $request->amount_assigned,
-                    'gateway_id' => $request->gateway_id,
-                    'status' => 'paid',
-                    'date' => now(),
-                    'comment' => 'Apertura de caja chica',
-                    'direction' => 'in',
-                ]
-            );
+            // $pettyCash->payments()->create(
+            //     [
+            //         'store_id' => $store->id,
+            //         'user_id' => Auth::id(),
+            //         'amount' => $request->amount_assigned,
+            //         'gateway_id' => $request->gateway_id,
+            //         'status' => 'paid',
+            //         'date' => now(),
+            //         'comment' => 'Apertura de caja chica',
+            //         'direction' => 'in',
+            //     ]
+            // );
 
             DB::commit();
 

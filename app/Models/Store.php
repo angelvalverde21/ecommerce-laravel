@@ -162,4 +162,8 @@ class Store extends Model
     public function inventories(){
         return $this->hasMany(Inventory::class);
     }
+
+    public function payments(){
+        return $this->hasMany(Payment::class);
+    }
 }

@@ -42,6 +42,9 @@ use App\Http\Controllers\Api\Dashboard\UnitDashboardController;
 use App\Http\Controllers\Api\Dashboard\UserDashboardController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Dashboard\BatchDashboardController;
+use App\Http\Controllers\Api\Dashboard\EmployeeAttendanceDashboardController;
+use App\Http\Controllers\Api\Dashboard\EmployeePaymentDashboardController;
+
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
 // });
@@ -339,8 +342,34 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::put('/', [EmployeeDashboardController::class, 'update']); //actualizar
             Route::delete('/', [EmployeeDashboardController::class, 'destroy']); //borrar
 
+            Route::prefix('attendances')->group(function () {
 
+                Route::get('/', [EmployeeAttendanceDashboardController::class, 'index']); //Listar
+                Route::post('/', [EmployeeAttendanceDashboardController::class, 'store']); //create
+                Route::post('/upload', [EmployeeAttendanceDashboardController::class, 'upload']); //create
 
+                Route::prefix('{attendance_id}')->group(function () {
+
+                    Route::get('/', [EmployeeAttendanceDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [EmployeeAttendanceDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [EmployeeAttendanceDashboardController::class, 'destroy']); //borrar
+
+                });
+            });
+
+            Route::prefix('payments')->group(function () {
+
+                Route::get('/', [EmployeePaymentDashboardController::class, 'index']); //Listar
+                Route::post('/', [EmployeePaymentDashboardController::class, 'store']); //create
+
+                Route::prefix('{payment_id}')->group(function () {
+
+                    Route::get('/', [EmployeePaymentDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [EmployeePaymentDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [EmployeePaymentDashboardController::class, 'destroy']); //borrar
+
+                });
+            });
         });
     });
 
@@ -674,18 +703,17 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('barcodes')->group(function () {
-    
+
         Route::get('/', [BarcodeDashboardController::class, 'index']); //Listar
         Route::post('/print', [BarcodeDashboardController::class, 'print']); //Imprimir
         Route::post('/', [BarcodeDashboardController::class, 'store']); //create
-    
+
         Route::prefix('barcode_id}')->group(function () {
-    
+
             Route::get('/', [BarcodeDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [BarcodeDashboardController::class, 'update']); //actualizar
             Route::delete('/', [BarcodeDashboardController::class, 'destroy']); //borrar
-    
+
         });
-    
     });
 });

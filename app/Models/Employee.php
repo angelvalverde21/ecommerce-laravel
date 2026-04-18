@@ -27,4 +27,9 @@ class Employee extends Model
     {
         return $this->hasMany(Attendance::class)->orderByDesc('created_at');
     }
+
+    public function payments()
+    {
+        return $this->morphMany(Payment::class, 'paymentable');
+    }
 }

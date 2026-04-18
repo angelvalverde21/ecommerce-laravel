@@ -20,7 +20,7 @@ class ManufacturePurchaseDashboardController extends Controller
         $purchases = $store->manufactures()
             ->findOrFail($manufacture_id)
             ->purchases()
-            ->with('supplier', 'items.unit') // Carga las relaciones necesarias para mostrar el nombre del supplier y el unit
+            ->with('supplier', 'items.unit', 'payments.images') // Carga las relaciones necesarias para mostrar el nombre del supplier y el unit
             ->get();
 
             return responseOk($purchases, "se han obtenido correctamente los purchases del manufacture");
