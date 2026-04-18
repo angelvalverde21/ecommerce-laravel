@@ -13,6 +13,7 @@ class Payment extends Model
     protected $hidden = [
         'paymentable_type',
         'paymentable_id',
+        'paymentable' // se oculta para evitar que se muestre en la respuesta, ya que se accede a través del accesor "getPurchaseAttribute", pero es necesario para evitar el n+1
     ];
 
     const STATUS = [
@@ -94,6 +95,13 @@ class Payment extends Model
 
     protected $appends = ['purchase'];
 
+    public function getPurchaseAttribute()
+    {
+        return $this->paymentable instanceof Purchase
+            ? $this->paymentable
+            : null;
+    }
+
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable');
@@ -108,12 +116,6 @@ class Payment extends Model
         'date' => 'date:Y-m-d'
     ];
 
-    public function getPurchaseAttribute()
-    {
-        return $this->paymentable instanceof Purchase
-            ? $this->paymentable
-            : null;
-    }
 
     // public function getStatusAttribute()
     // {

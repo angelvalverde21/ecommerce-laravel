@@ -140,29 +140,33 @@ class PaymentDashboardController extends Controller
     public function update(Store $store, Request $request, $payment_id)
     {
 
+        // Log::info("xxxx");
+
         Log::info($request);
         Log::info($request->all());
         Log::info($request->allFiles());
         Log::info($request->headers->all());
 
-        $validated = $request->validate([
-            'paymentable_type' => [
-                'required',
-                Rule::in(['manufacture', 'petty_cash', 'purchase', 'employee']) // Agrega más tipos según sea necesario, por ejemplo pagos de manufacture, pagos de ordenes, pagos de compras, etc
-            ],
-            'paymentable_id' => 'required|integer',
-            'gateway_id' => 'required|integer|max:255',
-            'amount' => 'required|numeric',
-            'direction' => 'required|string|max:255',
-            'comment' => 'string|max:255',
-            'date' => 'required|date'
-        ]);
 
-        $parentModel = $this->getParentModel($validated);
-
-        $payment = $parentModel->payments()->findOrFail($payment_id); // Verifica que el pago pertenece al modelo padre
 
         try {
+
+            $validated = $request->validate([
+                'paymentable_type' => [
+                    'required',
+                    Rule::in(['manufacture', 'petty_cash', 'purchase', 'employee']) // Agrega más tipos según sea necesario, por ejemplo pagos de manufacture, pagos de ordenes, pagos de compras, etc
+                ],
+                'paymentable_id' => 'required|integer',
+                'gateway_id' => 'required|integer|max:255',
+                'amount' => 'required|numeric',
+                'direction' => 'required|string|max:255',
+                'comment' => 'nullable|string|max:255',
+                'date' => 'required|date'
+            ]);
+
+            $parentModel = $this->getParentModel($validated);
+
+            $payment = $parentModel->payments()->findOrFail($payment_id); // Verifica que el pago pertenece al modelo padre
 
             // DB::beginTransaction();
 

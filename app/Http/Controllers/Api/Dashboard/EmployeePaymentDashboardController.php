@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Purchase;
 use App\Models\Store;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 
 class EmployeePaymentDashboardController extends Controller
@@ -15,7 +17,18 @@ class EmployeePaymentDashboardController extends Controller
     {
         $employee = $store->employees()->findOrFail($employee_id);
 
-        return $employee->user->payments()->with(['images', 'paymentable', 'gateway']) //se agrega paymentable para que el accesor "getPurchaseAttribute" que esta en payment no haga n + 1 consultas
+        return $employee->user
+            ->payments()->with(
+                [
+                    'images',
+                    'gateway',
+                    'paymentable' => function (MorphTo $morphTo) {
+                        $morphTo->morphWith([
+                            Purchase::class => ['items'],
+                        ]);
+                    }
+                ]
+            )
             ->latest()
             ->paginate(15);
     }
