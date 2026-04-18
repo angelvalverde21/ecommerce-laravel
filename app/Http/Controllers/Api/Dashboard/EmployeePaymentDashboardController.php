@@ -15,7 +15,7 @@ class EmployeePaymentDashboardController extends Controller
     {
         $employee = $store->employees()->findOrFail($employee_id);
 
-        return $employee->user->payments()->with(['images', 'gateway'])
+        return $employee->user->payments()->with(['images', 'paymentable', 'gateway']) //se agrega paymentable para que el accesor "getPurchaseAttribute" que esta en payment no haga n + 1 consultas
             ->latest()
             ->paginate(15);
     }

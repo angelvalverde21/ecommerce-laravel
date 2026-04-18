@@ -92,6 +92,8 @@ class Payment extends Model
         return $this->morphTo();
     }
 
+    protected $appends = ['purchase'];
+
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable');
@@ -106,6 +108,12 @@ class Payment extends Model
         'date' => 'date:Y-m-d'
     ];
 
+    public function getPurchaseAttribute()
+    {
+        return $this->paymentable instanceof Purchase
+            ? $this->paymentable
+            : null;
+    }
 
     // public function getStatusAttribute()
     // {
