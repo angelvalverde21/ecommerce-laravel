@@ -57,7 +57,7 @@ class User extends Authenticatable implements OAuthenticatable
             'password' => 'hashed',
         ];
     }
-    
+
     public function addresses()
     {
         return $this->morphMany(Address::class, 'addressable');
@@ -68,7 +68,8 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->belongsToMany(Store::class);
     }
 
-    public function suppliers(){
+    public function suppliers()
+    {
         return $this->hasMany(Supplier::class);
     }
 
@@ -97,7 +98,13 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->hasOne(Supplier::class);
     }
 
-    public function payments(){
+    public function payments()
+    {
         return $this->hasMany(Payment::class);
+    }
+
+    public function purchases()
+    {
+        return $this->morphMany(Purchase::class, 'purchaseable');
     }
 }

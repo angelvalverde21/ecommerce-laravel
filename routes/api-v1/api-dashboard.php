@@ -361,6 +361,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 Route::get('/', [EmployeePaymentDashboardController::class, 'index']); //Listar
                 Route::post('/', [EmployeePaymentDashboardController::class, 'store']); //create
+                Route::post('/search', [EmployeePaymentDashboardController::class, 'search']); //create
 
                 Route::prefix('{payment_id}')->group(function () {
 

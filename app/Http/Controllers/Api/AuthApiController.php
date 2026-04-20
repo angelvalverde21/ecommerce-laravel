@@ -63,6 +63,7 @@ class AuthApiController extends Controller
 
             Log::info("------------- Inicio de sesion correcto --------------------");
             $user = Auth::user(); // Obtener el usuario autenticado
+            $user->load('employee');
             Log::info($user);
 
             //como todo fue correcto y se paso las validaciones entonces creamos el token, ojo las lineas rojas es una alerta
@@ -96,6 +97,7 @@ class AuthApiController extends Controller
 
                     $user_data['id'] = $user->id;
                     $user_data['name'] = $user->name;
+                    $user_data['employee'] = $user->employee;
                     $user_data['email'] = $user->email;
                     $user_data['phone'] = $user->phone;
                     $user_data['roles'] = $user->getRoleNames();
@@ -119,6 +121,7 @@ class AuthApiController extends Controller
                             'message' => 'Inicio de sesion correcto',
                             'data' => $data
                         ]);
+
                     } catch (\Throwable $th) {
                         //throw $th;
                         return responseError($th, "El usuario no pertenece a la tienda en linea");

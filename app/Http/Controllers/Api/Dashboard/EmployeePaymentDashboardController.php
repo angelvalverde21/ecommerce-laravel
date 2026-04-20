@@ -7,6 +7,8 @@ use App\Models\Purchase;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class EmployeePaymentDashboardController extends Controller
 {
@@ -15,23 +17,90 @@ class EmployeePaymentDashboardController extends Controller
      */
     public function index(Store $store, $employee_id)
     {
-        $employee = $store->employees()->findOrFail($employee_id);
 
-        return $employee->user
-            ->payments()->with(
-                [
-                    'images',
-                    'gateway',
-                    'paymentable' => function (MorphTo $morphTo) {
-                        $morphTo->morphWith([
-                            Purchase::class => ['items'],
-                        ]);
-                    }
-                ]
-            )
-            ->latest()
-            ->paginate(15);
+        $employee = $store->employees()
+            ->with('user')
+            ->findOrFail($employee_id);
+
+        $payments = $employee->user
+            ->payments()
+            ->with(['images', 'gateway'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy(function ($payment) {
+                return Str::plural(
+                    strtolower(class_basename($payment->paymentable_type)) . '_payments'
+                );
+            });
+
+        return responseOk($payments, "Pagos del empleado obtenidos correctamente.");
     }
+
+    public function search(Store $store, $employee_id, Request $request)
+    {
+        $validated = $request->validate([
+            'search'     => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date'   => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $search    = trim($validated['search'] ?? '');
+        $startDate = $validated['start_date'] ?? null;
+        $endDate   = $validated['end_date'] ?? null;
+
+        $employee = $store->employees()
+            ->with('user')
+            ->findOrFail($employee_id);
+
+        $query = $employee->user
+            ->payments()
+            ->with(['images', 'gateway']);
+
+        // 👉 Filtro por búsqueda SOLO si hay texto
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('comment', 'like', "%{$search}%");
+                // ->orWhere('description', 'like', "%{$search}%");
+            });
+        } else {
+            Log::info("Búsqueda sin término, solo se aplicará filtro por fechas (si existe) para el store ID: {$store->id}");
+        }
+
+        // 👉 Filtro por fechas (independiente del search)
+        if ($startDate && $endDate) {
+            $query->whereBetween('created_at', [
+                $startDate . ' 00:00:00',
+                $endDate   . ' 23:59:59'
+            ]);
+        }
+
+        $payments = $query->get()->groupBy(function ($payment) {
+            return Str::plural(
+                strtolower(class_basename($payment->paymentable_type)) . '_payments'
+            );
+        });
+
+        return responseOk(
+            $payments,
+            "Pagos del empleado obtenidos correctamente"
+        );
+    }
+
+    // return $employee->user
+    //     ->payments()->with(
+    //         [
+    //             'images',
+    //             'gateway',
+    //             'paymentable' => function (MorphTo $morphTo) {
+    //                 $morphTo->morphWith([
+    //                     Purchase::class => ['items'],
+    //                 ]);
+    //             }
+    //         ]
+    //     )
+    //     ->latest()
+    //     ->paginate(15);
+
     /**
      * Show the form for creating a new resource.
      */
