@@ -95,19 +95,19 @@ class KardexDashboardController extends Controller
 
                 $kardex = $parentModel->kardexes()->create([
                     'product_id' => $product->id,
+                    'store_id' => $store->id,
                     'variant_id' => $data['variant_id'],
                     'quantity'   => $data['quantity'],
                     'comment'    => $data['comment'],
                     'direction'  => $data['direction'],
                 ]);
 
-                $kardexes[] = $kardex->load(['variant.product', 'variant.optionValues']);
+                $kardexes[] = $kardex->load(['variant.product.image', 'variant.optionValues']);
             }
 
             DB::commit();
 
             return responseOk($kardexes, "Se ha procesado correctamente el kardex EN LOTE");
-
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -148,5 +148,12 @@ class KardexDashboardController extends Controller
     public function destroy(Store $store)
     {
         //
+    }
+
+    public function getVariants(Store $store, $variant_id)
+    {
+        $kardexes = $store->kardexes()->where('variant_id', $variant_id)->with(['variant.product.image', 'variant.optionValues'])->get();
+
+        return responseOk($kardexes, "Kardexes encontrados para el variant_id: $variant_id");
     }
 }

@@ -19,7 +19,16 @@ class InventoryDashboardController extends Controller
     {
         //
         return responseOk(
-            $store->inventories()->with('kardexes.variant.product', 'kardexes.variant.optionValues')->get(),
+            $store->inventories()->with(
+                [
+                    'kardexes.variant.product',
+                    'kardexes.variant.optionValues',
+
+
+                ]
+            )
+                ->withSum('kardexes as sum_quantity', 'quantity')
+                ->get(),
             'Inventarios del store ' . $store->name
         );
     }
@@ -95,13 +104,14 @@ class InventoryDashboardController extends Controller
                 $kardexes[] = $inventory->kardexes()->create([
                     'product_id' => $firstVariant->product->id,
                     'variant_id' => $variant['variant_id'],
+                    'store_id'   => $store->id,
                     'quantity'   => $variant['quantity'], // Se inicia con 0 porque el kardex se actualizará cuando se agreguen o retiren productos del inventario
                     'comment'    => $name,
                     'direction'  => 'in',
                 ]);
 
                 // $batchItem->load(['variant.product', 'variant.optionValues']); //
-                
+
             }
 
             DB::commit();
@@ -110,7 +120,6 @@ class InventoryDashboardController extends Controller
                 $inventory->load('kardexes.variant.product', 'kardexes.variant.optionValues'),
                 'Se agregaron correctamente los variants al inventario ' . $inventory->name
             );
-
         } catch (\Throwable $th) {
 
             Log::info($th);

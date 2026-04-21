@@ -166,4 +166,9 @@ class Store extends Model
     public function payments(){
         return $this->hasMany(Payment::class);
     }
+
+    public function kardexes(){
+        return $this->hasMany(Kardex::class);
+    }
+
 }

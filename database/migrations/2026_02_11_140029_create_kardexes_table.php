@@ -15,6 +15,11 @@ return new class extends Migration
 
             $table->id();
 
+            $table->foreignId('store_id')
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete();
+
             $table->foreignId('product_id')
                 ->nullable()
                 ->constrained()

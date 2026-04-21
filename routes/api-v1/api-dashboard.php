@@ -44,6 +44,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Dashboard\BatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeAttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeePaymentDashboardController;
+use App\Http\Controllers\Api\Dashboard\InventoryBatchDashboardController;
 
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
@@ -229,7 +230,11 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::delete('/', [InventoryDashboardController::class, 'destroy']); //borrar
 
         });
+
     });
+
+
+
 
     // Route::prefix('productions')->group(function () {
 
@@ -678,6 +683,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::get('/', [KardexDashboardController::class, 'index']); //Listar
         Route::post('/', [KardexDashboardController::class, 'store']); //create
         Route::post('/batch', [KardexDashboardController::class, 'batch']); //create
+        Route::get('/variants/{variant_id?}', [KardexDashboardController::class, 'getVariants']); //buscar
 
         Route::prefix('{kardex_id}')->group(function () {
 
