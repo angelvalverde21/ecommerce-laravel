@@ -14,7 +14,10 @@ class EmployeeAttendanceDashboardController extends Controller
     public function index(Store $store, $employee_id)
     {   
         //
-        return responseOk($store->attendances()->where('employee_id', $employee_id)->get(), 'Asistencias obtenidas correctamente desde EmployeeAttendanceDashboardController');
+
+        return responseOk($store->employees()->findOrFail($employee_id)->attendances()->with('employee')->get(), 'Asistencias obtenidas correctamente desde EmployeeAttendanceDashboardController');
+
+        // return responseOk($store->attendances()->where('employee_id', $employee_id)->get(), 'Asistencias obtenidas correctamente desde EmployeeAttendanceDashboardController');
     }
 
     /**
