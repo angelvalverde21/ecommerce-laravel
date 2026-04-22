@@ -28,9 +28,6 @@ class AttendanceDashboardController extends Controller
     public function upload(Store $store, Request $request)
     {
         //
-
-
-
         $request->validate([
             'file' => 'required|file|mimes:csv,txt'
         ]);
@@ -201,15 +198,19 @@ class AttendanceDashboardController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Store $store, $attendance_id, Request $request)
     {
-        //
+        $attendance = $store->attendances()->findOrFail($attendance_id);
+        $attendance->update($request->all());
+
+        return responseOk($attendance, 'Asistencia actualizada correctamente');
+
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Store $store, $attendance_id)
     {
         //
     }
