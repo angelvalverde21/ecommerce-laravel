@@ -45,6 +45,7 @@ use App\Http\Controllers\Api\Dashboard\BatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeAttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeePaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\InventoryBatchDashboardController;
+use App\Http\Controllers\Api\Dashboard\LocationDashboardController;
 
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
@@ -230,10 +231,22 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::delete('/', [InventoryDashboardController::class, 'destroy']); //borrar
 
         });
-
     });
 
 
+    Route::prefix('locations')->group(function () {
+
+        Route::get('/', [LocationDashboardController::class, 'index']); //Listar
+        Route::post('/', [LocationDashboardController::class, 'store']); //create
+
+        Route::prefix('{location_id}')->group(function () {
+
+            Route::get('/', [LocationDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [LocationDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [LocationDashboardController::class, 'destroy']); //borrar
+
+        });
+    });
 
 
     // Route::prefix('productions')->group(function () {
@@ -352,7 +365,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
                 Route::get('/', [EmployeeAttendanceDashboardController::class, 'index']); //Listar
                 Route::post('/', [EmployeeAttendanceDashboardController::class, 'store']); //create
                 Route::post('/upload', [EmployeeAttendanceDashboardController::class, 'upload']); //create
-
+                Route::post('/search', [EmployeeAttendanceDashboardController::class, 'search']); //buscar
                 Route::prefix('{attendance_id}')->group(function () {
 
                     Route::get('/', [EmployeeAttendanceDashboardController::class, 'show']); //show o mostrar por id

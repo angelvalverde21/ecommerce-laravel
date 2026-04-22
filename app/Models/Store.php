@@ -171,4 +171,9 @@ class Store extends Model
         return $this->hasMany(Kardex::class);
     }
 
+    public function locations()
+    {
+        return $this->hasMany(Location::class);
+    }
+
 }
