@@ -59,19 +59,31 @@
                     //app\Http\Controllers\Api\Dashboard\BarcodeDashboardController.php
                 @endphp
 
-                <div style="text-align:center; margin-top:5px; margin-left:5px; margin-right:5px;">
-                    <img style="width: 100%; height: auto;"
-                        src="data:image/png;base64,{{ \Milon\Barcode\Facades\DNS1DFacade::getBarcodePNG(
-                            strtoupper($variant['id']),
-                            'C39',
-                            1.5, // más ancho
-                            30, // más alto
-                        ) }}">
+                <div
+                    style="
+                        width: 26mm;
+                        height: 8mm;
+                        padding: 1mm;
+                        box-sizing: border-box;
+                        text-align: center;
+                    ">
+
+                    <img src="data:image/png;base64,{{ \Milon\Barcode\Facades\DNS1DFacade::getBarcodePNG(strtoupper((string) $variant['id']), 'C39', 2, 40) }}"
+                        style="
+                            width: 100%;
+                            height: 6mm;
+                            object-fit: contain;
+                        ">
+
+                    <div style="font-size: 8px; margin-top: 1mm;">
+                        {{ strtoupper($variant['id']) }}-{{ $variant['sku'] }}
+                    </div>
+
                 </div>
 
-                <ul>
+                {{-- <ul>
                     <li>{{ strtoupper($variant['id']) }}-{{ $variant['sku'] }}</li>
-                </ul>
+                </ul> --}}
             </div>
 
             @if ($current < $total)
