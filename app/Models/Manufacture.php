@@ -96,6 +96,8 @@ class Manufacture extends Model
 
             // variantes
             ->withSum('manufactureVariants as sum_variants', 'quantity')
+            ->withSum('payments as sum_payments', 'amount')
+            ->withCount('payments as count_payments')
             ->withCount('manufactureVariants as count_variants')
 
             // kardex

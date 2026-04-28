@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\Dashboard\EmployeeAttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeePaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\InventoryBatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\LocationDashboardController;
+use App\Http\Controllers\Api\Dashboard\ManufacturePaymentDashboardController;
 
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
@@ -215,6 +216,22 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 });
             });
+
+            Route::prefix('payments')->group(function () {
+
+                Route::get('/', [ManufacturePaymentDashboardController::class, 'index']); //Listar
+                Route::post('/', [ManufacturePaymentDashboardController::class, 'store']); //create
+
+                Route::prefix('{payment_id}')->group(function () {
+
+                    Route::get('/', [ManufacturePaymentDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [ManufacturePaymentDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [ManufacturePaymentDashboardController::class, 'destroy']); //borrar
+
+                });
+            });
+
+
         });
     });
 

@@ -103,21 +103,35 @@ class ProductShopifyController extends Controller
     public function search(Store $store, Request $request, $search = "")
     {
 
-        if (trim($search) === '') {
-            return $this->index($request);
+        $search = $request->input('search', '');
+
+        if (trim($search) === '' || $search === null) {
+            Log::info("se ejectutó la búsqueda sin término de búsqueda, se devolverá el listado completo de Suppliers para el store con id: {$store->id}");
+            return $this->shopifyProductService->getProducts();
         }
 
-        try {
+        $validated = $request->validate([
+            'search'     => 'required|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date'   => 'nullable|date|after_or_equal:start_date',
 
-            $products = $this->shopifyProductService->getSearchProducts($search);
+        ]);
 
-            return responseOk($products, "Se ha procesado correctamente el listado de productos de shopify");
-        } catch (\Throwable $th) {
-            //throw $th;
-            Log::info($th);
+        $search     = $validated['search'];
+        $startDate  = $validated['start_date'] ?? null;
+        $endDate    = $validated['end_date'] ?? null;
 
-            return responseError($th, "Error al listar los resultados de busqueda de productos.... ");
-        }
+        $query = $this->shopifyProductService->getSearchProducts($search);
+
+
+        // if ($startDate && $endDate) {
+        //     $query->whereBetween('products.created_at', [
+        //         $startDate . ' 00:00:00',
+        //         $endDate   . ' 23:59:59'
+        //     ]);
+        // }
+
+        return responseOk($query, "Se ha procesado correctamente el resultado de la búsqueda de productos con el término: {$search}");
     }
 
     /**
@@ -139,6 +153,36 @@ class ProductShopifyController extends Controller
     }
 
     public function updatePrices(Store $store, Request $request)
+    {
+
+        Log::info("ok");
+
+        $products = $request->all();
+
+        foreach ($products as $product) {
+
+            if ($product['variants']) {
+
+                foreach ($product['variants'] as $v) {
+
+                    ShopifyVariant::where('id', $v['id'])->update([
+                        'price_etiqueta'    => $v['price_etiqueta'],
+                        'price_oferta'      => $v['price_oferta'],
+                        'price_sale'        => $v['price_sale'],
+                        'price_wholesaler'  => $v['price_wholesaler'],
+                        'price_live'        => $v['price_live'],
+                        'price_blackfriday' => $v['price_blackfriday'],
+                        'price_feria'       => $v['price_feria'],
+                        'updated_at'        => now(),
+                    ]);
+                }
+
+            }
+
+        }
+    }
+
+    public function updatePrices__back(Store $store, Request $request)
     {
         $variants = $request->all();
 

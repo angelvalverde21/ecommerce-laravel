@@ -20,11 +20,7 @@ class GatewayDashboardController extends Controller
         //
         try {
 
-            $gateways = Cache::remember(
-                "store:{$store->id}:gateways",
-                now()->addMinutes(10080),
-                fn() => $store->gateways
-            );
+            $gateways = $store->gateways;
 
             return responseOk($gateways, "Se ha procesado correctamente");
 

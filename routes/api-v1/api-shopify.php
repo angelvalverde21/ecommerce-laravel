@@ -42,8 +42,9 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
         Route::get('/active', [ProductShopifyController::class, 'active']); //Listar
         Route::get('/archived', [ProductShopifyController::class, 'archived']); //Listar
 
-        Route::get('/search/{search?}', [ProductShopifyController::class, 'search']); //Listar
+        // Route::get('/search/{search?}', [ProductShopifyController::class, 'search']); //Listar
 
+        Route::post('/search', [ProductShopifyController::class, 'search']); //Listar
 
         Route::prefix('sync')->group(function () {
 
@@ -54,6 +55,7 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
 
         });
 
+        // Route::put('/prices/massive', [ProductShopifyController::class, 'updatePriceMassive']); //actualizar
         Route::put('/prices', [ProductShopifyController::class, 'updatePrices']); //actualizar
         Route::put('/price', [ProductShopifyController::class, 'updatePrice']); //actualizar
 
