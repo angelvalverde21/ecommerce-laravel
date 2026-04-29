@@ -19,6 +19,7 @@ return new class extends Migration
 
             // Campos del empleado
             $table->decimal('salary', 10, 2)->nullable();
+            $table->enum('type', ['fulltime', 'partime'])->nullable();
             $table->tinyInteger('comission')->nullable();
             // $table->date('date_entry')->nullable();
             $table->string('tag_sales')->nullable(); //telefono de trabajo (del empleado)
