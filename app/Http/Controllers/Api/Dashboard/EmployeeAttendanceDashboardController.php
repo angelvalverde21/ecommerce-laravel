@@ -13,6 +13,47 @@ class EmployeeAttendanceDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
+
+    function countSundays(string $fechaInicio, string $fechaFin): int
+    {
+        $inicio = Carbon::parse($fechaInicio);
+        $fin = Carbon::parse($fechaFin);
+
+        $domingos = 0;
+
+        while ($inicio->lte($fin)) {
+
+            if ($inicio->dayOfWeek === Carbon::SUNDAY) {
+                $domingos++;
+            }
+
+            $inicio->addDay();
+        }
+
+        return $domingos;
+    }
+
+    function contarDias(string $fechaInicio, string $fechaFin): int
+    {
+        $inicio = Carbon::parse($fechaInicio);
+        $fin = Carbon::parse($fechaFin);
+
+        // +1 porque queremos incluir ambos extremos
+        return $inicio->diffInDays($fin) + 1;
+    }
+
+
+    function days_works(string $fechaInicio, string $fechaFin): int
+    { 
+
+        $days_period = $this->contarDias($fechaInicio, $fechaFin);
+
+        $dias_laborables = $days_period - $this->countSundays($fechaInicio, $fechaFin);
+
+        return $dias_laborables;
+
+    }
+
     public function index(Store $store, $employee_id)
     {
         $employee = $store->employees()
@@ -27,19 +68,28 @@ class EmployeeAttendanceDashboardController extends Controller
         );
     }
 
+    public function hour_works(string $fechaInicio, string $fechaFin): int
+    {
+
+        return $this->days_works($fechaInicio, $fechaFin) * 8; // se multiplica por 8 se descuenta una hora por almuerzo
+
+    }
+
     public function search(Store $store, $employee_id, Request $request)
     {
+
         $start = $request->input('start_date');
         $end   = $request->input('end_date');
-
+   
         $employee = $store->employees()
-            ->with(['attendances' => function ($query) use ($start, $end) {
-
-                if ($start && $end) {
-                    $query->whereBetween('date', [$start, $end]);
-                }
-            }, 'attendances.employee'])
-            ->findOrFail($employee_id);
+        ->with(['attendances' => function ($query) use ($start, $end) {
+            
+            if ($start && $end) {
+                $query->whereBetween('date', [$start, $end]);
+            }
+        }, 'attendances.employee'])
+        ->findOrFail($employee_id);
+    
 
         $data = $this->buildAttendances($employee);
 
@@ -47,6 +97,7 @@ class EmployeeAttendanceDashboardController extends Controller
             $data,
             'Asistencias filtradas correctamente'
         );
+
     }
 
     /**
@@ -130,6 +181,7 @@ class EmployeeAttendanceDashboardController extends Controller
             if ($attendances->has($key)) {
 
                 $attendance = $attendances[$key];
+
                 $attendance->missing = false;
 
                 $completeAttendances[] = $attendance;
