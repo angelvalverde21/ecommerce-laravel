@@ -63,7 +63,7 @@
                     style="
                         width: 26mm;
                         height: 8mm;
-                        padding: 1mm 0 1mm 5mm;
+                        padding: 1mm 0 1mm 3mm;
                         box-sizing: border-box;
                         text-align: center;
                     ">
