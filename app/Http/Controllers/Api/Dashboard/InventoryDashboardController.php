@@ -23,11 +23,10 @@ class InventoryDashboardController extends Controller
                 [
                     'kardexes.variant.product',
                     'kardexes.variant.optionValues',
-
-
                 ]
             )
                 ->withSum('kardexes as sum_quantity', 'quantity')
+                ->orderByDesc('sum_quantity')
                 ->get(),
             'Inventarios del store ' . $store->name
         );
