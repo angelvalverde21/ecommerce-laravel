@@ -4,55 +4,65 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Services\Dashboard\Employee\EmployeeAttendanceService;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
-use Carbon\CarbonPeriod;
+
 
 class EmployeeAttendanceDashboardController extends Controller
 {
+
+
+    protected EmployeeAttendanceService $employeeAttendanceService;
+
+    public function __construct()
+    {
+        // Pasamos el modelo que vamos a usar
+        $this->employeeAttendanceService = new EmployeeAttendanceService();
+    }
+
     /**
      * Display a listing of the resource.
      */
 
-    function countSundays(string $fechaInicio, string $fechaFin): int
-    {
-        $inicio = Carbon::parse($fechaInicio);
-        $fin = Carbon::parse($fechaFin);
+    // function countSundays(string $fechaInicio, string $fechaFin): int
+    // {
+    //     $inicio = Carbon::parse($fechaInicio);
+    //     $fin = Carbon::parse($fechaFin);
 
-        $domingos = 0;
+    //     $domingos = 0;
 
-        while ($inicio->lte($fin)) {
+    //     while ($inicio->lte($fin)) {
 
-            if ($inicio->dayOfWeek === Carbon::SUNDAY) {
-                $domingos++;
-            }
+    //         if ($inicio->dayOfWeek === Carbon::SUNDAY) {
+    //             $domingos++;
+    //         }
 
-            $inicio->addDay();
-        }
+    //         $inicio->addDay();
+    //     }
 
-        return $domingos;
-    }
+    //     return $domingos;
+    // }
 
-    function contarDias(string $fechaInicio, string $fechaFin): int
-    {
-        $inicio = Carbon::parse($fechaInicio);
-        $fin = Carbon::parse($fechaFin);
+    // function contarDias(string $fechaInicio, string $fechaFin): int
+    // {
+    //     $inicio = Carbon::parse($fechaInicio);
+    //     $fin = Carbon::parse($fechaFin);
 
-        // +1 porque queremos incluir ambos extremos
-        return $inicio->diffInDays($fin) + 1;
-    }
+    //     // +1 porque queremos incluir ambos extremos
+    //     return $inicio->diffInDays($fin) + 1;
+    // }
 
 
-    function days_works(string $fechaInicio, string $fechaFin): int
-    { 
+    // function days_works(string $fechaInicio, string $fechaFin): int
+    // { 
 
-        $days_period = $this->contarDias($fechaInicio, $fechaFin);
+    //     $days_period = $this->contarDias($fechaInicio, $fechaFin);
 
-        $dias_laborables = $days_period - $this->countSundays($fechaInicio, $fechaFin);
+    //     $dias_laborables = $days_period - $this->countSundays($fechaInicio, $fechaFin);
 
-        return $dias_laborables;
+    //     return $dias_laborables;
 
-    }
+    // }
 
     public function index(Store $store, $employee_id)
     {
@@ -60,7 +70,7 @@ class EmployeeAttendanceDashboardController extends Controller
             ->with('attendances.employee')
             ->findOrFail($employee_id);
 
-        $data = $this->buildAttendances($employee);
+        $data = $this->employeeAttendanceService->buildAttendances($employee);
 
         return responseOk(
             $data,
@@ -68,12 +78,12 @@ class EmployeeAttendanceDashboardController extends Controller
         );
     }
 
-    public function hour_works(string $fechaInicio, string $fechaFin): int
-    {
+    // public function hour_works(string $fechaInicio, string $fechaFin): int
+    // {
 
-        return $this->days_works($fechaInicio, $fechaFin) * 8; // se multiplica por 8 se descuenta una hora por almuerzo
+    //     return $this->days_works($fechaInicio, $fechaFin) * 8; // se multiplica por 8 se descuenta una hora por almuerzo
 
-    }
+    // }
 
     public function search(Store $store, $employee_id, Request $request)
     {
@@ -91,7 +101,7 @@ class EmployeeAttendanceDashboardController extends Controller
         ->findOrFail($employee_id);
     
 
-        $data = $this->buildAttendances($employee);
+        $data = $this->employeeAttendanceService->buildAttendances($employee);
 
         return responseOk(
             $data,
@@ -148,57 +158,5 @@ class EmployeeAttendanceDashboardController extends Controller
         //
     }
 
-    private function buildAttendances($employee)
-    {
-        $attendances = $employee->attendances
-            ->keyBy(function ($attendance) {
-                return Carbon::parse($attendance->date)->format('Y-m-d');
-            });
 
-        if ($employee->attendances->isEmpty()) {
-            return collect([]);
-        }
-
-        $dates = $employee->attendances
-            ->pluck('date')
-            ->map(fn($d) => Carbon::parse($d));
-
-        $start = $dates->min();
-        $end   = $dates->max();
-
-        $period = CarbonPeriod::create($start, $end);
-
-        $completeAttendances = [];
-
-        foreach ($period as $date) {
-
-            if ($date->dayOfWeek == Carbon::SUNDAY) {
-                continue;
-            }
-
-            $key = $date->format('Y-m-d');
-
-            if ($attendances->has($key)) {
-
-                $attendance = $attendances[$key];
-
-                $attendance->missing = false;
-
-                $completeAttendances[] = $attendance;
-            } else {
-
-                $completeAttendances[] = [
-                    'id' => null,
-                    'employee_id' => $employee->id,
-                    'employee' => $employee->load('user'),
-                    'check_in' => null,
-                    'check_out' => null,
-                    'date' => $key,
-                    'missing' => true
-                ];
-            }
-        }
-
-        return collect($completeAttendances);
-    }
 }
