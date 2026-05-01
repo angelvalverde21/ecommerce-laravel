@@ -88,25 +88,7 @@ class EmployeeAttendanceDashboardController extends Controller
     public function search(Store $store, $employee_id, Request $request)
     {
 
-        $start = $request->input('start_date');
-        $end   = $request->input('end_date');
-   
-        $employee = $store->employees()
-        ->with(['attendances' => function ($query) use ($start, $end) {
-            
-            if ($start && $end) {
-                $query->whereBetween('date', [$start, $end]);
-            }
-        }, 'attendances.employee'])
-        ->findOrFail($employee_id);
-    
-
-        $data = $this->employeeAttendanceService->buildAttendances($employee);
-
-        return responseOk(
-            $data,
-            'Asistencias filtradas correctamente'
-        );
+        return responseOk($this->employeeAttendanceService->search($store, $employee_id, $request), "Registros de asistencia obtenidos correctamente");
 
     }
 

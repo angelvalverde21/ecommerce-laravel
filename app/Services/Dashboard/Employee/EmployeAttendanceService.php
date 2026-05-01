@@ -86,9 +86,6 @@ class EmployeeAttendanceService
 
         $data = $this->buildAttendances($employee);
 
-        return responseOk(
-            $data,
-            'Asistencias filtradas correctamente'
-        );
+        return $data;
     }
 }
