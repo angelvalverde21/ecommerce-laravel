@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthApiController;
 use App\Http\Controllers\Api\public\StorePublicController;
 use App\Http\Controllers\Api\public\WebPublicController;
+use App\Http\Controllers\Api\public\YapePublicController;
 use App\Http\Controllers\Api\Shopify\App\AppShopifyController;
 // use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -27,6 +28,8 @@ use App\Http\Middleware\VerifyStore;
 Route::prefix('v1/public')->middleware('api')->group(function () {
 
     Route::post('/register', [StorePublicController::class, 'register']);
+
+    Route::post('/yape', [YapePublicController::class, 'store']);
 
     Route::prefix('{store}')->middleware([VerifyStore::class])->group(function () {
 
