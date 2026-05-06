@@ -29,10 +29,10 @@ Route::prefix('v1/public')->middleware('api')->group(function () {
 
     Route::post('/register', [StorePublicController::class, 'register']);
 
-    Route::post('/yape', [YapePublicController::class, 'store']);
-
+    
     Route::prefix('{store}')->middleware([VerifyStore::class])->group(function () {
-
+        
+        Route::post('/yape', [YapePublicController::class, 'store']);
         Route::get('/', [StorePublicController::class, 'show']);
         Route::post('/login', [AuthApiController::class, 'login']);
 
