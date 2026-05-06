@@ -19,7 +19,7 @@ class YapePublicController extends Controller
         // 🧹 limpiar datos
         $nombre = $request->nombre;
         $monto = floatval($request->monto);
-
+        $monto = round(floatval($request->monto), 2);
         // 🧠 guardar (ejemplo)
         Log::info('YAPE:', [
             'nombre' => $nombre,
