@@ -31,6 +31,8 @@ return new class extends Migration
                 'paypal',
             ])->default('cash');
 
+            $table->char('hash', 64)->unique();
+            
             $table->enum('status', [
                 'unpaid',
                 'pending',
