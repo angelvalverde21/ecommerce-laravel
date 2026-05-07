@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\Dashboard\EmployeePaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\InventoryBatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\LocationDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufacturePaymentDashboardController;
+use App\Http\Controllers\Api\Dashboard\YapeDashboardController;
 
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
@@ -752,5 +753,20 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::delete('/', [BarcodeDashboardController::class, 'destroy']); //borrar
 
         });
+    });
+
+    Route::prefix('yapes')->group(function () {
+    
+        Route::get('/', [YapeDashboardController::class, 'index']); //Listar
+        Route::post('/', [YapeDashboardController::class, 'store']); //create
+    
+        Route::prefix('{yape_id}')->group(function () {
+    
+            Route::get('/', [YapeDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [YapeDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [YapeDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 });
