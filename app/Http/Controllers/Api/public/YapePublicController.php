@@ -18,6 +18,8 @@ class YapePublicController extends Controller
         //     return response()->json(['error' => 'No autorizado'], 401);
         // }
 
+        Log::info($request);
+
         // 🧹 limpiar datos
         $nombre = $request->nombre;
         $monto = floatval($request->monto);
