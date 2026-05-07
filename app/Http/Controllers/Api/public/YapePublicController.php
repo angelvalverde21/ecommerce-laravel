@@ -19,6 +19,8 @@ class YapePublicController extends Controller
         //     return response()->json(['error' => 'Unauthorized'], 401);
         // }
 
+        Log::info($request);
+
         $request->validate([
             'raw_text' => 'required|string',
             'timestamp' => 'required|numeric',
