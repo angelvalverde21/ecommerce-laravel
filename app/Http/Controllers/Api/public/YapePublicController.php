@@ -1,90 +1,94 @@
-<?php
-
-namespace App\Http\Controllers\Api\public;
-
-use App\Http\Controllers\Controller;
-use App\Models\Store;
-use App\Models\Yape;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Yape;
+use App\Models\Store;
 
-class YapePublicController extends Controller
+public function store(Store $store, Request $request)
 {
-    //
-    public function store(Store $store, Request $request)
-    {
-        // 🔐 Validar API KEY
-        // if ($request->header('X-API-KEY') !== config('app.yape_api_key')) {
-        //     return response()->json(['error' => 'Unauthorized'], 401);
-        // }
+    // 🔐 Validar API KEY (si quieres activarlo)
+    /*
+    if ($request->header('X-API-KEY') !== config('app.yape_api_key')) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+    */
 
-        Log::info($request);
+    Log::info('Yape raw request', $request->all());
 
-        $request->validate([
-            'raw_text' => 'required|string',
-            'timestamp' => 'required|numeric',
-        ]);
+    $request->validate([
+        'raw_text'  => 'required|string',
+        'timestamp' => 'required|numeric',
+    ]);
 
-        $raw = $request->raw_text;
+    $raw = trim($request->raw_text);
 
-        // 🔐 Generar hash único
-        $hash = sha1($raw . $request->timestamp);
+    // 🔐 Generar hash fuerte
+    $hash = hash('sha256', $raw . $request->timestamp);
 
-        // 🚫 Evitar duplicados
-        if (Yape::where('hash', $hash)->exists()) {
-            return response()->json(['status' => 'duplicate']);
+    // 🚫 Evitar duplicados (a nivel financiero)
+    if (Yape::where('hash', $hash)->exists()) {
+        Log::info('Yape duplicado detectado', ['hash' => $hash]);
+        return response()->json(['status' => 'duplicate']);
+    }
+
+    // 🎯 Procesar texto (más robusto)
+    $monto = null;
+    $nombre = null;
+
+    // Validación mínima inteligente
+    if (str_contains($raw, 'Yape!') && str_contains($raw, 'S/')) {
+
+        // Extraer monto (más robusto)
+        preg_match('/S\/\s?(\d+(?:\.\d+)?)/', $raw, $montoMatch);
+        $monto = isset($montoMatch[1]) ? (float) $montoMatch[1] : null;
+
+        // Extraer nombre
+        preg_match('/Yape!\s(.+?)\ste envió/i', $raw, $nombreMatch);
+        $nombre = $nombreMatch[1] ?? null;
+
+        // Normalizar nombre
+        if ($nombre) {
+            $nombre = trim(preg_replace('/\s+/', ' ', $nombre));
         }
+    }
 
-        // 🎯 Procesar texto
-        $monto = null;
-        $nombre = null;
+    if (!$monto || $monto <= 0) {
+        Log::warning('Yape sin monto válido', ['raw' => $raw]);
+        return response()->json(['status' => 'ignored']);
+    }
 
-        if (str_contains($raw, 'te envió un pago')) {
-
-            preg_match('/S\/\s?(\d+(\.\d+)?)/', $raw, $montoMatch);
-            $monto = $montoMatch[1] ?? null;
-
-            preg_match('/Yape!\s(.+?)\ste envió/', $raw, $nombreMatch);
-            $nombre = $nombreMatch[1] ?? null;
-        }
-
+    try {
 
         DB::beginTransaction();
 
-        try {
+        Yape::create([
+            'amount'    => $monto,
+            'comment'   => $raw,
+            'hash'      => $hash,
+            'status'    => 'paid',
+            'date'      => now(),
+            'direction' => 'in',
+            'store_id'  => $store->id,
+        ]);
 
-            // 💾 Guardar notificación cruda
+        DB::commit();
 
-            // 💰 Crear registro financiero REAL
-            if ($monto) {
+    } catch (\Exception $e) {
 
-                Yape::create([
-                    'amount'    => $monto,
-                    'comment'   => $raw, // mejor guardar raw_text aquí
-                    'status'    => 'paid',
-                    'date'      => now(),
-                    'direction' => 'in',
-                    'store_id'  => $store->id,
-                ]);
-            }
+        DB::rollBack();
 
-            DB::commit();
-
-        } catch (\Exception $e) {
-
-            DB::rollBack();
-
-            return response()->json([
-                'error' => 'Server error',
-                'message' => $e->getMessage()
-            ], 500);
-        }
+        Log::error('Error guardando Yape', [
+            'error' => $e->getMessage()
+        ]);
 
         return response()->json([
-            'status' => 'stored',
-            'amount' => $monto,
-            'customer' => $nombre
-        ]);
+            'error' => 'Server error'
+        ], 500);
     }
+
+    return response()->json([
+        'status'   => 'stored',
+        'amount'   => $monto,
+        'customer' => $nombre,
+    ]);
 }
