@@ -32,6 +32,7 @@ return new class extends Migration
             ])->default('cash');
 
             $table->char('hash', 64)->unique();
+            $table->string('reference_code', 10)->nullable();
             
             $table->enum('status', [
                 'unpaid',

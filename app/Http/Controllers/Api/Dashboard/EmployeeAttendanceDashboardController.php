@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 class EmployeeAttendanceDashboardController extends Controller
 {
 
-
     protected EmployeeAttendanceService $employeeAttendanceService;
 
     public function __construct()
