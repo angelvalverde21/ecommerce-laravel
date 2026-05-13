@@ -21,7 +21,20 @@ return new class extends Migration
             $table->decimal('salary', 10, 2)->nullable();
             $table->enum('type', ['fulltime', 'partime'])->nullable();
             $table->tinyInteger('comission')->nullable();
-            // $table->date('date_entry')->nullable();
+
+            /* ---- */
+
+            $table->time('work_time_start')->default('09:00:00')->nullable(); //defecto
+            $table->time('work_time_end')->default('19:00:00')->nullable();
+            $table->integer('tolerance_minutes')->default(15); // opcional
+
+            /*
+            ALTER TABLE employees
+            ADD COLUMN work_time_start TIME NULL DEFAULT '09:00:00' AFTER comission,
+            ADD COLUMN work_time_end TIME NULL DEFAULT '19:00:00' AFTER work_time_start,
+            ADD COLUMN tolerance_minutes INT NOT NULL DEFAULT 10 AFTER work_time_end;
+            */
+
             $table->string('tag_sales')->nullable(); //telefono de trabajo (del empleado)
             $table->string('phone')->nullable(); //telefono de trabajo (del empleado)
             $table->timestamps();

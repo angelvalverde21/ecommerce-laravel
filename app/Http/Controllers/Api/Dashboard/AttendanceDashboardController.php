@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Store;
+use App\Services\Dashboard\Crud\AttendanceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -14,6 +15,14 @@ class AttendanceDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
+
+    protected AttendanceService $attendanceService;
+
+    public function __construct()
+    {
+        $this->attendanceService = new AttendanceService();
+    }
+
     public function index(Store $store)
     {
         //
@@ -25,138 +34,57 @@ class AttendanceDashboardController extends Controller
      * Show the form for upload a new un lote.
      */
 
+    // Función para guardar un usuario con validación
+
     public function upload(Store $store, Request $request)
     {
-        //
-        $request->validate([
-            'file' => 'required|file|mimes:csv,txt'
-        ]);
 
-        $file = $request->file('file');
+        try {
+            
+            $this->attendanceService->upload($store, $request);
 
-        $path = $file->store('uploads');
+            return responseOk([], 'Asistencias subidas correctamente');
 
-        // return response()->json([
-        //     'path' => $path
-        // ]);
+        } catch (\Throwable $th) {
 
-        //Leyendo el archivo subido recientemente
+            Log::info($th);
 
-        $path = storage_path('app/private/' . $path);
+            return responseError("Ha ocurrido un error al subir el archivo");
 
-        $handle = fopen($path, 'r');
-
-        $rows = [];
-        $line = 0;
-
-        while (($data = fgetcsv($handle, 0, ';')) !== false) {
-
-            $line++;
-
-            if ($line <= 2) {
-                continue;
-            }
-
-            $dni = trim($data[1] ?? '');
-            $name = trim($data[2] ?? '');
-            $datetime = trim($data[3] ?? '');
-
-            // Ignorar filas vacías
-            if (!$dni || !$datetime) {
-                continue;
-            }
-
-            $rows[] = [
-                'dni' => $dni,
-                'name' => $name,
-                'datetime' => $datetime,
-            ];
         }
 
-        fclose($handle);
-
-        // foreach ($rows as $row) {
-        //     Log::info($row);
-        // }
-
-        $clean = [];
-
-        foreach ($rows as $record) {
-
-            $date = Carbon::createFromFormat('d/m/Y H:i', $record['datetime']);
-
-            $dni = $record['dni'];
-            $day = $date->format('Y-m-d');
-            $time = $date->format('H:i:s');
-
-            $key = $dni . '_' . $day;
-
-            if (!isset($clean[$key])) {
-                $clean[$key] = [
-                    'dni' => $dni,
-                    'name' => $record['name'],
-                    'date' => $day,
-                    'entry' => $time,
-                    'exit' => $time
-                ];
-            } else {
-
-                if ($time < $clean[$key]['entry']) {
-                    $clean[$key]['entry'] = $time;
-                }
-
-                if ($time > $clean[$key]['exit']) {
-                    $clean[$key]['exit'] = $time;
-                }
-            }
-        }
-
-        $result = array_values($clean);
-
-        Log::info($result);
-
-        foreach ($result as $record) {
-            $attendances[] = Attendance::create([
-                'store_id' => $store->id,
-                'employee_id' => $this->getEmployee($record['dni']),
-                'date' => $record['date'],
-                'check_in' => $record['entry'],
-                'check_out' => $record['exit'],
-            ]);
-        }
-
-        return responseOk($attendances, 'Asistencias subidas correctamente');
 
     }
 
-    public function getEmployee($param){
+    public function getEmployee(string $param): ?int
+    {
 
         switch ($param) {
             case '1':
                 //Ayin
                 return 3;
-            break;
+                break;
 
             case '2':
                 //Jenifer
                 return 2;
-            break;
+                break;
 
             case '5':
                 //Fiorella
                 return 6;
-            break;
+                break;
 
             case '76540879':
                 //Marina
                 return 4;
-            break;
+                break;
 
             case '42412498':
-                //Marina
-                return 4;
-            break;
-            
+                //Angel
+                return 1;
+                break;
+
             default:
                 return null;
                 break;
@@ -204,7 +132,6 @@ class AttendanceDashboardController extends Controller
         $attendance->update($request->all());
 
         return responseOk($attendance, 'Asistencia actualizada correctamente');
-
     }
 
     /**

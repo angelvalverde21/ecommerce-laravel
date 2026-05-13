@@ -18,6 +18,10 @@ return new class extends Migration
             $table->date('date');
             $table->time('check_in')->nullable();
             $table->time('check_out')->nullable();
+            // ALTER TABLE attendances
+            // ADD CONSTRAINT attendances_store_employee_date_unique
+            // UNIQUE (store_id, employee_id, date);
+            $table->unique(['store_id', 'employee_id', 'date']); //Esto es lo mismo que el sql de arriba
             $table->timestamps();
         });
     }

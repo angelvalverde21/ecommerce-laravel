@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Services\Dashboard\Crud\AttendanceService;
 use App\Services\Dashboard\Employee\EmployeeAttendanceService;
 use Illuminate\Http\Request;
 
@@ -12,11 +13,13 @@ class EmployeeAttendanceDashboardController extends Controller
 {
 
     protected EmployeeAttendanceService $employeeAttendanceService;
+    protected AttendanceService $attendanceService;
 
     public function __construct()
     {
         // Pasamos el modelo que vamos a usar
         $this->employeeAttendanceService = new EmployeeAttendanceService();
+        $this->attendanceService = new AttendanceService();
     }
 
     /**
@@ -63,13 +66,13 @@ class EmployeeAttendanceDashboardController extends Controller
 
     // }
 
-    public function index(Store $store, $employee_id)
+    public function index(Store $store, int $employee_id)
     {
         $employee = $store->employees()
             ->with('attendances.employee')
             ->findOrFail($employee_id);
 
-        $data = $this->employeeAttendanceService->buildAttendances($employee);
+        $data = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
 
         return responseOk(
             $data,

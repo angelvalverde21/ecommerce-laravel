@@ -3,6 +3,7 @@
 namespace App\Services\Dashboard\Employee;
 
 use App\Models\Store;
+use App\Services\Dashboard\Crud\AttendanceService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,58 +15,11 @@ use Illuminate\Http\Request;
 class EmployeeAttendanceService
 {
 
-    public function buildAttendances($employee)
+    protected AttendanceService $attendanceService;
+
+    public function __construct()
     {
-        $attendances = $employee->attendances
-            ->keyBy(function ($attendance) {
-                return Carbon::parse($attendance->date)->format('Y-m-d');
-            });
-
-        if ($employee->attendances->isEmpty()) {
-            return collect([]);
-        }
-
-        $dates = $employee->attendances
-            ->pluck('date')
-            ->map(fn($d) => Carbon::parse($d));
-
-        $start = $dates->min();
-        $end   = $dates->max();
-
-        $period = CarbonPeriod::create($start, $end);
-
-        $completeAttendances = [];
-
-        foreach ($period as $date) {
-
-            if ($date->dayOfWeek == Carbon::SUNDAY) {
-                continue;
-            }
-
-            $key = $date->format('Y-m-d');
-
-            if ($attendances->has($key)) {
-
-                $attendance = $attendances[$key];
-
-                $attendance->missing = false;
-
-                $completeAttendances[] = $attendance;
-            } else {
-
-                $completeAttendances[] = [
-                    'id' => null,
-                    'employee_id' => $employee->id,
-                    'employee' => $employee->load('user'),
-                    'check_in' => null,
-                    'check_out' => null,
-                    'date' => $key,
-                    'missing' => true
-                ];
-            }
-        }
-
-        return collect($completeAttendances);
+        $this->attendanceService = new AttendanceService();
     }
 
     public function search(Store $store, $employee_id, Request $request)
@@ -84,7 +38,7 @@ class EmployeeAttendanceService
             ->findOrFail($employee_id);
 
 
-        $data = $this->buildAttendances($employee);
+        $data = $this->attendanceService->completeRange($employee->attendances);
 
         return $data;
     }

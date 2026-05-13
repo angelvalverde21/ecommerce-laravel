@@ -1,0 +1,301 @@
+<?php
+
+namespace App\Services\Dashboard\Crud;
+
+use App\Models\Attendance;
+use App\Models\Employee;
+use Illuminate\Database\Eloquent\Collection;
+use App\Models\Store;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
+use Illuminate\Support\Facades\Auth;
+
+class AttendanceService
+{
+
+
+
+    public function store(Store $store, Request $request) {}
+
+    private function readFile(Request $request)
+    {
+
+        //
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt'
+        ]);
+
+        $file = $request->file('file');
+
+        $path = $file->store('uploads');
+
+        // return response()->json([
+        //     'path' => $path
+        // ]);
+
+        //Leyendo el archivo subido recientemente
+
+        $path = storage_path('app/private/' . $path);
+
+        $handle = fopen($path, 'r');
+
+        $rows = [];
+        $line = 0;
+
+        while (($data = fgetcsv($handle, 0, ';')) !== false) {
+
+            $line++;
+
+            if ($line <= 2) {
+                continue;
+            }
+
+            $dni = trim($data[1] ?? '');
+            $name = trim($data[2] ?? '');
+            $datetime = trim($data[3] ?? ''); //fecha del registro del evento
+
+            // Ignorar filas vacías
+            if (!$dni || !$datetime) {
+                continue;
+            }
+
+            $rows[] = [
+                'dni' => $dni,
+                'name' => $name,
+                'datetime' => $datetime,
+            ];
+        }
+
+        fclose($handle);
+
+        return $rows;
+        // foreach ($rows as $row) {
+        //     Log::info($row);
+        // }
+
+    }
+
+    public function upload(Store $store, Request $request)
+    {
+        $rows = $this->readFile($request); //las assistencias en bruto con repetidos y todo
+
+        $dailyAttendances = $this->filterRows($rows); //Elimina las marcas duplicadas y me trae solo filas unicas con inicio y fin de jornada
+
+        $rowsToUpsert = $this->prepareRows($store, $dailyAttendances); //Construye las attendances listos para insertar en la db
+
+        Attendance::upsert( //se usa en conjunto con las restricciones agregados a la base de datos ($table->unique(['store_id', 'employee_id', 'date'])) en la tabla attendances
+            $rowsToUpsert,
+            ['store_id', 'employee_id', 'date'], // columnas únicas
+            ['check_in', 'check_out', 'updated_at'] // columnas a actualizar
+        );
+    }
+
+    private function filterRows(array $rows)
+    {
+        $dailyAttendances = [];
+
+        foreach ($rows as $record) {
+
+            $date = Carbon::createFromFormat('d/m/Y H:i', $record['datetime']); //no usamos parse() porque el formato que envia el huellero no es standar es '02/03/2026 10:44', el estandar es '2026-03-02 10:44:00'
+
+            $dni = $record['dni'];
+            $day = $date->format('Y-m-d'); //devuelve solo la parte del dia (sin horas)
+            $time = $date->format('H:i:s'); //devuelve la hora de la fecha  (sin dias)
+
+            $key = $dni . '_' . $day;
+
+            if (!isset($dailyAttendances[$key])) {
+                $dailyAttendances[$key] = [
+                    'dni' => $dni,
+                    'name' => $record['name'],
+                    'date' => $day,
+                    'entry' => $time,
+                    'exit' => $time
+                ];
+            } else {
+
+                // Si la hora es menor → es entrada más temprana
+                if ($time < $dailyAttendances[$key]['entry']) {
+                    $dailyAttendances[$key]['entry'] = $time;
+                }
+
+                // Si la hora es mayor → es salida más tarde
+                if ($time > $dailyAttendances[$key]['exit']) {
+                    $dailyAttendances[$key]['exit'] = $time;
+                }
+            }
+        }
+
+
+        return array_values($dailyAttendances);
+    }
+
+    private function prepareRows(Store $store, array $dailyAttendances)
+    { //tipos nativos en minusculas
+
+        $rowsToUpsert = [];
+
+        foreach ($dailyAttendances as $attendance) {
+
+            $rowsToUpsert[] = [
+                'store_id' => $store->id,
+                'employee_id' => $this->getEmployee($attendance['dni']),
+                'date' => $attendance['date'],
+                'check_in' => $attendance['entry'],
+                'check_out' => $attendance['exit'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        return $rowsToUpsert;
+    }
+
+
+
+
+    private function getEmployee(string $param): ?int
+
+    {
+
+        switch ($param) {
+            case '1':
+                //Ayin
+                return 3;
+                break;
+
+            case '2':
+                //Jenifer
+                return 2;
+                break;
+
+            case '5':
+                //Fiorella
+                return 6;
+                break;
+
+            case '76540879':
+                //Marina
+                return 4;
+                break;
+
+            case '42412498':
+                //Angel
+                return 1;
+                break;
+
+            default:
+                return null;
+                break;
+        }
+    }
+
+
+    // Recibe fechas y completa rango de fechas (por si hay faltas) para enviarlas al frontend (angular)
+    public function completeRangeEmployee(Employee $employee, Collection $attendances)
+    {
+        $attendances =  $attendances
+            ->keyBy(function ($attendance) {
+                return Carbon::parse($attendance->date)->format('Y-m-d');
+            });
+
+        if ($attendances->isEmpty()) {
+            return collect([]);
+        }
+
+        $dates = $attendances
+            ->pluck('date') //solo trae la columna date
+            ->map(fn($d) => Carbon::parse($d));
+
+        $start = $dates->min();
+        $end   = $dates->max();
+
+        $period = CarbonPeriod::create($start, $end);
+
+        $completeAttendances = [];
+
+        foreach ($period as $date) {
+
+            if ($date->dayOfWeek == Carbon::SUNDAY) {
+                continue;
+            }
+
+            $key = $date->format('Y-m-d');
+
+            if ($attendances->has($key)) {
+
+                $attendance = $attendances[$key];
+
+                $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
+                $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out);
+
+                $attendance->is_late = $this->isLate($employee, $attendance); //determina si llego tarde
+                $attendance->missing = false;
+
+                $attendance->minutes = $checkIn->diffInMinutes($checkOut);
+
+                //Ahora calcular los minutos que se computaran
+                $work_time_end = Carbon::createFromFormat('H:i:s', $employee->work_time_end);
+
+                //Agregamos la tolerancia a la salida
+                $work_time_end->addMinutes($employee->tolerance_minutes); //Sumamos a la hora de salida los 15 minutos mas de tolerancia para que la salida maxima sea por ejemplo 7:15
+
+                // $attendance->work_time_end = $work_time_end->format('H:i:s');
+                // $attendance->work_time_end_real = $checkOut->format('H:i:s');
+
+                if($work_time_end > $checkOut){
+                    $attendance->minutes_computed = $checkIn->diffInMinutes($checkOut);
+                }else{
+                    $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
+                }
+
+                $completeAttendances[] = $attendance;
+
+            } else {
+
+                $completeAttendances[] = [
+                    'id' => null,
+                    // 'employee_id' => $employee->id,
+                    // 'employee' => $employee->load('user'),
+                    'check_in' => null,
+                    'check_out' => null,
+                    'minutes' => 0,
+                    'date' => $key,
+                    'missing' => true
+                ];
+
+            }
+        }
+
+        return $completeAttendances;
+
+        // return collect($completeAttendances);
+    }
+
+
+    // Metodo que determina si llego tarde
+
+    private function isLate(Employee $employee, Attendance $attendance)
+    {
+
+        //Tolerencia de cada usuario
+        $toleranceMinutes = $employee->tolerance_minutes;
+
+        //Creamos la hora de entrada con carbon para usar sus funciones 
+
+        $scheduleStart = Carbon::createFromFormat('H:i:s', $employee->work_time_start); //Hora de entrada del usuario
+
+        //Creamos el checkIn con carbon para tambien usar sus funciones
+
+        $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in); 
+
+        $lateMinutes = $scheduleStart->diffInMinutes($checkIn, false); //El false es importante porque: Si llega antes → será negativo, Si llega después → será positivo
+
+        return $lateMinutes > $toleranceMinutes;
+    }
+
+    private function minutesComputed(){
+
+    }
+}
