@@ -6,17 +6,12 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
     /**
      * Run the migrations.
      */
-
     public function up(): void
     {
-
-        //https://lpderecho.pe/como-sanciona-tardanza-trabajador/
-        Schema::create('schedules', function (Blueprint $table) {
-
+        Schema::create('employee_schedules', function (Blueprint $table) {
             $table->id();
             $table->foreignId('store_id')->constrained()->cascadeOnDelete();
             $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
@@ -31,10 +26,7 @@ return new class extends Migration
 
             //PERMITIR HORAS EXTRAS
             $table->boolean('allow_extra_hours')->default(false);
-            // $table->time('extra_start_time')->nullable();
-            // $table->time('extra_end_time')->nullable();
             $table->timestamps();
-
         });
     }
 
@@ -43,7 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('schedules');
+        Schema::dropIfExists('employee_schedules');
     }
-
 };

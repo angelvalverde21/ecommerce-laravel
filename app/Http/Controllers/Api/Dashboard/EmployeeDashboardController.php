@@ -180,7 +180,8 @@ class EmployeeDashboardController extends Controller
 
             $employee = Employee::with(
                 'user.roles',
-                'attendances.employee'
+                'attendances.employee',
+                'schedules'
             )
                 ->addSelect([
                     'balance' => Payment::selectRaw("
@@ -304,16 +305,20 @@ class EmployeeDashboardController extends Controller
 
             //VALIDACIÓN FLEXIBLE (update parcial o completo)
             $validated = $request->validate([
-                'name'            => 'sometimes|required|string|max:255',
-                'email'           => ["sometimes", "required", "email", Rule::unique('users', 'email')->ignore($employee->user->id)],
-                'phone'           => 'sometimes|nullable|string|max:20',
-                'document_number' => 'sometimes|nullable|string|max:20',
-                'status'          => 'sometimes|required|in:0,1',
+                'name'            => 'required|string|max:255',
+                'email'           => ["required", "email", Rule::unique('users', 'email')->ignore($employee->user->id)],
+                'phone'           => 'nullable|string|max:20',
+                'document_number' => 'nullable|string|max:20',
+                'status'          => 'required|in:0,1',
                 'tag_sales'       => 'nullable|string|max:100',
-                'roles'           => 'sometimes|required|array|min:1',
+                'roles'           => 'required|array|min:1',
                 'roles.*'         => 'string|exists:roles,name',
-                'comission'       => 'sometimes|nullable|numeric|min:0|max:100', //employee comission
-                'salary'          => 'sometimes|nullable|numeric|min:0', //employee salary
+                'comission'       => 'nullable|numeric|min:0|max:100', //employee comission
+                'salary'          => 'nullable|numeric|min:0', //employee salary
+                'auto_close_end_time' => 'nullable|boolean',
+                'work_time_start' => 'nullable|date_format:H:i:s',
+                'work_time_end' => 'nullable|date_format:H:i:s',
+
             ]);
 
             DB::beginTransaction();
@@ -325,6 +330,9 @@ class EmployeeDashboardController extends Controller
                     'comission' => $validated['comission'] ?? null, //actualiza comision del empleado si llega
                     'salary'    => $validated['salary'] ?? null, //actualiza salario del empleado si llega
                     'tag_sales' => $validated['tag_sales'] ?? null, //actualiza tag_sales del empleado si llega
+                    'auto_close_end_time' => $validated['auto_close_end_time'],
+                    'work_time_start' => $validated['work_time_start'],
+                    'work_time_end' => $validated['work_time_end'],
                 ]
             );
 

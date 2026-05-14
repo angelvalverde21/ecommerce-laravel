@@ -26,7 +26,9 @@ return new class extends Migration
 
             $table->time('work_time_start')->default('09:00:00')->nullable(); //defecto
             $table->time('work_time_end')->default('19:00:00')->nullable();
-            $table->integer('tolerance_minutes')->default(15); // opcional
+            $table->integer('tolerance')->default(15); // opcional
+
+            $table->boolean('allow_extra_hours')->default(true); //Si es true el calculo se hace con las horas extras, si es false se hace con el horario normal (cierre del sistema)
 
             /*
             ALTER TABLE employees

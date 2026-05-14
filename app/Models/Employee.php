@@ -32,4 +32,8 @@ class Employee extends Model
     {
         return $this->morphMany(Payment::class, 'paymentable');
     }
+
+    public function schedules(){
+        return $this->hasMany(EmployeeSchedule::class);
+    }
 }
