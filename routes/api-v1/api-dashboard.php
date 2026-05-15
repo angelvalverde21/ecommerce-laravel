@@ -44,6 +44,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Dashboard\BatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeAttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeePaymentDashboardController;
+use App\Http\Controllers\Api\Dashboard\EmployeeScheduleDashboardController;
 use App\Http\Controllers\Api\Dashboard\InventoryBatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\LocationDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufacturePaymentDashboardController;
@@ -407,6 +408,22 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 });
             });
+
+            Route::prefix('schedules')->group(function () {
+            
+                Route::get('/', [EmployeeScheduleDashboardController::class, 'index']); //Listar
+                Route::post('/', [EmployeeScheduleDashboardController::class, 'store']); //create
+            
+                Route::prefix('{schedule_id}')->group(function () {
+            
+                    Route::get('/', [EmployeeScheduleDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [EmployeeScheduleDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [EmployeeScheduleDashboardController::class, 'destroy']); //borrar
+            
+                });
+            
+            });
+
         });
     });
 

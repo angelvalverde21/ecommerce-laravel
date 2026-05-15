@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('employee_schedules', function (Blueprint $table) {
+
             $table->id();
             $table->foreignId('store_id')->constrained()->cascadeOnDelete();
             $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
@@ -22,11 +23,15 @@ return new class extends Migration
             $table->time('start_time')->default('09:00:00')->nullable();
             $table->time('end_time')->default('19:00:00');
 
+
+            //Comentarios
+            $table->string('comments')->nullable();
             //Dias de la semana
 
             //PERMITIR HORAS EXTRAS
             $table->boolean('allow_extra_hours')->default(false);
             $table->timestamps();
+
         });
     }
 

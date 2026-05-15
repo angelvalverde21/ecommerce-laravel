@@ -7,4 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class EmployeeSchedule extends Model
 {
     //
+
+    protected $guarded = ['id', 'created_at'];
+
 }
