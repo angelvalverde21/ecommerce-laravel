@@ -26,7 +26,7 @@ class AttendanceDashboardController extends Controller
     public function index(Store $store)
     {
         //
-        $attendances = $store->attendances()->with('employee')->get();
+        $attendances = $store->attendances()->with(['employee'])->get();
         return responseOk($attendances, 'Asistencias obtenidas correctamente');
     }
 

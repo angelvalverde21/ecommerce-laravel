@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceService
 {
@@ -195,6 +196,24 @@ class AttendanceService
     // Recibe fechas y completa rango de fechas (por si hay faltas) para enviarlas al frontend (angular)
     public function completeRangeEmployee(Employee $employee, Collection $attendances)
     {
+
+        $schedules = collect([]);
+
+        $employee = $employee->load('schedules');
+        // Log::info($employee->schedules);
+        // Log::info($employee);
+
+        $schedules = $employee->schedules;
+
+        if ($schedules->isEmpty()) {
+            // Log::info("no hay schedules");
+            return;
+        }
+
+        $schedules = $employee->schedules->keyBy('day_of_week');
+
+        // Log::info($schedules);
+
         $attendances =  $attendances
             ->keyBy(function ($attendance) {
                 return Carbon::parse($attendance->date)->format('Y-m-d');
@@ -215,11 +234,18 @@ class AttendanceService
 
         $completeAttendances = [];
 
-        foreach ($period as $date) {
+        foreach ($period as $date) { //Recorre dia por dia
+
+            // Log::info($date->dayOfWeek);
 
             if ($date->dayOfWeek == Carbon::SUNDAY) {
                 continue;
             }
+
+            $schedule = $schedules[$date->dayOfWeek] ?? null;
+            
+            Log::info($employee->id);
+            Log::info($schedule->day_of_week);
 
             $key = $date->format('Y-m-d');
 
@@ -227,28 +253,50 @@ class AttendanceService
 
                 $attendance = $attendances[$key];
 
-                $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
-                $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out);
+                // Log::info($schedule->work_type);
 
-                $attendance->is_late = $this->isLate($employee, $attendance); //determina si llego tarde
-                $attendance->missing = false;
+                if (strtolower($schedule->work_type) === "onsite") {
 
-                $attendance->minutes = $checkIn->diffInMinutes($checkOut);
+                    Log::info("onsite");
 
-                //Ahora calcular los minutos que se computaran
-                $work_time_end = Carbon::createFromFormat('H:i:s', $employee->work_time_end);
+                    $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
+                    $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out);
 
-                //Agregamos la tolerancia a la salida
-                $work_time_end->addMinutes($employee->tolerance_minutes); //Sumamos a la hora de salida los 15 minutos mas de tolerancia para que la salida maxima sea por ejemplo 7:15
+                    $attendance->is_late = $this->isLate($employee, $attendance); //determina si llego tarde
+                    $attendance->missing = false;
 
-                // $attendance->work_time_end = $work_time_end->format('H:i:s');
-                // $attendance->work_time_end_real = $checkOut->format('H:i:s');
+                    $attendance->minutes = $checkIn->diffInMinutes($checkOut);
 
-                if($work_time_end > $checkOut){
-                    $attendance->minutes_computed = $checkIn->diffInMinutes($checkOut);
-                }else{
-                    $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
+                    //Ahora calcular los minutos que se computaran
+                    $work_time_end = Carbon::createFromFormat('H:i:s', $employee->work_time_end);
+
+                    $attendance->work_type = $schedule->work_type;
+
+                    //Agregamos la tolerancia a la salida
+                    $work_time_end->addMinutes($employee->tolerance_minutes); //Sumamos a la hora de salida los 15 minutos mas de tolerancia para que la salida maxima sea por ejemplo 7:15
+
+                    // $attendance->work_time_end = $work_time_end->format('H:i:s');
+                    // $attendance->work_time_end_real = $checkOut->format('H:i:s');
+
+                    if ($work_time_end > $checkOut) {
+                        $attendance->minutes_computed = $checkIn->diffInMinutes($checkOut);
+                    } else {
+                        $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
+                    }
+                } else {
+
+                    Log::info("home_office");
+                    //home office
+                    $attendance->is_late = false;
+                    $attendance->missing = false;
+                    $attendance->work_type = $schedule->work_type;
+                    $checkIn  = Carbon::createFromFormat('H:i:s', $schedule->start_time ?? "9:00:00");
+                    $checkOut = Carbon::createFromFormat('H:i:s', $schedule->end_time ?? "19:00:00");
+                    $attendance->minutes = $checkIn->diffInMinutes($checkOut);
+                    $attendance->minutes_computed = $attendance->minutes;
+
                 }
+
 
                 $completeAttendances[] = $attendance;
 
@@ -264,7 +312,6 @@ class AttendanceService
                     'date' => $key,
                     'missing' => true
                 ];
-
             }
         }
 
@@ -288,14 +335,12 @@ class AttendanceService
 
         //Creamos el checkIn con carbon para tambien usar sus funciones
 
-        $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in); 
+        $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
 
         $lateMinutes = $scheduleStart->diffInMinutes($checkIn, false); //El false es importante porque: Si llega antes → será negativo, Si llega después → será positivo
 
         return $lateMinutes > $toleranceMinutes;
     }
 
-    private function minutesComputed(){
-
-    }
+    private function minutesComputed() {}
 }

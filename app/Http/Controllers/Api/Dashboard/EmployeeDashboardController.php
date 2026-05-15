@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\Payment;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Dashboard\Crud\AttendanceService;
 use App\Services\Dashboard\Employee\EmployeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -24,11 +25,13 @@ class EmployeeDashboardController extends Controller
      * Display a listing of the resource.
      */
     protected EmployeeService $employeeService;
+    protected AttendanceService $attendanceService;
 
     public function __construct()
     {
         // Pasamos el modelo que vamos a usar
         $this->employeeService = new EmployeeService();
+        $this->attendanceService = new AttendanceService();
     }
 
     //  getOrdersByTag
@@ -38,7 +41,23 @@ class EmployeeDashboardController extends Controller
         //
         try {
 
-            $employees = $store->employees()->with('user.roles')->get();
+            $employees = $store->employees()->with(['user.roles', 'attendances'])->get();
+
+            $employees = $employees->map(function ($employee) {
+
+                $completeAttendances = $this->attendanceService
+                    ->completeRangeEmployee($employee, $employee->attendances);
+            
+                // Convertimos a colección por si viene como array
+                $collection = collect($completeAttendances);
+            
+                $employee->attendances = $completeAttendances;
+            
+                $employee->total_minutes = $collection->sum('minutes');
+                $employee->total_minutes_computed = $collection->sum('minutes_computed');
+            
+                return $employee;
+            });
 
             // $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar Employee->user en el front sino todo plano
             //     $store->employees()->get()

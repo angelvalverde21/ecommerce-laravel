@@ -38,7 +38,7 @@ class EmployeeAttendanceService
             ->findOrFail($employee_id);
 
 
-        $data = $this->attendanceService->completeRange($employee->attendances);
+        $data = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
 
         return $data;
     }
