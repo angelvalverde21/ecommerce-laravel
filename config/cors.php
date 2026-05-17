@@ -25,6 +25,7 @@ return [
         'http://3b.pe',
         'https://www.3b.pe',
         'http://www.3b.pe',
+        'http://192.168.68.107:4200'
     ],
 
     'allowed_origins_patterns' => [],

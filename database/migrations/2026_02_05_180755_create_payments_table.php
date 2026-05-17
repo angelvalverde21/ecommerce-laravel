@@ -13,6 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('payments', function (Blueprint $table) {
+
             $table->id();
 
             $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete();
@@ -31,7 +32,7 @@ return new class extends Migration
                 'paypal',
             ])->default('cash');
 
-            $table->char('hash', 64)->unique();
+            $table->char('hash', 64)->unique(); //porsiaca
             $table->string('reference_code', 10)->nullable();
             
             $table->enum('status', [
@@ -46,8 +47,6 @@ return new class extends Migration
             $table->timestamp('date')->nullable();
             $table->morphs('paymentable'); // Polimórfica para asociar con compras, ventas, etc.
             $table->enum('direction', ['in', 'out'])->default('out');
-
-
             $table->timestamps();
         });
     }
