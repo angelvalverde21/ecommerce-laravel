@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SearchRequest;
+use App\Models\Manufacture;
 use App\Models\Store;
 use App\Services\Dashboard\Crud\ManufactureOrderService;
 use Illuminate\Http\Request;
@@ -73,5 +75,19 @@ class ManufactureOrderDashboardController extends Controller
     public function destroy(Store $store)
     {
         //
+    }
+
+    public function search(Store $store, SearchRequest $request)
+    {
+        if ($request->hasNoFilters()) {
+            return $this->index($store);
+        }
+
+        $employees = Manufacture::searchOrder($request->search) //Recuerda agrear el trait en el modelo correspondiente, en este caso Manufacture
+            ->betweenDates($request->start_date, $request->end_date) //Sino hay fechas simplemente pasa de largo, no se considera
+            ->limit(10)
+            ->get();
+
+        return responseOk($employees);
     }
 }

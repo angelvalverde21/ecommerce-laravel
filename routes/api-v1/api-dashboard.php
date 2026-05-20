@@ -138,13 +138,13 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         Route::get('/', [ManufactureDashboardController::class, 'index']); //Listar
         Route::post('/', [ManufactureDashboardController::class, 'store']); //create
-        Route::get('/search/{search?}', [ManufactureDashboardController::class, 'search']); //buscar
-
+        Route::post('/search/{search?}', [ManufactureDashboardController::class, 'search']); //buscar
+        
         Route::prefix('productions')->group(function () {
-
+            
             Route::get('/', [ManufactureProductionDashboardController::class, 'index']); //Listar
             Route::post('/', [ManufactureProductionDashboardController::class, 'store']); //create
-            // Route::get('/search/{search?}', [ManufactureProductionDashboardController::class, 'search']); //buscar
+            Route::post('/search/{search?}', [ManufactureProductionDashboardController::class, 'search']); //buscar
 
             Route::prefix('{production_id}')->group(function () {
 
@@ -159,7 +159,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
             Route::get('/', [ManufactureOrderDashboardController::class, 'index']); //Listar
             Route::post('/', [ManufactureOrderDashboardController::class, 'store']); //create
-            // Route::get('/search/{search?}', [ManufactureOrderDashboardController::class, 'search']); //buscar
+            Route::post('/search/{search?}', [ManufactureOrderDashboardController::class, 'search']); //buscar
 
             Route::prefix('{order_id}')->group(function () {
 
@@ -168,6 +168,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
                 // Route::delete('/', [ManufactureOrderDashboardController::class, 'destroy']); //borrar
 
             });
+            
         });
 
         Route::prefix('{manufacture_id}')->group(function () {

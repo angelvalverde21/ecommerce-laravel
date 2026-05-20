@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SearchRequest;
 use App\Http\Resources\FlatUserResource;
 use App\Models\Employee;
 use App\Models\Payment;
@@ -47,15 +48,15 @@ class EmployeeDashboardController extends Controller
 
                 $completeAttendances = $this->attendanceService
                     ->completeRangeEmployee($employee, $employee->attendances);
-            
+
                 // Convertimos a colección por si viene como array
                 $collection = collect($completeAttendances);
-            
+
                 $employee->attendances = $completeAttendances;
-            
+
                 $employee->total_minutes = $collection->sum('minutes');
                 $employee->total_minutes_computed = $collection->sum('minutes_computed');
-            
+
                 return $employee;
             });
 
@@ -71,50 +72,19 @@ class EmployeeDashboardController extends Controller
         }
     }
 
-    public function search(Store $store, Request $request)
+    public function search(Store $store, SearchRequest $request)
     {
-        $validated = $request->validate([
-            'search'     => 'required|string|max:255',
-            'start_date' => 'nullable|date',
-            'end_date'   => 'nullable|date|after_or_equal:start_date',
-
-        ]);
-
-        $search     = $validated['search'];
-        $startDate  = $validated['start_date'] ?? null;
-        $endDate    = $validated['end_date'] ?? null;
-
-        if (trim($search) === '' || $search === null) {
+        if ($request->hasNoFilters()) {
             return $this->index($store);
         }
-
-        try {
-
-            $query = Employee::whereHas('user', function ($query) use ($search) {
-                $query->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('email', 'LIKE', "%{$search}%")
-                    ->orWhere('phone', 'LIKE', "%{$search}%")
-                    ->orWhere('document_number', 'LIKE', "%{$search}%");
-            })
-                ->with('user');
-
-            // 🔥 Si ambas fechas existen → aplicar between
-            if ($startDate && $endDate) {
-                $query->whereBetween('created_at', [
-                    $startDate . ' 00:00:00',
-                    $endDate   . ' 23:59:59'
-                ]);
-            }
-
-            $employees = $query
-                ->limit(10)
-                ->get();
-
-            return responseOk($employees, "Empleados obtenidos correctamente (search)");
-        } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError("Ha ocurrido un error interno al buscar los empleados");
-        }
+    
+        $employees = Employee::with('user')
+            ->search($request->search)
+            ->betweenDates($request->start_date, $request->end_date) //Sino hay fechas simplemente pasa de largo, no se considera
+            ->limit(10)
+            ->get();
+    
+        return responseOk($employees);
     }
 
     /**
