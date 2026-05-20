@@ -637,6 +637,7 @@ class ShopifyProductService extends ShopifyBaseService
 
                     $variants = [];
 
+
                     foreach ($product->variants as $variant) {
 
                         // $data["product_id"] = GID del producto
@@ -705,4 +706,75 @@ class ShopifyProductService extends ShopifyBaseService
             ];
         */
     }
+
+    // public function syncPricesVariants($type, $variants)
+    // {
+
+    //     $query = <<<'GRAPHQL'
+    //                     mutation updateVariantPrice(
+    //                         $productId: ID!, 
+    //                         $variants: [ProductVariantsBulkInput!]!
+    //                     ) {
+    //                         productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+    //                             productVariants {
+    //                                 id
+    //                                 price
+    //                                 compareAtPrice
+    //                             }
+    //                             userErrors {
+    //                                 field
+    //                                 message
+    //                             }
+    //                         }
+    //                     }
+    //                 GRAPHQL;
+
+    //     $counter = 0;
+
+    //     // $variants = [];
+
+    //     if (empty($variants)) {
+    //         return;
+    //     }
+
+    //     foreach ($variants as $variant) {
+
+    //         // $data["product_id"] = GID del producto
+    //         // $data["variants"] = array con N variantes
+
+    //         $price = $variant->{$type} ?? null;
+
+    //         if ($price === null) {
+    //             continue; // saltar si no hay precio
+    //         }
+
+    //         $variants[] = [
+    //             "id" => $variant->shopify_variant_id,
+    //             "price" => $price,
+    //             "compareAtPrice" => $variant->price_etiqueta,
+    //         ];
+    //     }
+
+    //     // Si no hay variantes válidas, saltar
+ 
+    //     $variables = [
+    //         "productId" => $product->shopify_product_id,
+    //         "variants" => $variants  // aquí pueden venir N variantes
+    //     ];
+
+    //     if ($product->sync_status) {
+    //         # code...
+    //         $response = $this->graphql($query, $variables)->json();
+    //         Log::info($response);
+    //     }
+
+
+    //     $counter++;
+
+    //     // pausa cada 5 productos
+    //     if ($counter % 5 === 0) {
+    //         usleep(200_000); // 200ms
+    //     }
+
+    // }
 }
