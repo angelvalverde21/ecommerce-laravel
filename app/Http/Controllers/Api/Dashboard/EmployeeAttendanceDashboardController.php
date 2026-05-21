@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
 use App\Models\Store;
 use App\Services\Dashboard\Crud\AttendanceService;
 use App\Services\Dashboard\Employee\EmployeeAttendanceService;
@@ -91,7 +92,6 @@ class EmployeeAttendanceDashboardController extends Controller
     {
 
         return responseOk($this->employeeAttendanceService->search($store, $employee_id, $request), "Registros de asistencia obtenidos correctamente");
-
     }
 
     /**
@@ -105,9 +105,10 @@ class EmployeeAttendanceDashboardController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Store $store, Request $request)
     {
         //
+
     }
 
     /**
@@ -141,6 +142,4 @@ class EmployeeAttendanceDashboardController extends Controller
     {
         //
     }
-
-
 }

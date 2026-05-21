@@ -16,6 +16,8 @@ class AttendanceDashboardController extends Controller
      * Display a listing of the resource.
      */
 
+
+
     protected AttendanceService $attendanceService;
 
     public function __construct()
@@ -40,20 +42,16 @@ class AttendanceDashboardController extends Controller
     {
 
         try {
-            
+
             $this->attendanceService->upload($store, $request);
 
             return responseOk([], 'Asistencias subidas correctamente');
-
         } catch (\Throwable $th) {
 
             Log::info($th);
 
             return responseError("Ha ocurrido un error al subir el archivo");
-
         }
-
-
     }
 
     public function getEmployee(string $param): ?int
@@ -104,7 +102,34 @@ class AttendanceDashboardController extends Controller
      */
     public function store(Store $store, Request $request)
     {
-        //
+        $validated = $request->validate([
+            'employee_id' => 'nullable|exists:employees,id',
+            'date'        => 'required|date',
+            'check_in'    => 'nullable|date_format:H:i:s',
+            'check_out'   => 'nullable|date_format:H:i:s',
+            'comment'     => 'nullable|string|max:250',
+        ]);
+    
+        $attendance = Attendance::create([
+            'store_id'    => $store->id,
+            'employee_id' => $validated['employee_id'] ?? null,
+            'date'        => $validated['date'],
+            'check_in'    => $validated['check_in'] ?? null,
+            'check_out'   => $validated['check_out'] ?? null,
+            'comment'     => $validated['comment'] ?? null,
+        ]);
+
+        Log::info($attendance);
+
+        $attendance->is_late = false;
+        $attendance->missing = false;
+        $attendance->work_type = "home_office";
+        $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in ?? "9:00:00");
+        $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out ?? "19:00:00");
+        $attendance->minutes = $checkIn->diffInMinutes($checkOut);
+        $attendance->minutes_computed = $attendance->minutes;
+
+        return responseOk($attendance->load('employee'), "Attendance Creado Correctamente");
     }
 
     /**
@@ -128,8 +153,19 @@ class AttendanceDashboardController extends Controller
      */
     public function update(Store $store, $attendance_id, Request $request)
     {
+
+        
         $attendance = $store->attendances()->findOrFail($attendance_id);
         $attendance->update($request->all());
+        Log::info($attendance);
+
+        $attendance->is_late = false;
+        $attendance->missing = false;
+        $attendance->work_type = "home_office";
+        $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in ?? "9:00:00");
+        $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out ?? "19:00:00");
+        $attendance->minutes = $checkIn->diffInMinutes($checkOut);
+        $attendance->minutes_computed = $attendance->minutes;
 
         return responseOk($attendance, 'Asistencia actualizada correctamente');
     }

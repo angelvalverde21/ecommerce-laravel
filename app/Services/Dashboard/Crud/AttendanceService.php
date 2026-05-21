@@ -283,6 +283,7 @@ class AttendanceService
                     } else {
                         $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
                     }
+
                 } else {
 
                     Log::info("home_office");
@@ -320,6 +321,7 @@ class AttendanceService
         // return collect($completeAttendances);
     }
 
+    
 
     // Metodo que determina si llego tarde
 
