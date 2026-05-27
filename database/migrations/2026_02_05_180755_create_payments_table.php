@@ -32,7 +32,7 @@ return new class extends Migration
                 'paypal',
             ])->default('cash');
 
-            $table->char('hash', 64)->unique(); //porsiaca
+            $table->char('hash', 64)->unique()->nullable(); //porsiaca
             $table->string('reference_code', 10)->nullable();
             
             $table->enum('status', [

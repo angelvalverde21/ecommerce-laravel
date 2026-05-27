@@ -1058,6 +1058,7 @@ class ShopifyOrderService extends ShopifyBaseService
                                             node {
                                                 id
                                                 name
+                                                tags
                                                 createdAt
                                                 updatedAt
                                                 processedAt
@@ -1128,17 +1129,13 @@ class ShopifyOrderService extends ShopifyBaseService
 
     public function getOrdersByTagBetween($tag, $start = null, $end = null): array
     {
-
         Log::info($start);
         Log::info($end);
 
         $start = $start ?? date('Y-m-d');
         $end = $end ?? date('Y-m-d', strtotime('+1 month', strtotime($start)));
-        
-        Log::info('getOrdersSearch');
 
-        // Asegurar límite mínimo
-        // $limit = max(1, $limit);
+        Log::info('getOrdersSearch');
 
         // -------------------------------------------------------------
         // 1️⃣ — Sub-queries para evitar repetición
@@ -1150,91 +1147,106 @@ class ShopifyOrderService extends ShopifyBaseService
         $eventsQuery          = $this->eventsQuery();
 
         // -------------------------------------------------------------
-        // 2️⃣ — GraphQL Template SIN FECHAS, usando LIMIT
+        // 2️⃣ — GraphQL Template
         // -------------------------------------------------------------
         $queryTemplate = <<<GRAPHQL
-                                {
-                                    orders(
-                                        first: 50,
-                                        sortKey: CREATED_AT,
-                                        reverse: true,
-                                        query: "financial_status:paid tag::tag cancelled_at:null fulfillment_status:fulfilled created_at:>=:start created_at:<=:end",
-                                        after: :cursor
-                                    ) {
-                                        pageInfo {
-                                            hasNextPage
-                                            endCursor
-                                        }
-                                        edges {
-                                            cursor
-                                            node {
-                                                id
-                                                name
-                                                createdAt
-                                                updatedAt
-                                                tags
-                                                processedAt
-                                                sourceName
-                                                displayFinancialStatus
-                                                displayFulfillmentStatus
-                                                note
-                                                fulfillmentOrders(first: 20) {
-                                                    edges {
-                                                        node {
-                                                            id
-                                                            status
-                                                            createdAt
-                                                            requestStatus
-                                                            updatedAt
-                                                        }
-                                                    }
-                                                }
-                                                totalPriceSet {
-                                                    shopMoney {
-                                                        amount
-                                                        currencyCode
-                                                    }
-                                                }
-                                                $itemsQuery
-                                                $shippingLinesQuery
-                                            }
-                                        }
-                                    }
+        {
+            orders(
+                first: 50,
+                sortKey: CREATED_AT,
+                reverse: true,
+                query: ":searchQuery financial_status:paid cancelled_at:null fulfillment_status:fulfilled created_at:>=:start created_at:<=:end",
+                after: :cursor
+            ) {
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
+    
+                edges {
+                    cursor
+    
+                    node {
+                        id
+                        name
+                        createdAt
+                        updatedAt
+                        tags
+                        processedAt
+                        sourceName
+                        displayFinancialStatus
+                        displayFulfillmentStatus
+                        note
+    
+                        fulfillmentOrders(first: 20) {
+                            edges {
+                                node {
+                                    id
+                                    status
+                                    createdAt
+                                    requestStatus
+                                    updatedAt
                                 }
-                            GRAPHQL;
+                            }
+                        }
+    
+                        totalPriceSet {
+                            shopMoney {
+                                amount
+                                currencyCode
+                            }
+                        }
+    
+                        $itemsQuery
+                        $shippingLinesQuery
+                    }
+                }
+            }
+        }
+        GRAPHQL;
 
         // -------------------------------------------------------------
-        // 2️⃣ — QueryBuilder para reemplazar placeholders
+        // 3️⃣ — QueryBuilder
         // -------------------------------------------------------------
-        $queryBuilder = function (?string $cursor) use ($queryTemplate, $start, $end, $tag) {
+        $queryBuilder = function (?string $cursor) use (
+            $queryTemplate,
+            $start,
+            $end,
+            $tag
+        ) {
+
+            $searchQuery = "(tag:$tag OR note:$tag)";
 
             return str_replace(
-                [':start', ':end', ':tag', ':cursor'], //Elementos a reeemplazar
-                [$start, $end, $tag, $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
-                $queryTemplate //En el template
+                [':start', ':end', ':searchQuery', ':cursor'],
+                [
+                    $start,
+                    $end,
+                    $searchQuery,
+                    $cursor ? "\"$cursor\"" : 'null'
+                ],
+                $queryTemplate
             );
-
         };
 
         // -------------------------------------------------------------
-        // 3️⃣ — Ejecutar el query builder ($queryBuilder) para traer los datos de Shopify
+        // 4️⃣ — Ejecutar query
         // -------------------------------------------------------------
         $result = $this->getDataFromShopify(
             'orders',
             $queryBuilder,
-            ['lineItems', 'shippingLines'] //podria ser 'lineItems'
+            ['lineItems', 'shippingLines']
         );
 
         // -------------------------------------------------------------
-        // 4️⃣ — Normalizar items
+        // 5️⃣ — Logs
         // -------------------------------------------------------------
         Log::info('result de getOrdersByTagBetween');
         Log::info($result);
 
         return $result;
-        // $orders = collect($result['items'] ?? []);
     }
-
+    
     public function getSearchOrders(int $limit = 20, $cursor = null, $search = null): array
     {
         Log::info('getSearchOrders');

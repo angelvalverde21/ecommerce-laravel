@@ -478,7 +478,7 @@ class ShopifyReportService extends ShopifyBaseService
   }
   public function reportCashWeekly()
   {
-      $startDate = Carbon::create(2026, 3, 21)->startOfDay();
+      $startDate = Carbon::create(2026, 5, 19)->startOfDay();
       $endDate   = now()->endOfDay();
   
       /*
