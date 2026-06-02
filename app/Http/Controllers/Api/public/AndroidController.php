@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Http\Controllers\Api\public;
+
+use App\Http\Controllers\Controller;
+use App\Models\ShopifyVariant;
+use App\Models\Store;
+use App\Models\Variant;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+
+class AndroidController extends Controller
+{
+    //
+    public function price(Store $store, $variant_id){
+
+        
+        try {
+            
+            $variant = Variant::findOrFail($variant_id);
+
+            Log::info($variant);
+
+            $product = $variant->product;
+
+            $shopify_variant = ShopifyVariant::where('shopify_product_id', $product->id)->first();
+
+            $product = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => $shopify_variant->price_etiqueta
+            ];
+        
+            return response()->json($product);
+            
+        } catch (\Throwable $th) {
+            //throw $th;
+
+            return "Error";
+
+        }
+        
+
+    }
+}
