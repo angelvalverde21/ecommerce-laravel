@@ -28,7 +28,7 @@ class AndroidController extends Controller
             $product = [
                 'id' => $product->id,
                 'name' => $product->name,
-                'price' => $shopify_variant->price_etiqueta
+                'price' => $shopify_variant->price_etiqueta . " "  . $shopify_variant->price_oferta
             ];
         
             return response()->json($product);
