@@ -243,48 +243,52 @@ class AttendanceService
             }
 
             $schedule = $schedules[$date->dayOfWeek] ?? null;
-            
+
             Log::info($employee->id);
             Log::info($schedule->day_of_week);
 
             $key = $date->format('Y-m-d');
 
+            /*------------------- inicio ----------------------*/
+
             if ($attendances->has($key)) {
 
+                //Si el empleado marca su asistencia quiere decir de todas maneras que es presencial (onsite) asi ese dia le haya tocado remoto o home_office
+                
                 $attendance = $attendances[$key];
 
-                // Log::info($schedule->work_type);
+                Log::info("el empleado asistio");
 
-                if (strtolower($schedule->work_type) === "onsite") {
+                $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
+                $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out);
 
-                    Log::info("onsite");
+                $attendance->is_late = $this->isLate($employee, $attendance); //determina si llego tarde
+                $attendance->missing = false;
 
-                    $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
-                    $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out);
+                $attendance->minutes = $checkIn->diffInMinutes($checkOut);
 
-                    $attendance->is_late = $this->isLate($employee, $attendance); //determina si llego tarde
-                    $attendance->missing = false;
+                //Ahora calcular los minutos que se computaran
+                $work_time_end = Carbon::createFromFormat('H:i:s', $employee->work_time_end);
 
-                    $attendance->minutes = $checkIn->diffInMinutes($checkOut);
+                $attendance->work_type = $schedule->work_type;
 
-                    //Ahora calcular los minutos que se computaran
-                    $work_time_end = Carbon::createFromFormat('H:i:s', $employee->work_time_end);
+                //Agregamos la tolerancia a la salida
+                $work_time_end->addMinutes($employee->tolerance_minutes); //Sumamos a la hora de salida los 15 minutos mas de tolerancia para que la salida maxima sea por ejemplo 7:15
 
-                    $attendance->work_type = $schedule->work_type;
+                // $attendance->work_time_end = $work_time_end->format('H:i:s');
+                // $attendance->work_time_end_real = $checkOut->format('H:i:s');
 
-                    //Agregamos la tolerancia a la salida
-                    $work_time_end->addMinutes($employee->tolerance_minutes); //Sumamos a la hora de salida los 15 minutos mas de tolerancia para que la salida maxima sea por ejemplo 7:15
-
-                    // $attendance->work_time_end = $work_time_end->format('H:i:s');
-                    // $attendance->work_time_end_real = $checkOut->format('H:i:s');
-
-                    if ($work_time_end > $checkOut) {
-                        $attendance->minutes_computed = $checkIn->diffInMinutes($checkOut);
-                    } else {
-                        $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
-                    }
-
+                if ($work_time_end > $checkOut) {
+                    $attendance->minutes_computed = $checkIn->diffInMinutes($checkOut);
                 } else {
+                    $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
+                }
+
+                $completeAttendances[] = $attendance;
+
+            } else {
+
+                if (strtolower($schedule->work_type) === "home_office") {
 
                     Log::info("home_office");
                     //home office
@@ -296,24 +300,29 @@ class AttendanceService
                     $attendance->minutes = $checkIn->diffInMinutes($checkOut);
                     $attendance->minutes_computed = $attendance->minutes;
 
+                    $attendance->employee_id = $employee->id;
+
+                    $completeAttendances[] = $attendance;
+
+                } else {
+
+                    $completeAttendances[] = [
+                        'id' => null,
+                        // 'employee_id' => $employee->id,
+                        // 'employee' => $employee->load('user'),
+                        'check_in' => null,
+                        'check_out' => null,
+                        'minutes' => 0,
+                        'date' => $key,
+                        'missing' => true,
+                        'employee_id' => $employee->id
+                    ];
+
                 }
-
-
-                $completeAttendances[] = $attendance;
-
-            } else {
-
-                $completeAttendances[] = [
-                    'id' => null,
-                    // 'employee_id' => $employee->id,
-                    // 'employee' => $employee->load('user'),
-                    'check_in' => null,
-                    'check_out' => null,
-                    'minutes' => 0,
-                    'date' => $key,
-                    'missing' => true
-                ];
             }
+
+            /*------------------- fin ----------------------*/
+
         }
 
         return $completeAttendances;
@@ -321,7 +330,7 @@ class AttendanceService
         // return collect($completeAttendances);
     }
 
-    
+
 
     // Metodo que determina si llego tarde
 
