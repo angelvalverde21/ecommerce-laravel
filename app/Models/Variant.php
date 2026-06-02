@@ -44,4 +44,8 @@ class Variant extends Model
         return $this->hasMany(VariantOptionValue::class);
     }
 
+    public function kardexes(){
+        return $this->hasMany(Kardex::class);
+    }
+
 }

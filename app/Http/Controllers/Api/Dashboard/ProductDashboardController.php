@@ -59,7 +59,7 @@ class ProductDashboardController extends Controller
     {
         //
 
-        $product = $store->products()->with(['category', 'attributes', 'options.option_values', 'variants.product',  'variants.variant_option_values.optionValue'])->find($product_id);
+        $product = $store->products()->with(['category', 'attributes', 'options.option_values', 'variants.product', 'variants.kardexes',  'variants.variant_option_values.optionValue'])->find($product_id);
 
         if (!$product) {
             return responseError([], "Error al obtener el producto x", 404);

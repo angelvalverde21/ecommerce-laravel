@@ -26,7 +26,8 @@ class InventoryDashboardController extends Controller
                 ]
             )
                 ->withSum('kardexes as sum_quantity', 'quantity')
-                ->orderByDesc('sum_quantity')
+                // ->orderByDesc('sum_quantity')
+                ->orderByDesc('id')
                 ->get(),
             'Inventarios del store ' . $store->name
         );
