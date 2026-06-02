@@ -17,7 +17,11 @@ class AndroidController extends Controller
         
         try {
             
-            $variant = Variant::findOrFail($variant_id);
+            $variant = Variant::with(['product', 'kardexes',  'variant_option_values.optionValue'])->findOrFail($variant_id);
+
+            $variant_option_value = $variant->variant_option_values->first();
+
+            Log::info($variant_option_value);
 
             Log::info($variant);
 
@@ -29,7 +33,8 @@ class AndroidController extends Controller
                 'id' => $product->id,
                 'name' => $product->name,
                 'price' => $shopify_variant->price_etiqueta ?? 0,
-                'oferta' => $shopify_variant->price_oferta ?? 0
+                'oferta' => $shopify_variant->price_oferta ?? 0,
+                'size' =>  $variant_option_value->option_value->value ?? 0,
             ];
         
             return response()->json($product);
