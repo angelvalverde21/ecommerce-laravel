@@ -251,7 +251,7 @@ class AttendanceService
 
             /*------------------- inicio ----------------------*/
 
-            if ($attendances->has($key)) {
+            if ($attendances->has($key)) { //Esto quiere decir que hay un registro en el huellero, tambien puede ser que el empleado le haya tocado home office pero igual vino
 
                 //Si el empleado marca su asistencia quiere decir de todas maneras que es presencial (onsite) asi ese dia le haya tocado remoto o home_office
                 
@@ -291,18 +291,37 @@ class AttendanceService
                 if (strtolower($schedule->work_type) === "home_office") {
 
                     Log::info("home_office");
+
+                    $attendance = new \stdClass();
+                    
                     //home office
                     $attendance->is_late = false;
                     $attendance->missing = false;
+                    $attendance->date = $key;
+
+                    Log::info($key);
+
                     $attendance->work_type = $schedule->work_type;
                     $checkIn  = Carbon::createFromFormat('H:i:s', $schedule->start_time ?? "9:00:00");
                     $checkOut = Carbon::createFromFormat('H:i:s', $schedule->end_time ?? "19:00:00");
+
+                    Log::info("checkIn " . $checkIn);
+                    Log::info("checkIn " . $checkOut);
+                    Log::info("schedule start_time " . $schedule->start_time);
+                    Log::info("schedule end_time" . $schedule->end_time);
+                    
+                    
+                    
                     $attendance->minutes = $checkIn->diffInMinutes($checkOut);
                     $attendance->minutes_computed = $attendance->minutes;
+                    Log::info("minutes " . $checkIn->diffInMinutes($checkOut));
+                    Log::info("minutes_computed " . $attendance->minutes);
 
                     $attendance->employee_id = $employee->id;
 
                     $completeAttendances[] = $attendance;
+
+                    Log::info('Attendance', (array) $attendance);
 
                 } else {
 
