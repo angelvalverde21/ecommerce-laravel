@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('store_id')->constrained()->cascadeOnDelete();
             $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
             //Tipo de trabajo home office o onsite
-            $table->enum('work_type', ['home_office', 'onsite'])->default('onsite');
+            $table->enum('work_type', ['home_office', 'onsite', 'rest'])->default('onsite');
 
             $table->tinyInteger('day_of_week')->unsigned()->nullable(); //
             $table->time('start_time')->default('09:00:00')->nullable();

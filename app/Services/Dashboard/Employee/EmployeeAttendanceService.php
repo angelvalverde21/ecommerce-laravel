@@ -22,8 +22,24 @@ class EmployeeAttendanceService
         $this->attendanceService = new AttendanceService();
     }
 
+    public function index(Store $store, $employee_id)
+    {
+
+        Log::info("index");
+
+        $employee = $store->employees()
+            ->with(['attendances.employee'])
+            ->findOrFail($employee_id);
+
+        $data = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
+
+        return $data;
+    }
+
     public function search(Store $store, $employee_id, Request $request)
     {
+
+        Log::info("search");
 
         $start = $request->input('start_date');
         $end   = $request->input('end_date');

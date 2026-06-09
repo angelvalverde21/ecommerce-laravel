@@ -77,13 +77,13 @@ class EmployeeDashboardController extends Controller
         if ($request->hasNoFilters()) {
             return $this->index($store);
         }
-    
+
         $employees = Employee::with('user')
             ->search($request->search)
             ->betweenDates($request->start_date, $request->end_date) //Sino hay fechas simplemente pasa de largo, no se considera
             ->limit(10)
             ->get();
-    
+
         return responseOk($employees);
     }
 
@@ -163,7 +163,7 @@ class EmployeeDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Store $store, $employed_id)
+    public function  show(Store $store, $employed_id)
     {
         try {
 
@@ -195,72 +195,7 @@ class EmployeeDashboardController extends Controller
 
 
             // --- NORMALIZAR ASISTENCIAS ---
-
-            $attendances = $employee->attendances
-                ->keyBy(function ($attendance) {
-                    return Carbon::parse($attendance->date)->format('Y-m-d'); //devuelve la fecha formateada Y-m-d
-                });
-
-            // ✅ FIX: si no hay asistencias, devolver vacío
-            if ($employee->attendances->isEmpty()) {
-                $employee->setRelation('attendances', collect([]));
-                return responseOk($employee, "No hay asistencias registradas");
-            }
-
-            //------ Generamos la coleccion de carbones
-
-            /*
-                Collection [
-                    Carbon\Carbon @1746057600 {
-                        date: 2026-05-01 00:00:00.0 UTC,
-                    },
-                    Carbon\Carbon @1746144000 {
-                        date: 2026-05-02 00:00:00.0 UTC,
-                    },
-                    Carbon\Carbon @1746403200 {
-                        date: 2026-05-05 00:00:00.0 UTC,
-                    },
-                ]
-            */
-
-            $dates = $employee->attendances
-                ->pluck('date') //Pluck extrae una columna de todas las columnas disponibles (store_id, employee_id, date, check_in, check_out, etc) evitando gastar memoria
-                //Una vez extraida la columna, quedan los datos en formato string y lo recorremos con map
-                ->map(fn($d) => Carbon::parse($d));
-
-            $start = $dates->min();
-            $end   = $dates->max();
-
-            $period = CarbonPeriod::create($start, $end);
-
-            $completeAttendances = [];
-
-            foreach ($period as $date) {
-
-                if ($date->dayOfWeek == Carbon::SUNDAY) {
-                    continue;
-                }
-
-                $key = $date->format('Y-m-d');
-
-                if ($attendances->has($key)) {
-
-                    $attendance = $attendances[$key];
-                    $attendance->missing = false;
-
-                    $completeAttendances[] = $attendance;
-                } else {
-
-                    $completeAttendances[] = [
-                        'id' => null,
-                        'employee_id' => $employee->id,
-                        'check_in' => null,
-                        'check_out' => null,
-                        'date' => $key,
-                        'missing' => true
-                    ];
-                }
-            }
+            $completeAttendances = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
 
             $employee->setRelation('attendances', collect($completeAttendances)); //Borra la relacion $employee->attendances y la reeemplaza por $completeAttendances
 

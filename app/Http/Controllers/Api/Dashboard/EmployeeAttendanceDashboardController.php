@@ -73,10 +73,8 @@ class EmployeeAttendanceDashboardController extends Controller
             ->with('attendances.employee')
             ->findOrFail($employee_id);
 
-        $data = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
-
         return responseOk(
-            $data,
+            $this->employeeAttendanceService->index($store, $employee->id),
             'Asistencias obtenidas correctamente desde EmployeeAttendanceDashboardController'
         );
     }

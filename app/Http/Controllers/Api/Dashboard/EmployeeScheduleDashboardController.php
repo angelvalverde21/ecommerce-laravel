@@ -94,7 +94,7 @@ class EmployeeScheduleDashboardController extends Controller
             Log::info($request->all());
 
             $validated = $request->validate([
-                'work_type'         => ['required', 'in:home_office,onsite'],
+                'work_type'         => ['required', 'in:home_office,onsite,rest'],
                 'day_of_week'       => ['nullable', 'integer', 'between:1,7'],
                 'start_time'        => ['nullable', 'date_format:H:i:s'],
                 'end_time'          => ['required', 'date_format:H:i:s', 'after:start_time'],
