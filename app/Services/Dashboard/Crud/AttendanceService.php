@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\Log;
 class AttendanceService
 {
 
-
-
     public function store(Store $store, Request $request) {}
 
     private function readFile(Request $request)
@@ -253,124 +251,129 @@ class AttendanceService
 
             if ($attendances->has($key)) {
 
-                $attendance = $attendances[$key];
+                if ($attendances->has($key)) { //Esto quiere decir que hay un registro en el huellero, tambien puede ser que el empleado le haya tocado home office pero igual vino
 
-                //si hay registro es porque el empleado vino presencialmente a oficina a trabajar
+                    //Si el empleado marca su asistencia quiere decir de todas maneras que es presencial (onsite) asi ese dia le haya tocado remoto o home_office
 
-                Log::info("onsite");
+                    $attendance = $attendances[$key];
 
-                $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
-                $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out);
+                    //si hay registro es porque el empleado vino presencialmente a oficina a trabajar
 
-                $attendance->is_late = $this->isLate($employee, $attendance);
-                $attendance->missing = false;
+                    Log::info("onsite");
 
-                $attendance->minutes = $checkIn->diffInMinutes($checkOut);
+                    $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
+                    $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out);
 
-                $work_time_end = Carbon::createFromFormat('H:i:s', $employee->work_time_end);
-                $attendance->work_type = $schedule->work_type;
+                    $attendance->is_late = $this->isLate($employee, $attendance);
+                    $attendance->missing = false;
 
-                $work_time_end->addMinutes($employee->tolerance_minutes);
+                    $attendance->minutes = $checkIn->diffInMinutes($checkOut);
 
-                if ($work_time_end > $checkOut) {
-                    $attendance->minutes_computed = $checkIn->diffInMinutes($checkOut);
+                    $work_time_end = Carbon::createFromFormat('H:i:s', $employee->work_time_end);
+                    $attendance->work_type = $schedule->work_type;
+
+                    $work_time_end->addMinutes($employee->tolerance_minutes);
+
+                    if ($work_time_end > $checkOut) {
+                        $attendance->minutes_computed = $checkIn->diffInMinutes($checkOut);
+                    } else {
+                        $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
+                    }
+
+                    $salary_neto = round((($employee->salary / 30) * ($attendance->minutes - 60)) / 480, 2);
+                    $salary_day = round($employee->salary / 30, 0);
+
+                    $completeAttendances[] = [
+                        'id' => $attendance->id,
+                        'check_in' => $attendance->check_in,
+                        'check_out' => $attendance->check_out,
+                        'minutes' => $attendance->minutes,
+                        'minutes_computed' => $attendance->minutes_computed,
+                        'salary_day' => $salary_day,
+                        'salary_neto' => $salary_neto,
+                        'salary_extra' => $salary_neto - $salary_day,
+                        'date' => $key,
+                        'missing' => $attendance->missing,
+                        'is_late' => $attendance->is_late,
+                        'work_type' => 'onsite',
+                        'employee_name' => $employee->user->name
+                    ];
                 } else {
-                    $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
+
+                    switch (strtolower($schedule->work_type)) {
+
+                        case 'home_office':
+
+                            Log::info("home_office");
+
+                            // $attendance->is_late = false;
+                            // $attendance->missing = false;
+                            // $attendance->work_type = $schedule->work_type;
+
+                            $checkIn  = Carbon::createFromFormat('H:i:s', $schedule->start_time ?? "09:00:00");
+                            $checkOut = Carbon::createFromFormat('H:i:s', $schedule->end_time ?? "19:00:00");
+
+                            $completeAttendances[] = [
+                                'id' => null,
+                                'check_in' => null,
+                                'check_out' => null,
+                                'minutes' => $checkIn->diffInMinutes($checkOut),
+                                'minutes_computed' => $checkIn->diffInMinutes($checkOut),
+                                'salary_day' => round($employee->salary / 30, 0),
+                                'salary_neto' => round($employee->salary / 30, 0),
+                                'salary_extra' => 0,
+                                'date' => $key,
+                                'missing' => false,
+                                'is_late' => false,
+                                'work_type' => 'home_office',
+                                'employee_name' => $employee->user->name,
+                                'missing_text' => "REMOTO"
+                            ];
+                            break;
+
+                        case 'rest': //descanzo
+                            $completeAttendances[] = [
+                                'id' => null,
+                                'check_in' => null,
+                                'check_out' => null,
+                                'minutes' => null,
+                                'minutes_computed' => null,
+                                'salary_day' => round($employee->salary / 30, 0),
+                                'salary_neto' => round($employee->salary / 30, 0),
+                                'salary_extra' => 0,
+                                'date' => $key,
+                                'missing' => false,
+                                'is_late' => false,
+                                'work_type' => 'rest',
+                                'employee_name' => $employee->user->name,
+                                'missing_text' => "DESCANZO"
+                            ];
+                            break;
+
+                        //Los demas casos se considera una falta
+                        default:
+                            $completeAttendances[] = [
+                                'id' => null,
+                                'check_in' => null,
+                                'check_out' => null,
+                                'minutes' => 0,
+                                'minutes_computed' => 0,
+                                'salary_day' => round($employee->salary / 30, 0),
+                                'salary_neto' => -round($employee->salary / 30, 0),
+                                'salary_extra' => -round($employee->salary / 30, 0),
+                                'date' => $key,
+                                'missing' => true,
+                                'is_late' => null, //no llego, entnoces no se puede decir que llego tarde
+                                'work_type' => null,
+                                'employee_name' => $employee->user->name,
+                                'missing_text' => "FALTO"
+                            ];
+                            break;
+                    }
                 }
 
-                $salary_neto = round((($employee->salary / 30) * ($attendance->minutes - 60)) / 480, 2);
-                $salary_day = round($employee->salary / 30, 0);
-
-                $completeAttendances[] = [
-                    'id' => $attendance->id,
-                    'check_in' => $attendance->check_in,
-                    'check_out' => $attendance->check_out,
-                    'minutes' => $attendance->minutes,
-                    'minutes_computed' => $attendance->minutes_computed,
-                    'salary_day' => $salary_day,
-                    'salary_neto' => $salary_neto,
-                    'salary_extra' => $salary_neto - $salary_day,
-                    'date' => $key,
-                    'missing' => $attendance->missing,
-                    'is_late' => $attendance->is_late,
-                    'work_type' => 'onsite',
-                    'employee_name' => $employee->user->name
-                ];
-            } else {
-
-                switch (strtolower($schedule->work_type)) {
-
-                    case 'home_office':
-
-                        Log::info("home_office");
-
-                        // $attendance->is_late = false;
-                        // $attendance->missing = false;
-                        // $attendance->work_type = $schedule->work_type;
-
-                        $checkIn  = Carbon::createFromFormat('H:i:s', $schedule->start_time ?? "09:00:00");
-                        $checkOut = Carbon::createFromFormat('H:i:s', $schedule->end_time ?? "19:00:00");
-
-                        $completeAttendances[] = [
-                            'id' => null,
-                            'check_in' => null,
-                            'check_out' => null,
-                            'minutes' => $checkIn->diffInMinutes($checkOut),
-                            'minutes_computed' => $checkIn->diffInMinutes($checkOut),
-                            'salary_day' => round($employee->salary / 30, 0),
-                            'salary_neto' => round($employee->salary / 30, 0),
-                            'salary_extra' => 0,
-                            'date' => $key,
-                            'missing' => false,
-                            'is_late' => false,
-                            'work_type' => 'home_office',
-                            'employee_name' => $employee->user->name,
-                            'missing_text' => "REMOTO"
-                        ];
-                        break;
-
-                    case 'rest': //descanzo
-                        $completeAttendances[] = [
-                            'id' => null,
-                            'check_in' => null,
-                            'check_out' => null,
-                            'minutes' => null,
-                            'minutes_computed' => null,
-                            'salary_day' => round($employee->salary / 30, 0),
-                            'salary_neto' => round($employee->salary / 30, 0),
-                            'salary_extra' => 0,
-                            'date' => $key,
-                            'missing' => false,
-                            'is_late' => false,
-                            'work_type' => 'rest',
-                            'employee_name' => $employee->user->name,
-                            'missing_text' => "DESCANZO"
-                        ];
-                        break;
-
-                    //Los demas casos se considera una falta
-                    default:
-                        $completeAttendances[] = [
-                            'id' => null,
-                            'check_in' => null,
-                            'check_out' => null,
-                            'minutes' => 0,
-                            'minutes_computed' => 0,
-                            'salary_day' => round($employee->salary / 30, 0),
-                            'salary_neto' => -round($employee->salary / 30, 0),
-                            'salary_extra' => -round($employee->salary / 30, 0), 
-                            'date' => $key,
-                            'missing' => true,
-                            'is_late' => null, //no llego, entnoces no se puede decir que llego tarde
-                            'work_type' => null,
-                            'employee_name' => $employee->user->name,
-                            'missing_text' => "FALTO"
-                        ];
-                        break;
-                }
+                // $completeAttendances[] = $attendance;
             }
-
-            // $completeAttendances[] = $attendance;
         }
 
         return $completeAttendances;
