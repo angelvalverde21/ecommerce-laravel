@@ -22,13 +22,13 @@ class EmployeeAttendanceService
         $this->attendanceService = new AttendanceService();
     }
 
-    public function index(Store $store, $employee_id)
+    public function index(Store $store, int $employee_id)
     {
 
         Log::info("index");
 
         $employee = $store->employees()
-            ->with(['attendances.employee'])
+            ->with(['attendances'])
             ->findOrFail($employee_id);
 
         $data = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);

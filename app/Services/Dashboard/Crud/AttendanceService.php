@@ -295,6 +295,7 @@ class AttendanceService
                     'is_late' => $attendance->is_late,
                     'work_type' => 'onsite',
                     'employee_name' => $employee->user->name,
+                    'employee_id' => $employee->id,
                     'missing_text' => null
                 ];
             } else {
@@ -326,6 +327,7 @@ class AttendanceService
                             'is_late' => false,
                             'work_type' => 'home_office',
                             'employee_name' => $employee->user->name,
+                            'employee_id' => $employee->id,
                             'missing_text' => "REMOTO"
                         ];
                         break;
@@ -345,6 +347,7 @@ class AttendanceService
                             'is_late' => false,
                             'work_type' => 'rest',
                             'employee_name' => $employee->user->name,
+                            'employee_id' => $employee->id,
                             'missing_text' => "DESCANZO"
                         ];
                         break;
@@ -365,6 +368,7 @@ class AttendanceService
                             'is_late' => null, //no llego, entnoces no se puede decir que llego tarde
                             'work_type' => null,
                             'employee_name' => $employee->user->name,
+                            'employee_id' => $employee->id,
                             'missing_text' => "FALTO"
                         ];
                         break;
