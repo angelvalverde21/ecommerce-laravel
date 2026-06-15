@@ -296,6 +296,7 @@ class AttendanceService
                     'work_type' => 'onsite',
                     'employee_name' => $employee->user->name,
                     'employee_id' => $employee->id,
+                    'comment' => $attendance->comment,
                     'missing_text' => null
                 ];
             } else {
@@ -328,6 +329,7 @@ class AttendanceService
                             'work_type' => 'home_office',
                             'employee_name' => $employee->user->name,
                             'employee_id' => $employee->id,
+                            // 'comment' => $attendance->comment,
                             'missing_text' => "REMOTO"
                         ];
                         break;
@@ -348,6 +350,7 @@ class AttendanceService
                             'work_type' => 'rest',
                             'employee_name' => $employee->user->name,
                             'employee_id' => $employee->id,
+                            // 'comment' => $attendance->comment,
                             'missing_text' => "DESCANZO"
                         ];
                         break;
@@ -369,6 +372,7 @@ class AttendanceService
                             'work_type' => null,
                             'employee_name' => $employee->user->name,
                             'employee_id' => $employee->id,
+                            // 'comment' => $attendance->comment,
                             'missing_text' => "FALTO"
                         ];
                         break;
