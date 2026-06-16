@@ -25,7 +25,7 @@ class EmployeePaymentDashboardController extends Controller
         $payments = $employee->user
             ->payments()
             ->with(['images', 'gateway'])
-            ->orderBy('created_at', 'desc')
+            ->orderBy('date', 'desc')
             ->get()
             ->groupBy(function ($payment) {
                 return Str::plural(
