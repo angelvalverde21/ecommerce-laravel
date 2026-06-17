@@ -77,6 +77,7 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
     Route::prefix('reports')->group(function () {
 
         Route::get('/', [ReportShopifyController::class, 'index']); //Listar
+        Route::get('/inventory', [ReportShopifyController::class, 'inventory']); //Listar
         Route::get('/top', [ReportShopifyController::class, 'reportTopSellingProducts']); //Listar
 
         Route::prefix('bars')->group(function () {

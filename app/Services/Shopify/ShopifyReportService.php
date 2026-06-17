@@ -375,7 +375,7 @@ class ShopifyReportService extends ShopifyBaseService
 
 
       // Crear rango de fechas
-      [$startDate, $endDate] = $this->buildDateRange(3650); //10 años
+      [$startDate, $endDate] = $this->buildDateRange(120); //10 años
 
       // -------------------------------------------------------------
       // 1 — EL QUERY ESTÁ AQUÍ MISMO (plantilla)
@@ -385,7 +385,7 @@ class ShopifyReportService extends ShopifyBaseService
       orders(
         first: 200,
         sortKey: CREATED_AT,
-        query: "financial_status:paid cancelled_at:null created_at:>=:start created_at:<=:end",
+        query: "fulfillment_status:fulfilled cancelled_at:null created_at:>=:start created_at:<=:end",
         after: :cursor
       ) {
           pageInfo {
@@ -611,5 +611,167 @@ class ShopifyReportService extends ShopifyBaseService
           ->values(); // ← convierte years en array real
   
       return $report;
+  }
+
+    // ==================================== REPORTES DEL PRODUCTO MAS VENDIDOS ORDENADOS DE MAYOR A MENOR  ====================================
+
+  public function inventory($days = 90) // 10 años
+  {
+
+    // Crear rango de fechas
+    [$startDate, $endDate] = $this->buildDateRange($days); //3650 quiere decir 10 años
+
+    $queryTemplate = <<<GRAPHQL
+                  {
+                    orders(
+                      first: 100,
+                      sortKey: CREATED_AT,
+                      query: "fulfillment_status:fulfilled cancelled_at:null created_at:>=:start created_at:<=:end",
+                      after: :cursor
+                    ) {
+                      pageInfo {
+                        hasNextPage
+                        endCursor
+                      }
+                      edges {
+                        cursor
+                        node {
+                          id
+                          name
+                          createdAt
+                          totalPriceSet { shopMoney { amount currencyCode } }
+                          lineItems(first: 50) {
+                            edges {
+                              node {
+                                name
+                                quantity
+                                variant {
+                                  id
+                                  title
+                                  price
+                                  image { url }
+                                  product { 
+                                    title
+                                    createdAt
+                                    featuredImage {
+                                      url
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+            GRAPHQL;
+
+    // -------------------------------------------------------------
+    // 2️⃣ — QueryBuilder para reemplazar placeholders
+    // -------------------------------------------------------------
+
+    $queryBuilder = function (?string $cursor) use ($queryTemplate, $startDate, $endDate) {
+
+      return str_replace(
+        [':start', ':end', ':cursor'], //Elementos a reeemplazar
+        [$startDate->toDateString(), $endDate->toDateString(), $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
+        $queryTemplate //En el template
+      );
+    };
+
+    //fin del QueryBuilder
+
+    // -------------------------------------------------------------
+    // 3️⃣ — Ejecutar el query builder ($queryBuilder) para traer los datos de Shopify
+    // -------------------------------------------------------------
+    // getReportTopSellingProducts
+    $result = $this->getDataFromShopify( //Ejecuta el codigo del queryBuilder y trae los datos de shopify con un while para no cargar a shopify
+      'orders',
+      $queryBuilder,
+      ['lineItems'] //podria ser 'lineItems'
+    );
+
+    // -------------------------------------------------------------
+    // 4️⃣ — Normalizar items
+    // -------------------------------------------------------------
+    $orders = collect($result['items'] ?? []);
+
+    //collect() transforma un array en un objeto Collection. Esto permite usar métodos como: ,map(),filter(),groupBy(),pluck(),sortBy(),count(),where()
+    //formato que trae shopify
+    /*
+       {
+      "id":"gid:\/\/shopify\/Order\/6428652896480",
+      "name":"#6981",
+      "createdAt":"2025-11-22T16:43:00Z",
+      "totalPriceSet":{
+         "shopMoney":{
+            "amount":"99.9",
+            "currencyCode":"PEN"
+         }
+      },
+      "lineItems":[
+         {
+            "name":"Sweater Taylor Avena 1 - Standar",
+            "quantity":1,
+            "variant":{
+               "id":"gid:\/\/shopify\/ProductVariant\/47794765267168",
+               "title":"Standar",
+               "price":"84.90",
+               "image":null,
+               "product":{
+                  "title":"Sweater Taylor Avena 1",
+                  "createdAt":"2025-09-27T20:01:04Z",
+                  "featuredImage":{
+                     "url":"https:\/\/cdn.shopify.com\/s\/files\/1\/0667\/7204\/1952\/files\/9AB3B43E-9444-417F-A6CB-BA2BDB1A2521.jpg?v=1759013825"
+                  }
+               }
+            }
+         }
+      ],
+      "cursor":"eyJsYXN0X2lkIjo2NDI4NjUyODk2NDgwLCJsYXN0X3ZhbHVlIjoiMjAyNS0xMS0yMiAxNjo0MzowMC41ODU3MzYifQ=="
+   },
+    */
+    $products = collect();
+
+    // Log::info($orders);
+
+    foreach ($orders as $order) {
+
+      foreach ($order['lineItems'] as $item) {
+
+        $title       = $item['variant']['product']['title'] ?? $item['name'];
+        $variant     = $item['variant']['title'] ?? 'N/A';
+        $price       = (float) ($item['variant']['price'] ?? 0);
+        $qty         = (int) $item['quantity'];
+        $image       = $item['variant']['product']['featuredImage']['url'] ?? null;
+
+        // Clave única producto + variante
+        $key = "{$title} - {$variant}";
+
+        // Producto acumulado si existe
+        $existing = $products->get($key, [
+          'title'       => $title,
+          'variant'     => $variant,
+          'image'       => $image,
+          'quantity'    => 0,
+          'total_sales' => 0.0,
+        ]);
+
+        // Sumar cantidades y ventas
+        $existing['quantity']    += $qty;
+        $existing['total_sales'] += ($price * $qty);
+
+        // Guardar actualizado
+        $products->put($key, $existing);
+      }
+    }
+
+    Log::info($products);
+
+    return $products
+      ->sortByDesc('quantity')   // También puedes ordenar por 'total_sales'
+      ->values()
+      ->toArray();
   }
 }

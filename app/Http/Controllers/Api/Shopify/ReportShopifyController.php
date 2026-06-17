@@ -27,7 +27,7 @@ class ReportShopifyController extends Controller
         return response()->json($report);
     }
 
-    
+
     public function reportCashWeekly(Store $store)
     {
 
@@ -69,5 +69,18 @@ class ReportShopifyController extends Controller
         });
 
         return response()->json($report);
+    }
+
+    public function inventory(Store $store, Request $request)
+    {
+
+        $cacheKey = "report_inventory_selling_products_{$store->id}";
+
+        $report = Cache::remember($cacheKey, now()->addHours(24), function () {
+            return $this->shopifyService->getReportTopSellingProducts();
+        });
+
+        return response()->json($report);
+
     }
 }
