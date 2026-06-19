@@ -198,7 +198,7 @@ class ShopifyReportService extends ShopifyBaseService
 
   // ==================================== REPORTES DEL PRODUCTO MAS VENDIDOS ORDENADOS DE MAYOR A MENOR  ====================================
 
-  public function getReportTopSellingProducts($days = 3650) // 10 años
+  public function getReportTopSellingProducts($days = 90) // 10 años
   {
 
     // Crear rango de fechas
@@ -209,7 +209,7 @@ class ShopifyReportService extends ShopifyBaseService
                     orders(
                       first: 100,
                       sortKey: CREATED_AT,
-                      query: "financial_status:paid cancelled_at:null created_at:>=:start created_at:<=:end",
+                      query: "fulfillment_status:fulfilled cancelled_at:null created_at:>=:start created_at:<=:end",
                       after: :cursor
                     ) {
                       pageInfo {
@@ -375,7 +375,7 @@ class ShopifyReportService extends ShopifyBaseService
 
 
       // Crear rango de fechas
-      [$startDate, $endDate] = $this->buildDateRange(120); //10 años
+      [$startDate, $endDate] = $this->buildDateRange(90); //3650 quiere decir 10 años
 
       // -------------------------------------------------------------
       // 1 — EL QUERY ESTÁ AQUÍ MISMO (plantilla)
