@@ -15,7 +15,14 @@ class Kardex extends Model
         'kardexable_id',
     ];
 
-    public function variant(){
+
+    public function kardexable()
+    {
+        return $this->morphTo();
+    }
+
+    public function variant()
+    {
         return $this->belongsTo(Variant::class);
     }
 }

@@ -13,17 +13,22 @@ class ManufactureVariantDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Store $store, $manufacture_id)
+    public function index(Store $store, int $manufacture_id)
     {
         //
 
         $manufactureVariants = $store->manufactures()
             ->findOrFail($manufacture_id)
             ->manufactureVariants()
-            ->with(['variant.product.image', 'variant.optionValues'])
+            ->with([
+                'variant.product.image',
+                'variant.optionValues',
+                'variant.manufactureKardexes' => fn($q) =>
+                $q->where('kardexable_id', $manufacture_id)
+            ])
             ->get();
 
-        return responseOk($manufactureVariants, "Listado de ManufactureVariants obtenido correctamente");  
+        return responseOk($manufactureVariants, "Listado de ManufactureVariants obtenido correctamente");
     }
 
     /**
@@ -179,7 +184,6 @@ class ManufactureVariantDashboardController extends Controller
             DB::commit();
 
             return responseOk($manufactureVariant->load(['variant.product.image', 'variant.optionValues']), "Cantidad actualizada correctamente");
-
         } catch (\Throwable $th) {
 
             Log::info($th);

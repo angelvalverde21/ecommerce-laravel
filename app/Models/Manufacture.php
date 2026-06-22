@@ -30,7 +30,7 @@ class Manufacture extends Model
 
     public function manufactureVariants()
     {
-        return $this->hasMany(ManufactureVariant::class);
+        return $this->hasMany(ManufactureVariant::class); //es la tabla de pedidos iniciales
     }
 
     public function variants()

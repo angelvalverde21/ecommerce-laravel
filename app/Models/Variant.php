@@ -44,8 +44,14 @@ class Variant extends Model
         return $this->hasMany(VariantOptionValue::class);
     }
 
-    public function kardexes(){
+    public function kardexes()
+    {
         return $this->hasMany(Kardex::class);
     }
 
+    public function manufactureKardexes()
+    {
+        return $this->hasMany(Kardex::class)
+            ->where('kardexable_type', Manufacture::class);
+    }
 }
