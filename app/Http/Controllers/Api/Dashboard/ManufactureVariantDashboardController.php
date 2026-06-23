@@ -171,7 +171,10 @@ class ManufactureVariantDashboardController extends Controller
             $manufacture = $store->manufactures()
                 ->findOrFail($manufacture_id);
 
-            $manufactureVariant = $manufacture->manufactureVariants()
+            $manufactureVariant = $manufacture->manufactureVariants()->with([
+                'variant.manufactureKardexes' => fn($q) =>
+                $q->where('kardexable_id', $manufacture_id)
+            ])
                 ->findOrFail($manufacture_variant_id);
 
             $manufactureVariant->update([
