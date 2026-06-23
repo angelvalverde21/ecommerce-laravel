@@ -134,8 +134,10 @@ class ManufactureVariantDashboardController extends Controller
             $manufacture = $store->manufactures()
                 ->findOrFail($manufacture_id);
 
-            $manufactureVariant = $manufacture->manufactureVariants()
-                ->findOrFail($manufacture_variant_id);
+            $manufactureVariant = $manufacture->manufactureVariants()->with([
+                'variant.manufactureKardexes' => fn($q) =>
+                $q->where('kardexable_id', $manufacture_id)
+            ]);
 
             $manufactureVariant->update([
 
@@ -156,7 +158,7 @@ class ManufactureVariantDashboardController extends Controller
         }
     }
 
-    public function update(store $store, Request $request, $manufacture_id, $manufacture_variant_id)
+    public function update(store $store, Request $request, int $manufacture_id, int $manufacture_variant_id)
     {
         //
 
@@ -187,6 +189,7 @@ class ManufactureVariantDashboardController extends Controller
             DB::commit();
 
             return responseOk($manufactureVariant->load(['variant.product.image', 'variant.optionValues']), "Cantidad actualizada correctamente");
+            
         } catch (\Throwable $th) {
 
             Log::info($th);
