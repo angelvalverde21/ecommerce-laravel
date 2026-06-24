@@ -14,21 +14,15 @@ use Illuminate\Support\Facades\Request;
 class ManufactureVariantService
 {
 
-    public function show(Store $store, int $manufacture_id)
+    public function show(Store $store, int $manufacture_id, int $manufacture_variant_id)
     {
         //
+        $manufacture = $store->manufactures()
+            ->findOrFail($manufacture_id);
 
-        $manufactureVariants = $store->manufactures()
-            ->findOrFail($manufacture_id)
+        $manufactureVariant = $manufacture
             ->manufactureVariants()
-            ->with([
-                'variant.product.image',
-                'variant.optionValues',
-                'variant.manufactureKardexes' => fn($q) =>
-                $q->where('kardexable_id', $manufacture_id)
-            ])
-            ->get();
-
-        return responseOk($manufactureVariants, "Listado de ManufactureVariants obtenido correctamente");
+            ->variantData($manufacture)
+            ->findOrFail($manufacture_variant_id);
     }
 }

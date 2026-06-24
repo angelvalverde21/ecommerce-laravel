@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+
 
 class ManufactureVariant extends Model
 {
@@ -19,5 +21,19 @@ class ManufactureVariant extends Model
     public function manufacture()
     {
         return $this->belongsTo(Manufacture::class);
+    }
+
+
+    public function scopeVariantData(
+        Builder $query,
+        int $manufacture_id
+    ) {
+        return $query->with([
+            'variant.product.image',
+            'variant.optionValues',
+            'variant.manufactureKardexes' => fn($q) =>
+            $q->where('kardexable_id', $manufacture_id)
+                ->where('kardexable_type', Manufacture::class),
+        ]);
     }
 }

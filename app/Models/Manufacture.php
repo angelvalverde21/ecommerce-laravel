@@ -37,8 +37,17 @@ class Manufacture extends Model
     {
         //Aqui no la especificamos porque los modelos Manufacture y Variant sigue la convención de Laravel
         return $this->belongsToMany(Variant::class)
-            ->withPivot('quantity')
+            ->withPivot(['quantity','price'])
             ->withTimestamps();
+    }
+
+    public function scopeWithVariantsAndKardexes(Builder $query): Builder
+    {
+        return $query->with([
+            'variants.product.image',
+            'variants.optionValues',
+            'variants.manufactureKardexes',
+        ]);
     }
 
     public function user()
@@ -98,11 +107,11 @@ class Manufacture extends Model
 
         return $query->where(function ($query) use ($term) {
             $query->where('manufactures.name', 'LIKE', '%' . $term . '%')
-            ->where('type', 'production');;
+                ->where('type', 'production');;
             // ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
         });
     }
-    
+
 
     public function scopeSearchOrder(Builder $query, $term)
     {
@@ -120,7 +129,7 @@ class Manufacture extends Model
 
         return $query->where(function ($query) use ($term) {
             $query->where('manufactures.name', 'LIKE', '%' . $term . '%')
-            ->where('type', 'order');;
+                ->where('type', 'order');;
             // ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
         });
     }
@@ -166,6 +175,6 @@ class Manufacture extends Model
 
     public function purchases()
     {
-        return $this->morphMany(Purchase::class, 'purchaseable');   
+        return $this->morphMany(Purchase::class, 'purchaseable');
     }
 }

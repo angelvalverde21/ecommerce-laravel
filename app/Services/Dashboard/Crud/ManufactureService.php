@@ -39,8 +39,9 @@ class ManufactureService
 
     public function show(Store $store, $manufacture_id): Manufacture
     {
-        return $store->manufactures()
+        return $store->manufactures()->with('payments')
             ->withFinancialSummary()
+            ->withVariantsAndKardexes()
             ->findOrFail($manufacture_id);
     }
 }
