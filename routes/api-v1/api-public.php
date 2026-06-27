@@ -12,15 +12,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\VerifyStore;
 
 
-// Route::get('/cache', function () {
+Route::get('/cache', function () {
 
-//     Artisan::call('cache:clear');
-//     Artisan::call('config:cache');
-//     Artisan::call('route:cache');
-//     Artisan::call('view:cache');
+    Artisan::call('cache:clear');
+    Artisan::call('config:cache');
+    Artisan::call('route:cache');
+    Artisan::call('view:cache');
 
-//     return "Cacheado!x";
-// });
+    return "Cacheado!x";
+});
 
 // Route::get('/link', function () {
 //     Artisan::call('storage:link');
