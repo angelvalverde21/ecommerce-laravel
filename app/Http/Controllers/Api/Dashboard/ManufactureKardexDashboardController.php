@@ -18,9 +18,18 @@ class ManufactureKardexDashboardController extends Controller
             ->findOrFail($manufacture_id)
             ->kardexes()
             ->with(['variant.product.image', 'variant.optionValues'])
-            ->get();
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy(fn($item) => $item->created_at->format('Y-m-d'))
+            ->map(function ($items, $date) {
+                return [
+                    'date' => $date,
+                    'items' => $items->values(),
+                ];
+            })
+            ->values();
 
-            return responseOk($kardexes, "Listado de Kardexes obtenido correctamente");
+        return responseOk($kardexes, "Listado de Kardexes obtenido correctamente");
     }
 
     /**
