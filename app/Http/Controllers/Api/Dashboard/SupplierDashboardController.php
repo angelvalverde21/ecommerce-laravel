@@ -29,17 +29,17 @@ class SupplierDashboardController extends Controller
 
     public function index(Store $store)
     {
-        return $this->supplierService->index($store, 25);
+        return $this->supplierService->index($store, 500);
     }
 
     public function active(Store $store)
     {
-        return $this->supplierService->active($store, 25);
+        return $this->supplierService->active($store, 500);
     }
 
     public function blocked(Store $store)
     {
-        return $this->supplierService->blocked($store, 25);
+        return $this->supplierService->blocked($store, 500);
     }
 
     // public function search(Store $store, string $search = '')
