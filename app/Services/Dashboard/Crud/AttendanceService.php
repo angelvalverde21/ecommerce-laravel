@@ -262,12 +262,17 @@ class AttendanceService
                 $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in);
                 $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out);
 
+                //comprobamos si llego tarde
                 $attendance->is_late = $this->isLate($employee, $attendance);
                 $attendance->missing = false;
 
+                //Calculamos los minutos trabajados
                 $attendance->minutes = $checkIn->diffInMinutes($checkOut);
 
+                //Calculamos el tiempo de trabajo
                 $work_time_end = Carbon::createFromFormat('H:i:s', $employee->work_time_end);
+
+                //remoto, presencial, home_office, etc
                 $attendance->work_type = $schedule->work_type;
 
                 $work_time_end->addMinutes($employee->tolerance_minutes);
@@ -277,9 +282,18 @@ class AttendanceService
                 } else {
                     $attendance->minutes_computed = $checkIn->diffInMinutes($work_time_end);
                 }
+                //Calculamos el salario neto y el salario del dia
 
-                $salary_neto = round((($employee->salary / 30) * ($attendance->minutes - 60)) / 480, 2);
                 $salary_day = round($employee->salary / 30, 0);
+
+
+                if ($employee->type == "fulltime") {
+                    $salary_neto = round(($salary_day * ($attendance->minutes - 60)) / 480, 2);
+                } else {
+                    $salary_neto = round(($salary_day * $attendance->minutes) / 480, 2); //480 es 8 horas
+                }
+
+
 
                 $completeAttendances[] = [
                     'id' => $attendance->id,
@@ -289,13 +303,14 @@ class AttendanceService
                     'minutes_computed' => $attendance->minutes_computed,
                     'salary_day' => $salary_day,
                     'salary_neto' => $salary_neto,
-                    'salary_extra' => $salary_neto - $salary_day,
+                    'salary_extra' => round($salary_neto - $salary_day, 2),
                     'date' => $key,
                     'missing' => $attendance->missing,
                     'is_late' => $attendance->is_late,
                     'work_type' => 'onsite',
                     'employee_name' => $employee->user->name,
                     'employee_id' => $employee->id,
+                    'employee_work_type' => $employee->type,
                     'comment' => $attendance->comment,
                     'missing_text' => null
                 ];
@@ -329,6 +344,7 @@ class AttendanceService
                             'work_type' => 'home_office',
                             'employee_name' => $employee->user->name,
                             'employee_id' => $employee->id,
+                            'employee_work_type' => $employee->type,
                             // 'comment' => $attendance->comment,
                             'missing_text' => "REMOTO"
                         ];
@@ -350,6 +366,7 @@ class AttendanceService
                             'work_type' => 'rest',
                             'employee_name' => $employee->user->name,
                             'employee_id' => $employee->id,
+                            'employee_work_type' => $employee->type,
                             // 'comment' => $attendance->comment,
                             'missing_text' => "DESCANZO"
                         ];
@@ -371,6 +388,7 @@ class AttendanceService
                             'is_late' => null, //no llego, entnoces no se puede decir que llego tarde
                             'work_type' => null,
                             'employee_name' => $employee->user->name,
+                            'employee_work_type' => $employee->type,
                             'employee_id' => $employee->id,
                             // 'comment' => $attendance->comment,
                             'missing_text' => "FALTO"

@@ -235,11 +235,12 @@ class EmployeeDashboardController extends Controller
                 'document_number' => 'nullable|string|max:20',
                 'status'          => 'required|in:0,1',
                 'tag_sales'       => 'nullable|string|max:100',
+                'type'       => 'nullable|string|max:100',
                 'roles'           => 'required|array|min:1',
                 'roles.*'         => 'string|exists:roles,name',
                 'comission'       => 'nullable|numeric|min:0|max:100', //employee comission
                 'salary'          => 'nullable|numeric|min:0', //employee salary
-                'auto_close_end_time' => 'nullable|boolean',
+                // 'auto_close_end_time' => 'nullable|boolean',
                 'work_time_start' => 'nullable|date_format:H:i:s',
                 'work_time_end' => 'nullable|date_format:H:i:s',
 
@@ -254,7 +255,8 @@ class EmployeeDashboardController extends Controller
                     'comission' => $validated['comission'] ?? null, //actualiza comision del empleado si llega
                     'salary'    => $validated['salary'] ?? null, //actualiza salario del empleado si llega
                     'tag_sales' => $validated['tag_sales'] ?? null, //actualiza tag_sales del empleado si llega
-                    'auto_close_end_time' => $validated['auto_close_end_time'],
+                    'type' => $validated['type'] ?? null, //actualiza tag_sales del empleado si llega
+                    // 'auto_close_end_time' => $validated['auto_close_end_time'],
                     'work_time_start' => $validated['work_time_start'],
                     'work_time_end' => $validated['work_time_end'],
                 ]
