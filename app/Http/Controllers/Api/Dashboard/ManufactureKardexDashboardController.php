@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Services\Dashboard\ManufactureKardexService;
 use Illuminate\Http\Request;
 
 class ManufactureKardexDashboardController extends Controller
@@ -11,23 +12,19 @@ class ManufactureKardexDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Store $store, $manufacture_id)
+
+    protected $service;
+
+    public function __construct(ManufactureKardexService $manufactureKardexService)
+    {
+        $this->service = $manufactureKardexService;
+    }
+
+
+    public function index(Store $store, int $manufacture_id)
     {
         //
-        $kardexes = $store->manufactures()
-            ->findOrFail($manufacture_id)
-            ->kardexes()
-            ->with(['variant.product.image', 'variant.optionValues'])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->groupBy(fn($item) => $item->created_at->format('Y-m-d'))
-            ->map(function ($items, $date) {
-                return [
-                    'date' => $date,
-                    'items' => $items->values(),
-                ];
-            })
-            ->values();
+        $kardexes = $this->service->index($store, $manufacture_id);
 
         return responseOk($kardexes, "Listado de Kardexes obtenido correctamente");
     }
