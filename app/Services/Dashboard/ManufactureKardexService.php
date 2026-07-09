@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
+
 class ManufactureKardexService
 {
     private array $relations = [
@@ -27,6 +28,7 @@ class ManufactureKardexService
             ->get();
 
         return $this->groupByDate($kardexes);
+        // return $kardexes;
     }
 
     public function show(Store $store, int $manufacture_id, int $kardex_id)
@@ -40,19 +42,27 @@ class ManufactureKardexService
         return $kardex;
     }
 
-    private function findManufacture(Store $store, int $manufacture_id)
-    {
-        return $store->manufactures()
-            ->findOrFail($manufacture_id);
-    }
-
     private function groupByDate($kardexes)
     {
+        // return $kardexes
+        //     ->groupBy(fn ($item) => $item->created_at->format('Y-m-d'))
+        //     ->map(fn ($items, $date) => [
+        //         'date' => $date,
+        //         'items' => $items->values(),
+        //     ])
+        //     ->values();
         return $kardexes
-            ->groupBy(fn ($item) => $item->created_at->format('Y-m-d'))
-            ->map(fn ($items, $date) => [
+            ->groupBy(fn($item) => $item->created_at->format('Y-m-d'))
+            ->map(fn($items, $date) => [
                 'date' => $date,
-                'items' => $items->values(),
+                'groups' => $items
+                    ->groupBy('direction')
+                    ->map(fn($directionItems, $direction) => [
+                        'direction' => $direction,
+                        'total_quantity' => $directionItems->sum('quantity'),
+                        'kardexes' => $directionItems->values(),
+                    ])
+                    ->values(),
             ])
             ->values();
     }
