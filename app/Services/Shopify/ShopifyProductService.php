@@ -133,7 +133,6 @@ class ShopifyProductService extends ShopifyBaseService
             // 'pageInfo'   => $result['pageInfo'] ?? null,
             // 'lastCursor' => $result['lastCursor'] ?? null,
         ];
-        
     }
 
     public function sync_(Store $store): array
@@ -451,6 +450,22 @@ class ShopifyProductService extends ShopifyBaseService
                     // ----------------------------------------------
                     // 2) PRODUCTO
                     // ----------------------------------------------
+                    // $product = Product::updateOrCreate(
+                    //     [
+                    //         'origin' => $product_shopify['id'],
+                    //         'store_id' => $store->id,
+                    //     ],
+                    //     [
+                    //         'name' => $product_shopify['title'],
+                    //         'status' => $this->mapShopifyStatus($product_shopify['status'] ?? null),
+                    //         'slug' => Str::slug($product_shopify['title']) . '-' . $store->id,
+                    //         'online_store_url' => $product_shopify['onlineStoreUrl'] ?? null,
+                    //         'user_id' => Auth::id(),
+                    //         'category_id' => $category->id,
+                    //         'created_at' => Carbon::parse($product_shopify['createdAt']),
+                    //         'updated_at' => Carbon::parse($product_shopify['updatedAt']),
+                    //     ]
+                    // );
                     $product = Product::updateOrCreate(
                         [
                             'origin' => $product_shopify['id'],
@@ -459,7 +474,7 @@ class ShopifyProductService extends ShopifyBaseService
                         [
                             'name' => $product_shopify['title'],
                             'status' => $this->mapShopifyStatus($product_shopify['status'] ?? null),
-                            'slug' => Str::slug($product_shopify['title']) . '-' . $store->id,
+                            'slug' => Str::slug($product_shopify['title']) . '-' . $store->id . '-' . $product_shopify['id'],
                             'online_store_url' => $product_shopify['onlineStoreUrl'] ?? null,
                             'user_id' => Auth::id(),
                             'category_id' => $category->id,
@@ -756,7 +771,7 @@ class ShopifyProductService extends ShopifyBaseService
     //     }
 
     //     // Si no hay variantes válidas, saltar
- 
+
     //     $variables = [
     //         "productId" => $product->shopify_product_id,
     //         "variants" => $variants  // aquí pueden venir N variantes
