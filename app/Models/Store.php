@@ -176,4 +176,9 @@ class Store extends Model
         return $this->hasMany(Location::class);
     }
 
+    public function acquires()
+    {
+        return $this->hasMany(Acquire::class);
+    }
+
 }

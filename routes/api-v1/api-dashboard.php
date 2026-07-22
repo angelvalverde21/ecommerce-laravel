@@ -2,6 +2,7 @@
 
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
+use App\Http\Controllers\Api\Dashboard\Acquires\AcquireDashboardController;
 use App\Http\Controllers\Api\Dashboard\AddressDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
@@ -114,6 +115,21 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::delete('/', [DistrictDashboardController::class, 'destroy']); //borrar
 
         });
+    });
+
+    Route::prefix('acquires')->group(function () {
+    
+        Route::get('/', [AcquireDashboardController::class, 'index']); //Listar
+        Route::post('/', [AcquireDashboardController::class, 'store']); //create
+    
+        Route::prefix('{Acquire_id}')->group(function () {
+    
+            Route::get('/', [AcquireDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [AcquireDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [AcquireDashboardController::class, 'destroy']); //borrar
+    
+        });
+    
     });
 
     Route::prefix('suppliers')->group(function () {
