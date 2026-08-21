@@ -172,17 +172,35 @@ abstract class ShopifyBaseService
         int $months,
         Collection $grouped
     ): array {
+
         $period = [];
 
         for ($i = 0; $i < $months; $i++) {
 
-            $monthStart = $startDate->copy()->addMonths($i)->startOfMonth();
-            $key = $monthStart->format('Y-m');          // clave para grouped (2025-12)
-            $date = $monthStart->toDateString();        // salida (2025-12-01)
+            $monthStart = $startDate
+                ->copy()
+                ->addMonths($i)
+                ->startOfMonth();
+
+            $key  = $monthStart->format('Y-m');
+            $date = $monthStart->toDateString();
+
+            // Órdenes del mes
+            $orders = $grouped[$key] ?? collect();
+
+            // Total de ventas del mes
+            $total = $orders->sum(function ($item) {
+                return (float) (
+                    $item['order']['totalPriceSet']['shopMoney']['amount']
+                    ?? 0
+                );
+            });
 
             $period[] = [
                 'date'        => $date,
-                'order_count' => ($grouped[$key] ?? collect())->count(),
+                'order_count' => $orders->count(),
+                'total'       => round($total, 2),
+                'comision'       => round($total * 0.02, 2), // 2% de comisión
             ];
         }
 

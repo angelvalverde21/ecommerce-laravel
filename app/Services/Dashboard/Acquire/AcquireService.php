@@ -36,7 +36,7 @@ class AcquireService
             [
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
-                'quantity_total' => $data['quantity_total'],
+                // 'quantity_total' => $data['quantity_total'],
                 'user_id' => Auth::id(),
                 'supplier_id' => $data['supplier_id'],
                 'date_start' => $data['date_start'],

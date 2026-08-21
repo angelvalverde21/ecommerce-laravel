@@ -83,11 +83,11 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
         Route::prefix('bars')->group(function () {
             Route::get('/daily/{days?}', [ReportShopifyController::class, 'reportBarDailys']); //Listar
             Route::get('/months/{days?}', [ReportShopifyController::class, 'reportBarMonths']); //Listar
+            Route::get('/between/{day_start}/{day_end}', [ReportShopifyController::class, 'reportShowRoomBetween']); //Listar
         });
 
         Route::get('/month-all', [ReportShopifyController::class, 'monthAll']); //Listar
         Route::get('/report-cash-weekly', [ReportShopifyController::class, 'reportCashWeekly']); //Listar
-
 
     });
 
