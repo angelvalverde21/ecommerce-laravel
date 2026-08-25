@@ -13,7 +13,7 @@ class AcquireService
     public function show(Store $store, int $acquire_id)
     {
         //
-        $acquire = $store->acquires()
+        $acquire = $store->acquires()->with(['variants.variant.product.image'])
             ->findOrFail($acquire_id);
 
         return $acquire;

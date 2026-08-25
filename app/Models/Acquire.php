@@ -29,4 +29,9 @@ class Acquire extends Model
     {
         return $this->morphMany(Batch::class, 'batchable');
     }
+
+    public function variants()
+    {
+        return $this->hasMany(AcquireVariant::class); //es la tabla de pedidos iniciales
+    }
 }

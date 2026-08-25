@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('acquire_variants', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('acquire_id')->constrained()->onDelete('cascade');
+            $table->foreignId('variant_id')->constrained()->onDelete('cascade');
+            $table->integer('quantity')->default(0); //stock inicial de acquire_variant, se usara para cuando se cree la orden de compra, sera el stock maximo, por ejemplo el pedido que se le hace al proveedor
+            $table->decimal('price', 10, 2)->default(0.00);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('acquire_variants');
+    }
+};
