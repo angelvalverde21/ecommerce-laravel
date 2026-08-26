@@ -34,9 +34,9 @@
         return ucwords($text);
     }
 
-    function extractPhoneWithoutArea($input = ""): ?string
+    function extractPhoneWithoutArea($input = ''): ?string
     {
-        if ($input === null || $input === "") {
+        if ($input === null || $input === '') {
             return '';
         }
 
@@ -75,11 +75,11 @@
             /* font-family: monospace; */
             /* font-weight: 100; */
             letter-spacing: -0.35px;
-            font-size: 9pt;
-            width: 75mm;
+            font-size: 0.9rem;
+            width: 100mm;
             box-sizing: border-box;
             margin: 0;
-            padding: 0 5px;
+            padding: 0px;
         }
 
         .text-center {
@@ -90,24 +90,26 @@
         /* hr { border: 0; border-top: 1px dashed #000; } */
 
         .container {
-            width: 75mm;
+            width: 100mm;
             /* border: 1px solid #ccc; */
             margin: 0;
         }
 
         ul {
-            margin: 0;
-            padding: 0;
+            margin: 0 10px 10px 10px !important;
+            padding: 0 10px !important;
+            border: 0px solid #ccc;
         }
 
         li {
             list-style: none;
+            padding: 2px 0
         }
 
-        .list-group {
-            padding: 0 0 0 10px;
+        /* .list-group { */
+            /* padding: 0 0 0 10px; */
             /* border: 1px solid #ccc; */
-        }
+        /* } */
 
         h2 {
             /* border: 1px solid #ccc; */
@@ -118,7 +120,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            border: 1px solid #ccc;
+            border: 0px solid #ccc;
             text-align: center;
             flew
         }
@@ -128,35 +130,78 @@
 
 <body>
     <div class="container">
-        <div style="margin: 10px 0; text-align: center;">
-            <img src="https://sorelleclothingperu.com/cdn/shop/files/Logo_2024.png" alt="" height="20">
+
+        <div class="w-100 d-flex justify-content-between"
+            style="margin: 10px 0; text-align: center; border-bottom: 1px solid #ccc;">
+            <img src="https://sorelleclothingperu.com/cdn/shop/files/Logo_2024.png" alt="" height="50">
         </div>
-        <ul class="list-group">
-            <li class="list-group-item">Pedido: <strong>{{ $order->name }}</strong></li>
-            <li class="list-group-item"> Nombre:
-                {{ titleCaseName($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName) }} </li>
-            <li class="list-group-item"> DNI: {{ $order->shippingAddress->company }} </li>
-            <li class="list-group-item"> Telefono: {{ extractPhoneWithoutArea($order->shippingAddress?->phone) }} </li>
-            <li class="list-group-item" style="margin: 2px 0 0 0">
-                Direccion: {{ normalize_text($order->shippingAddress->address1) }} </li>
-            <li class="list-group-item" style="margin: 2px 0 0 0;">
-                {{ normalize_text($order->shippingAddress->address2) }}, {{ titleCaseName($order->shippingAddress->city) }}
-            </li>
-            <li class="list-group-item" style="margin: 2px 0 0 0;">
-               Registro: 
-            </li>
-        </ul>
-        <h3 class="text-center"
+
+        @if (Str::upper($order->shippingAddress->firstName) === 'SHOWROOM')
+            <h1 style="text-align: center; margin: 80px 0">SHOWROOM</h1>
+        @else
+
+            <ul class="list-group">
+                <li class="list-group-item">
+                    {{ Str::upper(titleCaseName($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName)) }}
+                </li>
+                <li class="list-group-item">DNI: {{ $order->shippingAddress->company }}</li>
+                <li class="list-group-item">Teléfono: {{ extractPhoneWithoutArea($order->shippingAddress?->phone) }}
+                </li>
+
+            </ul>
+
+            <ul class="list-group" style="border: 1px solid #000; padding: 10px !important; border-radius: 5px">
+
+                <li class="list-group-item" style="margin: 2px 0 0 0">
+                    Enviar a: {{ normalize_text($order->shippingAddress->address1) }}
+                </li>
+
+                <li class="list-group-item" style="margin: 2px 0 0 0;">
+                    @if ($order->shippingAddress->address2)
+                        {{ normalize_text($order->shippingAddress->address2) }},
+                        {{ titleCaseName($order->shippingAddress->city) }}
+                    @else
+                        @if ($order->shippingAddress->city)
+                            {{ titleCaseName($order->shippingAddress->city) }}
+                        @endif
+                    @endif
+
+                </li>
+
+            </ul>
+        @endif
+
+        <div
             style="
-                margin: 2px auto;
+                margin: 2px 0;
                 position: absolute;
-                bottom: 5px;
+                bottom: 10px;
                 left: 0;
                 right: 0;
-                text-align: center;
             ">
-            {{ Str::upper($courier) }}
-        </h3>
+
+            <div style="width: 100%; border: 0 px solid #ccc; margin: 0px 0; padding: 0px 0; text-align: center;">
+                <img src="data:image/png;base64,{{ \Milon\Barcode\Facades\DNS1DFacade::getBarcodePNG(
+                    preg_replace('/[^A-Z0-9]/', '', strtoupper((string) $order->name)),
+                    'C39',
+                    3,
+                    45,
+                ) }}"
+                    style="display: block; width: 80%; object-fit: contain; border: 0px solid #ccc; margin: 0 auto;">
+                <div style="font-size: 1rem; padding: 5px 0">{{ $order->name }}</div>
+            </div>
+
+            @if (Str::upper(str_replace(' ', '', $courier)) == 'OLVACOURIER')
+                <div style="padding: 0 10px; font-size: 0.85rem">
+                    REGISTRO:
+                </div>
+            @endif
+
+            <h3 style="text-align: center;">
+                --- {{ Str::upper($courier) }} ---
+            </h3>
+        </div>
+
         {{-- <p class="text-center">62516516566616</p> --}}
     </div>
 
