@@ -145,7 +145,7 @@
                     {{ Str::upper(titleCaseName($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName)) }}
                 </li>
                 <li class="list-group-item">DNI: {{ $order->shippingAddress->company }}</li>
-                <li class="list-group-item">Teléfono: {{ extractPhoneWithoutArea($order->shippingAddress?->phone) }}
+                <li class="list-group-item">TELEFONO: {{ extractPhoneWithoutArea($order->shippingAddress?->phone) }}
                 </li>
 
             </ul>
@@ -153,16 +153,16 @@
             <ul class="list-group" style="border: 1px solid #000; padding: 10px !important; border-radius: 5px">
 
                 <li class="list-group-item" style="margin: 2px 0 0 0">
-                    Enviar a: {{ normalize_text($order->shippingAddress->address1) }}
+                    Enviar a: {{ Str::upper(normalize_text($order->shippingAddress->address1)) }}
                 </li>
 
                 <li class="list-group-item" style="margin: 2px 0 0 0;">
                     @if ($order->shippingAddress->address2)
-                        {{ normalize_text($order->shippingAddress->address2) }},
-                        {{ titleCaseName($order->shippingAddress->city) }}
+                        {{ Str::upper(normalize_text($order->shippingAddress->address2)) }},
+                        {{ Str::upper(normalize_text($order->shippingAddress->city)) }}
                     @else
                         @if ($order->shippingAddress->city)
-                            {{ titleCaseName($order->shippingAddress->city) }}
+                            {{ Str::upper(normalize_text($order->shippingAddress->city)) }}
                         @endif
                     @endif
 
@@ -171,15 +171,19 @@
             </ul>
         @endif
 
+        {{-- termino de la direccion --}}
+
         <div
             style="
+                border: 1px solid #ccc;
                 margin: 2px 0;
                 position: absolute;
-                bottom: 10px;
+                bottom: 5px;
                 left: 0;
                 right: 0;
             ">
 
+            {{-- codigo de barras --}}
             <div style="width: 100%; border: 0 px solid #ccc; margin: 0px 0; padding: 0px 0; text-align: center;">
                 <img src="data:image/png;base64,{{ \Milon\Barcode\Facades\DNS1DFacade::getBarcodePNG(
                     preg_replace('/[^A-Z0-9]/', '', strtoupper((string) $order->name)),
@@ -191,18 +195,19 @@
                 <div style="font-size: 1rem; padding: 5px 0">{{ $order->name }}</div>
             </div>
 
+            {{-- Letra de registro de olva couier --}}
             @if (Str::upper(str_replace(' ', '', $courier)) == 'OLVACOURIER')
-                <div style="padding: 0 10px; font-size: 0.85rem">
+                <div style="padding: 0 10px; font-size: 0.85rem; border: 1px solid #ccc;">
                     REGISTRO:
                 </div>
             @endif
 
-            <h3 style="text-align: center;">
+            {{-- nombre del courier --}}
+            <h3 style="text-align: center; padding: 0; margin: 0">
                 --- {{ Str::upper($courier) }} ---
             </h3>
         </div>
 
-        {{-- <p class="text-center">62516516566616</p> --}}
     </div>
 
 </body>

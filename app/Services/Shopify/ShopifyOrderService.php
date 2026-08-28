@@ -108,7 +108,7 @@ class ShopifyOrderService extends ShopifyBaseService
         $result = GraphQLResponseHelper::normalizeEntity(
             $response,
             'orders',
-            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress', 'fulfillmentOrders']
         );
 
         // Aplicar el mapeo solo una vez aqu铆
@@ -799,7 +799,7 @@ class ShopifyOrderService extends ShopifyBaseService
         $result = GraphQLResponseHelper::normalizeEntity(
             $response,
             'orders',
-            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress', 'fulfillmentOrders']
         );
 
         return [
