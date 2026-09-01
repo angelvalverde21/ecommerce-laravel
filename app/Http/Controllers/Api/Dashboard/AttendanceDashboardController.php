@@ -80,12 +80,12 @@ class AttendanceDashboardController extends Controller
 
             case '74910587':
                 //Marina
-                return 4;
+                return 8;
                 break;
 
             case '42412498':
                 //Angel
-                return 8;
+                return 1;
                 break;
 
             default:
