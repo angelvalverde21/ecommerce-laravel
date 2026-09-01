@@ -66,6 +66,44 @@ class ShopifyOrderService extends ShopifyBaseService
         );
     }
 
+    public function getOrderById(string $orderId)
+    {
+        // Validar que el ID tenga el formato correcto
+        if (!str_starts_with($orderId, 'gid://shopify/Order/')) {
+            throw new \InvalidArgumentException(
+                "ID de orden inválido. Debe ser formato: gid://shopify/Order/xxxxx"
+            );
+        }
+
+        $fields = $this->orderQuery(['shippingAddress', 'shippingLines', 'items']);
+
+        $query = <<<GQL
+        {
+          node(id: "{$orderId}") {
+            ... on Order {
+              {$fields}
+            }
+          }
+        }
+        GQL;
+
+        $response = $this->graphql($query);
+
+        // Normalizar la respuesta (usando 'node' en lugar de 'orders')
+        $data = GraphQLResponseHelper::normalizeSingle(
+            $response,
+            'node',  // Cambio clave: 'node' en lugar de 'orders'
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines']
+        );
+
+        // Verificar si se encontró la orden
+        if (empty($data)) {
+            throw new \Exception("No se encontró la orden con ID: {$orderId}");
+        }
+
+        return json_decode(json_encode($data));
+    }
+
 
     public function orderByNumber(string $orderNumber, $includes = ['customer', 'items', 'shippingAddress', 'shippingLines'])
     {
@@ -1246,7 +1284,7 @@ class ShopifyOrderService extends ShopifyBaseService
 
         return $result;
     }
-    
+
     public function getSearchOrders(int $limit = 20, $cursor = null, $search = null): array
     {
         Log::info('getSearchOrders');
