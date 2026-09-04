@@ -105,29 +105,50 @@ class PdfShopifyController extends Controller
         Log::info(json_encode($order));
 
 
-        if ($order->shippingLines) {
+        if ($order->shippingLines != null) {
 
-            $courier = match_courier($order->shippingLines[0]->title . " " . $order?->shippingAddress?->address1, $keywords);
+            $text = $order->shippingLines[0]->title . " " . $order?->shippingAddress?->address1;
 
-            $courier = $courier === "olva" ? "Olva Courier" : $courier;
-            $courier = $courier === "confianza" ? "GAMA" : $courier;
-            $courier = $courier === "tienda" ? "Recojo en tienda" : $courier;
-            $courier = $courier === "shalom" ? "Shalom" : $courier;
+            $courier = match_courier(
+                $text, 
+                $keywords
+            );
 
-            if ($order->shippingLines[0]?->originalPriceSet->shopMoney->amount == 15) {
-                $courier = "GAMA";
+            switch ($courier) {
+
+                case 'olva':
+                   $courier = "Olva Coruier";
+                    break;
+                case 'confianza':
+                   $courier = "GAMA o DINSIDES";
+                    break;
+                case 'tienda':
+                   $courier = "Recojo en tienda";
+                    break;
+                case 'shalom':
+                   $courier = "Shalom";
+                    break;
+                case 'dinsides':
+                   $courier = "Dinsides";
+                    break;
+                
+                default:
+                    $courier = $order->shippingLines[0]->title;
+                    break;
             }
 
-            if ($sumPrice > 299) {
-                $courier = "Olva Courier";
-            }
+            // if ($order->shippingLines[0]?->originalPriceSet->shopMoney->amount == 15) {
+            //     $courier = "GAMA";
+            // }
+
+            // if ($sumPrice > 299) {
+            //     $courier = "Olva Courier";
+            // }
 
             // Log::info($courier); // "olva courier"
         } else {
             $courier = "";
         }
-
-
 
         //return view('livewire.erp.orders.pdf.voucher', compact('order'));
 

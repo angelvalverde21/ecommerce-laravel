@@ -257,7 +257,7 @@ class ShopifyOrderService extends ShopifyBaseService
             displayFulfillmentStatus
             tags
             note
-            fulfillmentOrders(first: 20) {
+            fulfillmentOrders(first: 5) {
                 edges {
                     node {
                         id
@@ -265,6 +265,45 @@ class ShopifyOrderService extends ShopifyBaseService
                         createdAt
                         requestStatus
                         updatedAt
+                        assignedLocation {
+                            name
+                        }
+                        lineItems(first: 10) {
+                            edges {
+                                node {
+                                    id
+                                    totalQuantity
+                                    sku
+                                    lineItem {
+                                        id
+                                        title
+                                    }
+                                }
+                            }
+                        }
+                        fulfillments(first: 5) {
+                            edges {
+                                node {
+                                    id
+                                    status
+                                    createdAt
+                                    updatedAt
+                                    trackingInfo {
+                                        number
+                                        url
+                                        company
+                                    }
+                                    fulfillmentLineItems(first: 10) {
+                                        edges {
+                                            node {
+                                                id
+                                                quantity
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -290,9 +329,10 @@ class ShopifyOrderService extends ShopifyBaseService
     {
 
         return  "
-                    lineItems(first: 50) {
+                    lineItems(first: 10) {
                         edges {
                             node {
+                                id
                                 name
                                 quantity
                                 originalUnitPriceSet {
@@ -360,7 +400,7 @@ class ShopifyOrderService extends ShopifyBaseService
     {
 
         return "
-            events(first: 20, reverse: true) {
+            events(first: 10, reverse: true) {
                 edges {
                     node {
                     createdAt
@@ -625,7 +665,7 @@ class ShopifyOrderService extends ShopifyBaseService
         $result = GraphQLResponseHelper::normalizeEntity(
             $response,
             'orders',
-            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+            []
         );
 
         return [
