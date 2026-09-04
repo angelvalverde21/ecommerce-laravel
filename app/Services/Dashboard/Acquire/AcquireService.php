@@ -36,7 +36,7 @@ class AcquireService
             [
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
-                'quantity_total' => $data['quantity_total'],
+                // 'quantity_total' => $data['quantity_total'],
                 'user_id' => Auth::id(),
                 'supplier_id' => $data['supplier_id'],
                 'date_start' => $data['date_start'],
@@ -89,7 +89,7 @@ class AcquireService
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'quantity_total' => 'nullable|integer',
+            // 'quantity_total' => 'nullable|integer',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'date_start' => 'nullable|date',
             'date_end' => 'nullable|date|after_or_equal:date_start',
