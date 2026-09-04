@@ -196,6 +196,120 @@ class ShopifyReportService extends ShopifyBaseService
     );
   }
 
+  public function getReportShowRoomBetween(string $day_start, string $day_end): array
+  {
+    // -------------------------------------------------------------
+    // 1️⃣ — Rango de fechas
+    // -------------------------------------------------------------
+    $startDate = Carbon::parse($day_start)->startOfDay();
+    $endDate   = Carbon::parse($day_end)->endOfDay();
+
+    // Si las fechas vienen invertidas, las corregimos automáticamente
+    if ($startDate->greaterThan($endDate)) {
+      [$startDate, $endDate] = [$endDate, $startDate];
+    }
+
+    // -------------------------------------------------------------
+    // 2️⃣ — Cantidad de meses
+    // -------------------------------------------------------------
+    $months = $startDate->copy()
+      ->startOfMonth()
+      ->diffInMonths(
+        $endDate->copy()->startOfMonth()
+      ) + 1;
+
+    // -------------------------------------------------------------
+    // 3️⃣ — Query GraphQL
+    // -------------------------------------------------------------
+    $queryTemplate = <<<'GRAPHQL'
+    {
+        orders(
+            first: 50,
+            sortKey: CREATED_AT,
+            query: "financial_status:paid cancelled_at:null customer_id:7690467279072 created_at:>=:start created_at:<=:end",
+            after: :cursor
+        ) {
+            pageInfo {
+                hasNextPage
+                endCursor
+            }
+            edges {
+                cursor
+                node {
+                    id
+                    name
+                    createdAt
+                    totalPriceSet {
+                        shopMoney {
+                            amount
+                            currencyCode
+                        }
+                    }
+                }
+            }
+        }
+    }
+    GRAPHQL;
+
+    // -------------------------------------------------------------
+    // 4️⃣ — QueryBuilder
+    // -------------------------------------------------------------
+    $queryBuilder = function (?string $cursor) use (
+      $queryTemplate,
+      $startDate,
+      $endDate
+    ) {
+      return str_replace(
+        [':start', ':end', ':cursor'],
+        [
+          $startDate->toIso8601String(),
+          $endDate->toIso8601String(),
+          $cursor ? '"' . $cursor . '"' : 'null',
+        ],
+        $queryTemplate
+      );
+    };
+
+    // -------------------------------------------------------------
+    // 5️⃣ — Obtener datos desde Shopify
+    // -------------------------------------------------------------
+    $result = $this->getDataFromShopify(
+      'orders',
+      $queryBuilder,
+      []
+    );
+
+    // -------------------------------------------------------------
+    // 6️⃣ — Normalizar
+    // -------------------------------------------------------------
+    $orders = collect($result['items'] ?? []);
+
+    if ($orders->isEmpty()) {
+      Log::warning('getReportShowRoomBetween: vacío', [
+        'start' => $startDate->toDateString(),
+        'end'   => $endDate->toDateString(),
+      ]);
+    }
+
+    // Convertir a fecha local
+    $mapped = $this->mapOrdersToLocalDate($orders);
+
+    // -------------------------------------------------------------
+    // 7️⃣ — Agrupar por MES (Y-m)
+    // -------------------------------------------------------------
+    $grouped = $mapped->groupBy(function ($item) {
+      return Carbon::parse($item['date'])->format('Y-m');
+    });
+
+    // -------------------------------------------------------------
+    // 8️⃣ — Construir período mensual
+    // -------------------------------------------------------------
+    return $this->buildMonthPeriod(
+      $startDate,
+      $months,
+      $grouped
+    );
+  }
   // ==================================== REPORTES DEL PRODUCTO MAS VENDIDOS ORDENADOS DE MAYOR A MENOR  ====================================
 
   public function getReportTopSellingProducts($days = 90) // 10 años
@@ -478,16 +592,16 @@ class ShopifyReportService extends ShopifyBaseService
   }
   public function reportCashWeekly()
   {
-      $startDate = Carbon::create(2026, 5, 19)->startOfDay();
-      $endDate   = now()->endOfDay();
-  
-      /*
+    $startDate = Carbon::create(2026, 5, 19)->startOfDay();
+    $endDate   = now()->endOfDay();
+
+    /*
       |--------------------------------------------------------------------------
       | 1 — Query Shopify
       |--------------------------------------------------------------------------
       */
-  
-      $queryTemplate = <<<GRAPHQL
+
+    $queryTemplate = <<<GRAPHQL
       {
         orders(
           first: 200,
@@ -512,108 +626,107 @@ class ShopifyReportService extends ShopifyBaseService
         }
       }
       GRAPHQL;
-  
-      $queryBuilder = function (?string $cursor) use ($queryTemplate, $startDate, $endDate) {
-          return str_replace(
-              [':start', ':end', ':cursor'],
-              [
-                  $startDate->toDateString(),
-                  $endDate->toDateString(),
-                  $cursor ? "\"$cursor\"" : 'null'
-              ],
-              $queryTemplate
-          );
-      };
-  
-      $result = $this->getDataFromShopify('orders', $queryBuilder, []);
-      $orders = collect($result['items'] ?? []);
-  
-      /*
+
+    $queryBuilder = function (?string $cursor) use ($queryTemplate, $startDate, $endDate) {
+      return str_replace(
+        [':start', ':end', ':cursor'],
+        [
+          $startDate->toDateString(),
+          $endDate->toDateString(),
+          $cursor ? "\"$cursor\"" : 'null'
+        ],
+        $queryTemplate
+      );
+    };
+
+    $result = $this->getDataFromShopify('orders', $queryBuilder, []);
+    $orders = collect($result['items'] ?? []);
+
+    /*
       |--------------------------------------------------------------------------
       | 2 — Inicializar TODAS las semanas desde Enero 2026
       |--------------------------------------------------------------------------
       */
-  
-      $report = [
-          'total_sales' => 0,
-          'years' => [],
-      ];
-  
-      $cursorDate = $startDate->copy()->startOfWeek(Carbon::MONDAY);
-  
-      while ($cursorDate <= $endDate) {
-  
-          $year = $cursorDate->isoWeekYear;
-          $week = $cursorDate->isoWeek();
-  
-          $weekStart = $cursorDate->copy()->startOfWeek(Carbon::MONDAY);
-          $weekEnd   = $cursorDate->copy()->endOfWeek(Carbon::SUNDAY);
-  
-          if (!isset($report['years'][$year])) {
-              $report['years'][$year] = [
-                  'year'  => $year,
-                  'total' => 0,
-                  'weeks' => [],
-              ];
-          }
-  
-          $report['years'][$year]['weeks'][$week] = [
-              'week_number' => $week,
-              'name'  => $weekStart->translatedFormat('d \d\e F')
-                  . " al "
-                  . $weekEnd->translatedFormat('d \d\e F'),
-              'start' => $weekStart->toDateString(),
-              'end'   => $weekEnd->toDateString(),
-              'total' => 0,
-          ];
-  
-          $cursorDate->addWeek();
+
+    $report = [
+      'total_sales' => 0,
+      'years' => [],
+    ];
+
+    $cursorDate = $startDate->copy()->startOfWeek(Carbon::MONDAY);
+
+    while ($cursorDate <= $endDate) {
+
+      $year = $cursorDate->isoWeekYear;
+      $week = $cursorDate->isoWeek();
+
+      $weekStart = $cursorDate->copy()->startOfWeek(Carbon::MONDAY);
+      $weekEnd   = $cursorDate->copy()->endOfWeek(Carbon::SUNDAY);
+
+      if (!isset($report['years'][$year])) {
+        $report['years'][$year] = [
+          'year'  => $year,
+          'total' => 0,
+          'weeks' => [],
+        ];
       }
-  
-      /*
+
+      $report['years'][$year]['weeks'][$week] = [
+        'week_number' => $week,
+        'name'  => $weekStart->translatedFormat('d \d\e F')
+          . " al "
+          . $weekEnd->translatedFormat('d \d\e F'),
+        'start' => $weekStart->toDateString(),
+        'end'   => $weekEnd->toDateString(),
+        'total' => 0,
+      ];
+
+      $cursorDate->addWeek();
+    }
+
+    /*
       |--------------------------------------------------------------------------
       | 3 — Agregar ventas reales
       |--------------------------------------------------------------------------
       */
-  
-      foreach ($orders as $order) {
-  
-          $date   = Carbon::parse($order['createdAt']);
-          $year   = $date->isoWeekYear;
-          $week   = $date->isoWeek();
-          $amount = floatval($order['totalPriceSet']['shopMoney']['amount'] ?? 0);
-  
-          if (isset($report['years'][$year]['weeks'][$week])) {
-  
-              $report['years'][$year]['weeks'][$week]['total'] += $amount;
-              $report['years'][$year]['total'] += $amount;
-              $report['total_sales'] += $amount;
-          }
+
+    foreach ($orders as $order) {
+
+      $date   = Carbon::parse($order['createdAt']);
+      $year   = $date->isoWeekYear;
+      $week   = $date->isoWeek();
+      $amount = floatval($order['totalPriceSet']['shopMoney']['amount'] ?? 0);
+
+      if (isset($report['years'][$year]['weeks'][$week])) {
+
+        $report['years'][$year]['weeks'][$week]['total'] += $amount;
+        $report['years'][$year]['total'] += $amount;
+        $report['total_sales'] += $amount;
       }
-  
-      /*
+    }
+
+    /*
       |--------------------------------------------------------------------------
       | 4 — Convertir a ARRAYS reales (CLAVE)
       |--------------------------------------------------------------------------
       */
-  
-      $report['years'] = collect($report['years'])
-          ->sortKeys()
-          ->map(function ($yearData) {
-  
-              $yearData['weeks'] = collect($yearData['weeks'])
-                  ->sortBy('week_number')
-                  ->values(); // ← convierte weeks en array real
-  
-              return $yearData;
-  
-          })
-          ->values(); // ← convierte years en array real
-  
-      return $report;
+
+    $report['years'] = collect($report['years'])
+      ->sortKeys()
+      ->map(function ($yearData) {
+
+        $yearData['weeks'] = collect($yearData['weeks'])
+          ->sortBy('week_number')
+          ->values(); // ← convierte weeks en array real
+
+        return $yearData;
+      })
+      ->values(); // ← convierte years en array real
+
+    return $report;
   }
 
-    // ==================================== REPORTES DEL PRODUCTO MAS VENDIDOS ORDENADOS DE MAYOR A MENOR  ====================================
+  // ==================================== REPORTES DEL PRODUCTO MAS VENDIDOS ORDENADOS DE MAYOR A MENOR  ====================================
 
   public function inventory($days = 90) // 10 años
   {

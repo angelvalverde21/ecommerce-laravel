@@ -3,6 +3,7 @@
 // use App\Http\Controllers\api\v1\dashboard\ProductDashboardController;
 
 use App\Http\Controllers\Api\Dashboard\Acquires\AcquireDashboardController;
+use App\Http\Controllers\Api\Dashboard\Acquires\AcquireVariantDashboardController;
 use App\Http\Controllers\Api\Dashboard\AddressDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
@@ -118,18 +119,31 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('acquires')->group(function () {
-    
+
         Route::get('/', [AcquireDashboardController::class, 'index']); //Listar
         Route::post('/', [AcquireDashboardController::class, 'store']); //create
-    
-        Route::prefix('{Acquire_id}')->group(function () {
-    
+
+        Route::prefix('{acquire_id}')->group(function () {
+
             Route::get('/', [AcquireDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [AcquireDashboardController::class, 'update']); //actualizar
             Route::delete('/', [AcquireDashboardController::class, 'destroy']); //borrar
-    
+
+            Route::prefix('variants')->group(function () {
+
+                Route::post('/batch', [AcquireVariantDashboardController::class, 'batch']); //create
+                Route::get('/', [AcquireVariantDashboardController::class, 'index']); //Listar
+                Route::post('/', [AcquireVariantDashboardController::class, 'store']); //create
+
+                Route::prefix('{acquire_variant_id}')->group(function () {
+
+                    Route::get('/', [AcquireVariantDashboardController::class, 'show']); //show o mostrar por id
+                    Route::put('/', [AcquireVariantDashboardController::class, 'update']); //actualizar
+                    Route::delete('/', [AcquireVariantDashboardController::class, 'destroy']); //borrar
+                });
+            });
+
         });
-    
     });
 
     Route::prefix('suppliers')->group(function () {
@@ -155,9 +169,9 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::get('/', [ManufactureDashboardController::class, 'index']); //Listar
         Route::post('/', [ManufactureDashboardController::class, 'store']); //create
         Route::post('/search/{search?}', [ManufactureDashboardController::class, 'search']); //buscar
-        
+
         Route::prefix('productions')->group(function () {
-            
+
             Route::get('/', [ManufactureProductionDashboardController::class, 'index']); //Listar
             Route::post('/', [ManufactureProductionDashboardController::class, 'store']); //create
             Route::post('/search/{search?}', [ManufactureProductionDashboardController::class, 'search']); //buscar
@@ -184,7 +198,6 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
                 // Route::delete('/', [ManufactureOrderDashboardController::class, 'destroy']); //borrar
 
             });
-            
         });
 
         Route::prefix('{manufacture_id}')->group(function () {
@@ -215,7 +228,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 Route::prefix('{manufacture_kardex_id}')->group(function () {
 
-                    // Route::get('/', [ManufactureOrderVariantDashboardController::class, 'show']); //show o mostrar por id
+                    // Route::get('/', [ManufactureOrderAcquireVariantDashboardController::class, 'show']); //show o mostrar por id
                     Route::put('/', [ManufactureKardexDashboardController::class, 'update']); //actualizar
                     Route::delete('/', [ManufactureKardexDashboardController::class, 'destroy']); //borrar
 
@@ -249,8 +262,6 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 });
             });
-
-
         });
     });
 
@@ -314,15 +325,15 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
     //         Route::prefix('variants')->group(function () {
 
-    //             Route::get('/', [ProductionVariantDashboardController::class, 'index']); //Listar
-    //             Route::post('/', [ProductionVariantDashboardController::class, 'store']); //create
-    //             Route::post('/batch', [ProductionVariantDashboardController::class, 'batch']); //create
+    //             Route::get('/', [ProductionAcquireVariantDashboardController::class, 'index']); //Listar
+    //             Route::post('/', [ProductionAcquireVariantDashboardController::class, 'store']); //create
+    //             Route::post('/batch', [ ::class, 'batch']); //create
 
     //             Route::prefix('{production_variant_id}')->group(function () {
 
-    //                 // Route::get('/', [ManufactureOrderVariantDashboardController::class, 'show']); //show o mostrar por id
-    //                 Route::put('/', [ProductionVariantDashboardController::class, 'update']); //actualizar
-    //                 Route::delete('/', [ProductionVariantDashboardController::class, 'destroy']); //borrar
+    //                 // Route::get('/', [ManufactureOrderAcquireVariantDashboardController::class, 'show']); //show o mostrar por id
+    //                 Route::put('/', [ProductionAcquireVariantDashboardController::class, 'update']); //actualizar
+    //                 Route::delete('/', [ProductionAcquireVariantDashboardController::class, 'destroy']); //borrar
 
     //             });
     //         });
@@ -335,7 +346,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
     //             Route::prefix('{kardex_id}')->group(function () {
 
-    //                 // Route::get('/', [ManufactureOrderVariantDashboardController::class, 'show']); //show o mostrar por id
+    //                 // Route::get('/', [ManufactureOrderAcquireVariantDashboardController::class, 'show']); //show o mostrar por id
     //                 Route::put('/', [ProductionKardexDashboardController::class, 'update']); //actualizar
     //                 Route::delete('/', [ProductionKardexDashboardController::class, 'destroy']); //borrar
 
@@ -427,20 +438,18 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             });
 
             Route::prefix('schedules')->group(function () {
-            
+
                 Route::get('/', [EmployeeScheduleDashboardController::class, 'index']); //Listar
                 Route::post('/', [EmployeeScheduleDashboardController::class, 'store']); //create
-            
+
                 Route::prefix('{schedule_id}')->group(function () {
-            
+
                     Route::get('/', [EmployeeScheduleDashboardController::class, 'show']); //show o mostrar por id
                     Route::put('/', [EmployeeScheduleDashboardController::class, 'update']); //actualizar
                     Route::delete('/', [EmployeeScheduleDashboardController::class, 'destroy']); //borrar
-            
-                });
-            
-            });
 
+                });
+            });
         });
     });
 
@@ -790,17 +799,16 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('yapes')->group(function () {
-    
+
         Route::get('/', [YapeDashboardController::class, 'index']); //Listar
         Route::post('/', [YapeDashboardController::class, 'store']); //create
-    
+
         Route::prefix('{yape_id}')->group(function () {
-    
+
             Route::get('/', [YapeDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [YapeDashboardController::class, 'update']); //actualizar
             Route::delete('/', [YapeDashboardController::class, 'destroy']); //borrar
-    
+
         });
-    
     });
 });

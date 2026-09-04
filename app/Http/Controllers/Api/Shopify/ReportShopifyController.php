@@ -55,6 +55,12 @@ class ReportShopifyController extends Controller
         return response()->json($report);
     }
 
+    public function reportShowRoomBetween(Store $store, $day_start, $day_end)
+    {
+        $report = $this->shopifyService->getReportShowRoomBetween($day_start, $day_end); //reporte en barras
+
+        return response()->json($report);
+    }
 
     public function reportTopSellingProducts(Store $store, Request $request)
     {

@@ -172,20 +172,68 @@ abstract class ShopifyBaseService
         int $months,
         Collection $grouped
     ): array {
+
         $period = [];
 
         for ($i = 0; $i < $months; $i++) {
 
-            $monthStart = $startDate->copy()->addMonths($i)->startOfMonth();
-            $key = $monthStart->format('Y-m');          // clave para grouped (2025-12)
-            $date = $monthStart->toDateString();        // salida (2025-12-01)
+            $monthStart = $startDate
+                ->copy()
+                ->addMonths($i)
+                ->startOfMonth();
+
+            $key  = $monthStart->format('Y-m');
+            $date = $monthStart->toDateString();
+
+            // Órdenes del mes
+            $orders = $grouped[$key] ?? collect();
+
+            // Total de ventas del mes
+            $total = $orders->sum(function ($item) {
+                return (float) (
+                    $item['order']['totalPriceSet']['shopMoney']['amount']
+                    ?? 0
+                );
+            });
 
             $period[] = [
                 'date'        => $date,
-                'order_count' => ($grouped[$key] ?? collect())->count(),
+                'order_count' => $orders->count(),
+                'total'       => round($total, 2),
+                'comision'       => round($total * 0.02, 2), // 2% de comisión
             ];
         }
 
         return $period;
+    }
+
+    public function isValidGid(string $id, ?string $resourceType = null): bool
+    {
+        if (!str_starts_with($id, 'gid://')) {
+            return false;
+        }
+
+        $pattern = $resourceType
+            ? "/^gid:\/\/shopify\/{$resourceType}\/\d+$/"
+            : "/^gid:\/\/shopify\/[a-zA-Z]+\/\d+$/";
+
+        return preg_match($pattern, $id) === 1;
+    }
+
+    /**
+     * Extrae el ID numérico de un gid
+     */
+    public function extractNumericId(string $gid): string
+    {
+        $parts = explode('/', $gid);
+        return end($parts);
+    }
+
+    /**
+     * Convierte ID numérico a gid
+     */
+    public function toGid(string $numericId, string $resourceType = 'Order'): string
+    {
+        return "gid://shopify/{$resourceType}/{$numericId}";
     }
 }

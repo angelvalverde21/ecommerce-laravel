@@ -37,14 +37,27 @@ class PdfShopifyController extends Controller
 
         $pdf = app('dompdf.wrapper');
 
-        $pdf->set_paper([0, 0, 212.598425, 141.732283]); // 28.3464566  puntos equivale a 1 cms, por tanto 212.598425 es 7.5cms y 141.732283 es 5 cms
+        // $pdf->setOptions([
+        //     'dpi' => 203, // Resolución estándar impresora térmica
+        //     'defaultFont' => 'Courier New', // ¡CAMBIO! usar Courier New en vez de sans-serif
+        //     'isHtml5ParserEnabled' => true,
+        //     'isRemoteEnabled' => true,
+        //     'enable_font_subsetting' => false, // ¡CRÍTICO! Evita subdivisión de fuentes
+        //     'enable_unicode' => false, // Desactivar para mejor rendimiento
+        //     'enable_remote' => true,
+        //     'font_cache' => storage_path('fonts/'),
+        // ]);
+
+
+        // $pdf->set_paper([0, 0, 212.598425, 141.732283]); // 28.3464566  puntos equivale a 1 cms, por tanto 212.598425 es 7.5cms y 141.732283 es 5 cms
+        $pdf->set_paper([0, 0, 283.464566, 283.464566]); // 28.3464566  puntos equivale a 1 cms, por tanto 212.598425 es 7.5cms y 141.732283 es 5 cms
 
         // $order->changes()->create([
         //     'name'=>'print_vaucher',
         //     'content'=> []
         // ]);
 
-        $keywords = ['shalom', 'dinsides', 'indriver', 'olva', 'olva courier', 'gama', 'gamma', 'express', 'showroom', 'confianza', 'recojo en tienda', 'tienda'];
+        $keywords = ['shalom', 'dinsides', 'indriver', 'olva', 'olva courier', 'gama', 'gamma', 'express', 'showroom', 'confianza', 'recojo en tienda', 'tienda', 'showroom'];
         // $text = "ENVIOS GRATIS / OLVA COURIER ( POR COMPRAS MAYORES A S/299 )";
 
         Log::info(json_encode($order->lineItems));
@@ -90,7 +103,7 @@ class PdfShopifyController extends Controller
         }
 
         Log::info(json_encode($order));
-        
+
 
         if ($order->shippingLines) {
 
@@ -114,7 +127,7 @@ class PdfShopifyController extends Controller
             $courier = "";
         }
 
-        
+
 
         //return view('livewire.erp.orders.pdf.voucher', compact('order'));
 
