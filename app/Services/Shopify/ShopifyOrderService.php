@@ -253,11 +253,15 @@ class ShopifyOrderService extends ShopifyBaseService
             updatedAt
             processedAt
             sourceName
+            closed
+            closedAt
+            cancelledAt
+            cancelReason
             displayFinancialStatus
             displayFulfillmentStatus
             tags
             note
-            fulfillmentOrders(first: 5) {
+            fulfillmentOrders(first: 5) { # Representa las órdenes de cumplimiento asociadas a esta orden
                 edges {
                     node {
                         id
@@ -273,7 +277,21 @@ class ShopifyOrderService extends ShopifyBaseService
                                 node {
                                     id
                                     totalQuantity
-                                    sku
+                                    originalUnitPriceSet {
+                                        shopMoney {
+                                            amount
+                                            currencyCode
+                                        }
+                                    }
+                                    variant {
+                                        id
+                                        title
+                                        price
+                                        product {
+                                            title
+                                            featuredImage { url }
+                                        }
+                                    }
                                     lineItem {
                                         id
                                         title
@@ -281,7 +299,7 @@ class ShopifyOrderService extends ShopifyBaseService
                                 }
                             }
                         }
-                        fulfillments(first: 5) {
+                        fulfillments(first: 5) { # Representa los envíos realizados para esta orden de cumplimiento
                             edges {
                                 node {
                                     id
@@ -293,7 +311,7 @@ class ShopifyOrderService extends ShopifyBaseService
                                         url
                                         company
                                     }
-                                    fulfillmentLineItems(first: 10) {
+                                    fulfillmentLineItems(first: 10) { #son los productos que se enviaron en el fulfillment
                                         edges {
                                             node {
                                                 id
