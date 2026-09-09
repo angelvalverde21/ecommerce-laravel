@@ -79,7 +79,7 @@ class AttendanceDashboardController extends Controller
                 break;
 
             case '74910587':
-                //Marina
+                //josselin
                 return 8;
                 break;
 
