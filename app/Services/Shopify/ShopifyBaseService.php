@@ -46,10 +46,33 @@ abstract class ShopifyBaseService
             $payload['variables'] = $variables;
         }
 
-        return Http::withHeaders([
+        $response = Http::withHeaders([
             'Content-Type' => 'application/json',
             'X-Shopify-Access-Token' => $this->token,
         ])->post($this->apiUrl, $payload);
+
+        // Log si hay error en la respuesta
+        if ($response->failed()) {
+            Log::error('Shopify GraphQL Error', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'query' => $query,
+                'variables' => $variables,
+                'url' => $this->apiUrl,
+            ]);
+        }
+
+        // Verificar errores GraphQL en la respuesta
+        $responseData = $response->json();
+        if (isset($responseData['errors'])) {
+            Log::error('Shopify GraphQL Response Errors', [
+                'errors' => $responseData['errors'],
+                'query' => $query,
+                'variables' => $variables,
+            ]);
+        }
+
+        return $response;
     }
     //==================================== NUEVOS METODOS  ====================================
 

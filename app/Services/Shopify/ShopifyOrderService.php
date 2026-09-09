@@ -253,11 +253,15 @@ class ShopifyOrderService extends ShopifyBaseService
             updatedAt
             processedAt
             sourceName
+            closed
+            closedAt
+            cancelledAt
+            cancelReason
             displayFinancialStatus
             displayFulfillmentStatus
             tags
             note
-            fulfillmentOrders(first: 20) {
+            fulfillmentOrders(first: 5) { # Representa las órdenes de cumplimiento asociadas a esta orden
                 edges {
                     node {
                         id
@@ -265,6 +269,59 @@ class ShopifyOrderService extends ShopifyBaseService
                         createdAt
                         requestStatus
                         updatedAt
+                        assignedLocation {
+                            name
+                        }
+                        lineItems(first: 10) {
+                            edges {
+                                node {
+                                    id
+                                    totalQuantity
+                                    originalUnitPriceSet {
+                                        shopMoney {
+                                            amount
+                                            currencyCode
+                                        }
+                                    }
+                                    variant {
+                                        id
+                                        title
+                                        price
+                                        product {
+                                            title
+                                            featuredImage { url }
+                                        }
+                                    }
+                                    lineItem {
+                                        id
+                                        title
+                                    }
+                                }
+                            }
+                        }
+                        fulfillments(first: 5) { # Representa los envíos realizados para esta orden de cumplimiento
+                            edges {
+                                node {
+                                    id
+                                    status
+                                    createdAt
+                                    updatedAt
+                                    trackingInfo {
+                                        number
+                                        url
+                                        company
+                                    }
+                                    fulfillmentLineItems(first: 10) { #son los productos que se enviaron en el fulfillment
+                                        edges {
+                                            node {
+                                                id
+                                                quantity
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -290,9 +347,10 @@ class ShopifyOrderService extends ShopifyBaseService
     {
 
         return  "
-                    lineItems(first: 50) {
+                    lineItems(first: 10) {
                         edges {
                             node {
+                                id
                                 name
                                 quantity
                                 originalUnitPriceSet {
@@ -360,7 +418,7 @@ class ShopifyOrderService extends ShopifyBaseService
     {
 
         return "
-            events(first: 20, reverse: true) {
+            events(first: 10, reverse: true) {
                 edges {
                     node {
                     createdAt
@@ -625,7 +683,7 @@ class ShopifyOrderService extends ShopifyBaseService
         $result = GraphQLResponseHelper::normalizeEntity(
             $response,
             'orders',
-            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+            []
         );
 
         return [
