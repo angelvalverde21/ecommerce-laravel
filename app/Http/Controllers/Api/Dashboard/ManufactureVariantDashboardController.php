@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Services\Dashboard\Crud\ManufactureService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -13,20 +14,20 @@ class ManufactureVariantDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
+
+
+    private $service;
+
+    public function __construct(ManufactureService $service)
+    {
+        $this->service = $service;
+    }
+
     public function index(Store $store, int $manufacture_id)
     {
         //
 
-        $manufacture_variants = $store->manufactures()
-            ->findOrFail($manufacture_id)
-            ->manufactureVariants()
-            ->with([
-                'variant.product.image',
-                'variant.optionValues',
-                'variant.manufactureKardexes' => fn($q) =>
-                $q->where('kardexable_id', $manufacture_id)
-            ])
-            ->get();
+        $manufacture_variants = $this->service->variants($store, $manufacture_id);
 
         return responseOk($manufacture_variants, "Listado de Manufacture_variants obtenido correctamente");
     }
@@ -165,7 +166,7 @@ class ManufactureVariantDashboardController extends Controller
         try {
 
             DB::beginTransaction();
-            
+
             $validated = $request->validate([
                 'quantity' => 'required|numeric|min:0',
                 'price' => 'nullable|numeric|min:0',
@@ -175,10 +176,10 @@ class ManufactureVariantDashboardController extends Controller
                 ->findOrFail($manufacture_id);
 
             $manufacture_variant = $manufacture->manufactureVariants()
-                                                    ->with([
-                                                        'variant.product.image',
-                                                        'variant.optionValues'
-                                                    ])->findOrFail($manufacture_variant_id);
+                ->with([
+                    'variant.product.image',
+                    'variant.optionValues'
+                ])->findOrFail($manufacture_variant_id);
 
             $manufacture_variant->update([
 
@@ -189,8 +190,7 @@ class ManufactureVariantDashboardController extends Controller
 
             DB::commit();
 
-            return responseOk($manufacture_variant , "Cantidad actualizada correctamente abc");
-
+            return responseOk($manufacture_variant, "Cantidad actualizada correctamente abc");
         } catch (\Throwable $th) {
 
             Log::info($th);
