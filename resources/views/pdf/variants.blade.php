@@ -394,13 +394,13 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th class="col-qty">Cant. Pedida</th>
+                <th class="col-qty">Cant.</th>
                 <th class="col-received">Recepción</th>
-                <th class="col-variant">Var.</th>
-                <th class="col-image">Img.</th>
+                {{-- <th class="col-variant">Var.</th> --}}
+                <th class="col-image" style="text-align: center;">Imagen</th>
                 <th class="col-desc">Descripción</th>
                 <th class="col-barcode">Código Barras</th>
-                <th class="col-price">Precio</th>
+                <th class="col-price" style="text-align: center;">Precio</th>
             </tr>
         </thead>
         <tbody>
@@ -423,10 +423,7 @@
                     $size = '-';
                     if (!empty($variant['option_values'])) {
                         foreach ($variant['option_values'] as $opt) {
-                            if (isset($opt['option']['name']) && $opt['option']['name'] === 'size') {
-                                $size = $opt['value'];
-                                break;
-                            }
+                            $size = $opt['value'];
                         }
                     }
 
@@ -440,7 +437,7 @@
                 <tr>
                     <td class="col-qty">{{ $quantity }}</td>
                     <td class="col-received received-cell"></td>
-                    <td class="col-variant">{{ $size }}</td>
+                    {{-- <td class="col-variant">{{ $size }}</td> --}}
                     <td class="col-image img-cell">
                         @if($imageUrl)
                             <img src="{{ $imageUrl }}" alt="Img">
@@ -454,7 +451,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 15px;">
+                    <td colspan="6" style="text-align: center; padding: 15px;">
                         No se encontraron registros.
                     </td>
                 </tr>
@@ -463,7 +460,7 @@
         <tfoot>
             <tr>
                 <td class="col-qty">{{ $totalQuantity }}</td>
-                <td colspan="5">Total general</td>
+                <td colspan="4">Total general</td>
                 <td class="col-price total-value">{{ number_format($totalPrice, 2) }}</td>
             </tr>
         </tfoot>
