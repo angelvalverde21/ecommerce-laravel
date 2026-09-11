@@ -134,13 +134,14 @@ class ShopifyOrderService extends ShopifyBaseService
 
     private function fetchOrders(string $query)
     {
+        
         $response = $this->graphql($query);
 
         // Log::info($response);
 
         if ($response->failed()) {
             Log::error('Error al obtener 贸rdenes', ['response' => $response]);
-            return ['error' => 'No se pudieron obtener las 贸rdenes'];
+            return ['error' => 'No se pudieron obtener las ordenes'];
         }
 
         $result = GraphQLResponseHelper::normalizeEntity(
@@ -159,6 +160,7 @@ class ShopifyOrderService extends ShopifyBaseService
             'pageInfo'   => $result['pageInfo'] ?? null,
             'lastCursor' => $result['lastCursor'] ?? null,
         ];
+
     }
 
     private function fetchOrder(string $query)

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 class ManufactureService
 {
 
+
     public function index(Store $store, $manufacture_id) {}
 
     // public function show(Store $store, $manufacture_id)
@@ -43,5 +44,21 @@ class ManufactureService
             ->withFinancialSummary()
             ->withVariantsAndKardexes()
             ->findOrFail($manufacture_id);
+    }
+
+    public function variants(Store $store, int $manufacture_id)
+    {
+        //
+
+        return $store->manufactures()
+            ->findOrFail($manufacture_id)
+            ->manufactureVariants()
+            ->with([
+                'variant.product.image',
+                'variant.optionValues',
+                'variant.manufactureKardexes' => fn($q) =>
+                $q->where('kardexable_id', $manufacture_id)
+            ])
+            ->get();
     }
 }

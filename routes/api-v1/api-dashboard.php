@@ -51,6 +51,7 @@ use App\Http\Controllers\Api\Dashboard\InventoryBatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\LocationDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufacturePaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\YapeDashboardController;
+use App\Http\Controllers\Api\Shopify\PdfManufactureController;
 
 // Route::prefix('v1/dashboard/{store}')->middleware(['auth:api'])->group(function () {
 
@@ -209,6 +210,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::prefix('variants')->group(function () {
 
                 Route::get('/', [ManufactureVariantDashboardController::class, 'index']); //Listar
+                Route::get('/pdf/report', [PdfManufactureController::class, 'report']); //Listar
                 Route::post('/', [ManufactureVariantDashboardController::class, 'store']); //create
                 Route::post('/batch', [ManufactureVariantDashboardController::class, 'batch']); //create
 
