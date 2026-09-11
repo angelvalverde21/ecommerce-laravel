@@ -15,7 +15,7 @@ class ShopifyOrderService extends ShopifyBaseService
     public function getOrderByName(string $orderName)
     {
 
-        $fields = $this->orderQuery(['shippingAddress', 'shippingLines', 'items']);
+        $fields = $this->orderQuery(['shippingAddress', 'shippingLines', 'items', 'customer']);
 
         $query = <<<GQL
         {

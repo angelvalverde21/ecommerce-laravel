@@ -58,6 +58,9 @@
 
         return null; // No es un número móvil válido
     }
+
+    function searchPhone() {}
+
 @endphp
 <!DOCTYPE html>
 <html lang="es">
@@ -107,8 +110,8 @@
         }
 
         /* .list-group { */
-            /* padding: 0 0 0 10px; */
-            /* border: 1px solid #ccc; */
+        /* padding: 0 0 0 10px; */
+        /* border: 1px solid #ccc; */
         /* } */
 
         h2 {
@@ -139,13 +142,13 @@
         @if (Str::upper($order->shippingAddress->firstName) === 'SHOWROOM')
             <h1 style="text-align: center; margin: 80px 0">SHOWROOM</h1>
         @else
-
             <ul class="list-group">
                 <li class="list-group-item">
                     {{ Str::upper(titleCaseName($order->shippingAddress->firstName . ' ' . $order->shippingAddress->lastName)) }}
                 </li>
                 <li class="list-group-item">DNI: {{ $order->shippingAddress->company }}</li>
-                <li class="list-group-item">TELEFONO: {{ extractPhoneWithoutArea($order->shippingAddress?->phone) }}
+                <li class="list-group-item">TELEFONO:
+                    {{ extractPhoneWithoutArea(!empty($order->shippingAddress->phone) ? $order->shippingAddress->phone : $order->customer->phone) }}
                 </li>
 
             </ul>
@@ -165,7 +168,6 @@
                             {{ Str::upper(normalize_text($order->shippingAddress->city)) }}
                         @endif
                     @endif
-
                 </li>
 
             </ul>
