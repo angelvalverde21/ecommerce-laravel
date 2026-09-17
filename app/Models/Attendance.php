@@ -8,6 +8,8 @@ class Attendance extends Model
 {
     //
 
+    const TOLERANCE = 15;
+
     protected $guarded = ['id', 'created_at'];
 
     public function employee(){

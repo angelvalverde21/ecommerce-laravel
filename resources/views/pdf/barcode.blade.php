@@ -76,7 +76,7 @@
                         ">
 
                     <div style="font-size: 8px; margin-top: 1mm;">
-                        {{ strtoupper($variant['id']) }}-{{ $variant['sku'] }}
+                        <div>{{ $variant['id'] }}-{{ Str::upper($variant->optionValues[0]->value) }}</div>
                     </div>
 
                 </div>

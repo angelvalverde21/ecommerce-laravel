@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SearchRequest;
 use App\Http\Resources\FlatUserResource;
 use App\Models\Employee;
 use App\Models\Payment;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Dashboard\Crud\AttendanceService;
 use App\Services\Dashboard\Employee\EmployeeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -24,11 +26,13 @@ class EmployeeDashboardController extends Controller
      * Display a listing of the resource.
      */
     protected EmployeeService $employeeService;
+    protected AttendanceService $attendanceService;
 
     public function __construct()
     {
         // Pasamos el modelo que vamos a usar
         $this->employeeService = new EmployeeService();
+        $this->attendanceService = new AttendanceService();
     }
 
     //  getOrdersByTag
@@ -38,7 +42,23 @@ class EmployeeDashboardController extends Controller
         //
         try {
 
-            $employees = $store->employees()->with('user.roles')->get();
+            $employees = $store->employees()->with(['user.roles', 'attendances'])->get();
+
+            $employees = $employees->map(function ($employee) {
+
+                $completeAttendances = $this->attendanceService
+                    ->completeRangeEmployee($employee, $employee->attendances);
+
+                // Convertimos a colección por si viene como array
+                $collection = collect($completeAttendances);
+
+                $employee->attendances = $completeAttendances;
+
+                $employee->total_minutes = $collection->sum('minutes');
+                $employee->total_minutes_computed = $collection->sum('minutes_computed');
+
+                return $employee;
+            });
 
             // $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar Employee->user en el front sino todo plano
             //     $store->employees()->get()
@@ -52,50 +72,19 @@ class EmployeeDashboardController extends Controller
         }
     }
 
-    public function search(Store $store, Request $request)
+    public function search(Store $store, SearchRequest $request)
     {
-        $validated = $request->validate([
-            'search'     => 'required|string|max:255',
-            'start_date' => 'nullable|date',
-            'end_date'   => 'nullable|date|after_or_equal:start_date',
-
-        ]);
-
-        $search     = $validated['search'];
-        $startDate  = $validated['start_date'] ?? null;
-        $endDate    = $validated['end_date'] ?? null;
-
-        if (trim($search) === '' || $search === null) {
+        if ($request->hasNoFilters()) {
             return $this->index($store);
         }
 
-        try {
+        $employees = Employee::with('user')
+            ->search($request->search)
+            ->betweenDates($request->start_date, $request->end_date) //Sino hay fechas simplemente pasa de largo, no se considera
+            ->limit(10)
+            ->get();
 
-            $query = Employee::whereHas('user', function ($query) use ($search) {
-                $query->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('email', 'LIKE', "%{$search}%")
-                    ->orWhere('phone', 'LIKE', "%{$search}%")
-                    ->orWhere('document_number', 'LIKE', "%{$search}%");
-            })
-                ->with('user');
-
-            // 🔥 Si ambas fechas existen → aplicar between
-            if ($startDate && $endDate) {
-                $query->whereBetween('created_at', [
-                    $startDate . ' 00:00:00',
-                    $endDate   . ' 23:59:59'
-                ]);
-            }
-
-            $employees = $query
-                ->limit(10)
-                ->get();
-
-            return responseOk($employees, "Empleados obtenidos correctamente (search)");
-        } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError("Ha ocurrido un error interno al buscar los empleados");
-        }
+        return responseOk($employees);
     }
 
     /**
@@ -174,13 +163,14 @@ class EmployeeDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Store $store, $employed_id)
+    public function  show(Store $store, $employed_id)
     {
         try {
 
             $employee = Employee::with(
                 'user.roles',
-                'attendances.employee'
+                'attendances.employee',
+                'schedules'
             )
                 ->addSelect([
                     'balance' => Payment::selectRaw("
@@ -200,63 +190,14 @@ class EmployeeDashboardController extends Controller
             $rolesOnlyNames = $employee->user->roles->pluck('name');
 
             unset($employee->user->roles);
+
             $employee->user->setRelation('roles', $rolesOnlyNames);
 
 
             // --- NORMALIZAR ASISTENCIAS ---
+            $completeAttendances = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
 
-            $attendances = $employee->attendances
-                ->keyBy(function ($attendance) {
-                    return Carbon::parse($attendance->date)->format('Y-m-d');
-                });
-
-
-            // ✅ FIX: si no hay asistencias, devolver vacío
-            if ($employee->attendances->isEmpty()) {
-                $employee->setRelation('attendances', collect([]));
-                return responseOk($employee, "Empleado obtenido correctamente");
-            }
-
-
-            $dates = $employee->attendances
-                ->pluck('date')
-                ->map(fn($d) => Carbon::parse($d));
-
-            $start = $dates->min();
-            $end   = $dates->max();
-
-            $period = CarbonPeriod::create($start, $end);
-
-            $completeAttendances = [];
-
-            foreach ($period as $date) {
-
-                if ($date->dayOfWeek == Carbon::SUNDAY) {
-                    continue;
-                }
-
-                $key = $date->format('Y-m-d');
-
-                if ($attendances->has($key)) {
-
-                    $attendance = $attendances[$key];
-                    $attendance->missing = false;
-
-                    $completeAttendances[] = $attendance;
-                } else {
-
-                    $completeAttendances[] = [
-                        'id' => null,
-                        'employee_id' => $employee->id,
-                        'check_in' => null,
-                        'check_out' => null,
-                        'date' => $key,
-                        'missing' => true
-                    ];
-                }
-            }
-
-            $employee->setRelation('attendances', collect($completeAttendances));
+            $employee->setRelation('attendances', collect($completeAttendances)); //Borra la relacion $employee->attendances y la reeemplaza por $completeAttendances
 
             return responseOk($employee, "Empleado obtenido correctamente");
 
@@ -288,16 +229,21 @@ class EmployeeDashboardController extends Controller
 
             //VALIDACIÓN FLEXIBLE (update parcial o completo)
             $validated = $request->validate([
-                'name'            => 'sometimes|required|string|max:255',
-                'email'           => ["sometimes", "required", "email", Rule::unique('users', 'email')->ignore($employee->user->id)],
-                'phone'           => 'sometimes|nullable|string|max:20',
-                'document_number' => 'sometimes|nullable|string|max:20',
-                'status'          => 'sometimes|required|in:0,1',
+                'name'            => 'required|string|max:255',
+                'email'           => ["required", "email", Rule::unique('users', 'email')->ignore($employee->user->id)],
+                'phone'           => 'nullable|string|max:20',
+                'document_number' => 'nullable|string|max:20',
+                'status'          => 'required|in:0,1',
                 'tag_sales'       => 'nullable|string|max:100',
-                'roles'           => 'sometimes|required|array|min:1',
+                'type'       => 'nullable|string|max:100',
+                'roles'           => 'required|array|min:1',
                 'roles.*'         => 'string|exists:roles,name',
-                'comission'       => 'sometimes|nullable|numeric|min:0|max:100', //employee comission
-                'salary'          => 'sometimes|nullable|numeric|min:0', //employee salary
+                'comission'       => 'nullable|numeric|min:0|max:100', //employee comission
+                'salary'          => 'nullable|numeric|min:0', //employee salary
+                // 'auto_close_end_time' => 'nullable|boolean',
+                'work_time_start' => 'nullable|date_format:H:i:s',
+                'work_time_end' => 'nullable|date_format:H:i:s',
+
             ]);
 
             DB::beginTransaction();
@@ -309,6 +255,10 @@ class EmployeeDashboardController extends Controller
                     'comission' => $validated['comission'] ?? null, //actualiza comision del empleado si llega
                     'salary'    => $validated['salary'] ?? null, //actualiza salario del empleado si llega
                     'tag_sales' => $validated['tag_sales'] ?? null, //actualiza tag_sales del empleado si llega
+                    'type' => $validated['type'] ?? null, //actualiza tag_sales del empleado si llega
+                    // 'auto_close_end_time' => $validated['auto_close_end_time'],
+                    'work_time_start' => $validated['work_time_start'],
+                    'work_time_end' => $validated['work_time_end'],
                 ]
             );
 

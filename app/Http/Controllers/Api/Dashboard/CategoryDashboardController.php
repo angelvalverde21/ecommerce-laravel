@@ -75,7 +75,8 @@ class CategoryDashboardController extends Controller
 
             $category = Category::create(
                 [
-                    'name' => $resp['name'],
+                    'name' => $resp['name'],  
+                    'full_name' => $resp['name'],  
                     'slug' => Str::slug($resp['name']),
                     'parent_id' =>  is_numeric($request->parent_id) && (int)$request->parent_id > 0 ? (int)$request->parent_id : null,
                     'is_color'   => filter_var($resp['is_color'] ?? false, FILTER_VALIDATE_BOOLEAN),

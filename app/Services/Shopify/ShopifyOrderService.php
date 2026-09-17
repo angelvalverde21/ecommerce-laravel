@@ -66,6 +66,44 @@ class ShopifyOrderService extends ShopifyBaseService
         );
     }
 
+    public function getOrderById(string $orderId)
+    {
+        // Validar que el ID tenga el formato correcto
+        if (!str_starts_with($orderId, 'gid://shopify/Order/')) {
+            throw new \InvalidArgumentException(
+                "ID de orden inválido. Debe ser formato: gid://shopify/Order/xxxxx"
+            );
+        }
+
+        $fields = $this->orderQuery(['shippingAddress', 'shippingLines', 'items']);
+
+        $query = <<<GQL
+        {
+          node(id: "{$orderId}") {
+            ... on Order {
+              {$fields}
+            }
+          }
+        }
+        GQL;
+
+        $response = $this->graphql($query);
+
+        // Normalizar la respuesta (usando 'node' en lugar de 'orders')
+        $data = GraphQLResponseHelper::normalizeSingle(
+            $response,
+            'node',  // Cambio clave: 'node' en lugar de 'orders'
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines']
+        );
+
+        // Verificar si se encontró la orden
+        if (empty($data)) {
+            throw new \Exception("No se encontró la orden con ID: {$orderId}");
+        }
+
+        return json_decode(json_encode($data));
+    }
+
 
     public function orderByNumber(string $orderNumber, $includes = ['customer', 'items', 'shippingAddress', 'shippingLines'])
     {
@@ -96,19 +134,20 @@ class ShopifyOrderService extends ShopifyBaseService
 
     private function fetchOrders(string $query)
     {
+        
         $response = $this->graphql($query);
 
         // Log::info($response);
 
         if ($response->failed()) {
             Log::error('Error al obtener 贸rdenes', ['response' => $response]);
-            return ['error' => 'No se pudieron obtener las 贸rdenes'];
+            return ['error' => 'No se pudieron obtener las ordenes'];
         }
 
         $result = GraphQLResponseHelper::normalizeEntity(
             $response,
             'orders',
-            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress', 'fulfillmentOrders']
         );
 
         // Aplicar el mapeo solo una vez aqu铆
@@ -121,6 +160,7 @@ class ShopifyOrderService extends ShopifyBaseService
             'pageInfo'   => $result['pageInfo'] ?? null,
             'lastCursor' => $result['lastCursor'] ?? null,
         ];
+
     }
 
     private function fetchOrder(string $query)
@@ -215,11 +255,15 @@ class ShopifyOrderService extends ShopifyBaseService
             updatedAt
             processedAt
             sourceName
+            closed
+            closedAt
+            cancelledAt
+            cancelReason
             displayFinancialStatus
             displayFulfillmentStatus
             tags
             note
-            fulfillmentOrders(first: 20) {
+            fulfillmentOrders(first: 5) { # Representa las órdenes de cumplimiento asociadas a esta orden
                 edges {
                     node {
                         id
@@ -227,6 +271,59 @@ class ShopifyOrderService extends ShopifyBaseService
                         createdAt
                         requestStatus
                         updatedAt
+                        assignedLocation {
+                            name
+                        }
+                        lineItems(first: 10) {
+                            edges {
+                                node {
+                                    id
+                                    totalQuantity
+                                    originalUnitPriceSet {
+                                        shopMoney {
+                                            amount
+                                            currencyCode
+                                        }
+                                    }
+                                    variant {
+                                        id
+                                        title
+                                        price
+                                        product {
+                                            title
+                                            featuredImage { url }
+                                        }
+                                    }
+                                    lineItem {
+                                        id
+                                        title
+                                    }
+                                }
+                            }
+                        }
+                        fulfillments(first: 5) { # Representa los envíos realizados para esta orden de cumplimiento
+                            edges {
+                                node {
+                                    id
+                                    status
+                                    createdAt
+                                    updatedAt
+                                    trackingInfo {
+                                        number
+                                        url
+                                        company
+                                    }
+                                    fulfillmentLineItems(first: 10) { #son los productos que se enviaron en el fulfillment
+                                        edges {
+                                            node {
+                                                id
+                                                quantity
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -252,9 +349,10 @@ class ShopifyOrderService extends ShopifyBaseService
     {
 
         return  "
-                    lineItems(first: 50) {
+                    lineItems(first: 10) {
                         edges {
                             node {
+                                id
                                 name
                                 quantity
                                 originalUnitPriceSet {
@@ -322,7 +420,7 @@ class ShopifyOrderService extends ShopifyBaseService
     {
 
         return "
-            events(first: 20, reverse: true) {
+            events(first: 10, reverse: true) {
                 edges {
                     node {
                     createdAt
@@ -587,7 +685,7 @@ class ShopifyOrderService extends ShopifyBaseService
         $result = GraphQLResponseHelper::normalizeEntity(
             $response,
             'orders',
-            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+            []
         );
 
         return [
@@ -799,7 +897,7 @@ class ShopifyOrderService extends ShopifyBaseService
         $result = GraphQLResponseHelper::normalizeEntity(
             $response,
             'orders',
-            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress']
+            ['lineItems', 'fulfillments', 'customer', 'events', 'shippingLines', 'shippingAddress', 'fulfillmentOrders']
         );
 
         return [
@@ -1058,6 +1156,7 @@ class ShopifyOrderService extends ShopifyBaseService
                                             node {
                                                 id
                                                 name
+                                                tags
                                                 createdAt
                                                 updatedAt
                                                 processedAt
@@ -1128,17 +1227,13 @@ class ShopifyOrderService extends ShopifyBaseService
 
     public function getOrdersByTagBetween($tag, $start = null, $end = null): array
     {
-
         Log::info($start);
         Log::info($end);
 
         $start = $start ?? date('Y-m-d');
         $end = $end ?? date('Y-m-d', strtotime('+1 month', strtotime($start)));
-        
-        Log::info('getOrdersSearch');
 
-        // Asegurar límite mínimo
-        // $limit = max(1, $limit);
+        Log::info('getOrdersSearch');
 
         // -------------------------------------------------------------
         // 1️⃣ — Sub-queries para evitar repetición
@@ -1150,89 +1245,104 @@ class ShopifyOrderService extends ShopifyBaseService
         $eventsQuery          = $this->eventsQuery();
 
         // -------------------------------------------------------------
-        // 2️⃣ — GraphQL Template SIN FECHAS, usando LIMIT
+        // 2️⃣ — GraphQL Template
         // -------------------------------------------------------------
         $queryTemplate = <<<GRAPHQL
-                                {
-                                    orders(
-                                        first: 50,
-                                        sortKey: CREATED_AT,
-                                        reverse: true,
-                                        query: "financial_status:paid tag::tag cancelled_at:null fulfillment_status:fulfilled created_at:>=:start created_at:<=:end",
-                                        after: :cursor
-                                    ) {
-                                        pageInfo {
-                                            hasNextPage
-                                            endCursor
-                                        }
-                                        edges {
-                                            cursor
-                                            node {
-                                                id
-                                                name
-                                                createdAt
-                                                updatedAt
-                                                tags
-                                                processedAt
-                                                sourceName
-                                                displayFinancialStatus
-                                                displayFulfillmentStatus
-                                                note
-                                                fulfillmentOrders(first: 20) {
-                                                    edges {
-                                                        node {
-                                                            id
-                                                            status
-                                                            createdAt
-                                                            requestStatus
-                                                            updatedAt
-                                                        }
-                                                    }
-                                                }
-                                                totalPriceSet {
-                                                    shopMoney {
-                                                        amount
-                                                        currencyCode
-                                                    }
-                                                }
-                                                $itemsQuery
-                                                $shippingLinesQuery
-                                            }
-                                        }
-                                    }
+        {
+            orders(
+                first: 50,
+                sortKey: CREATED_AT,
+                reverse: true,
+                query: ":searchQuery financial_status:paid cancelled_at:null fulfillment_status:fulfilled created_at:>=:start created_at:<=:end",
+                after: :cursor
+            ) {
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
+    
+                edges {
+                    cursor
+    
+                    node {
+                        id
+                        name
+                        createdAt
+                        updatedAt
+                        tags
+                        processedAt
+                        sourceName
+                        displayFinancialStatus
+                        displayFulfillmentStatus
+                        note
+    
+                        fulfillmentOrders(first: 20) {
+                            edges {
+                                node {
+                                    id
+                                    status
+                                    createdAt
+                                    requestStatus
+                                    updatedAt
                                 }
-                            GRAPHQL;
+                            }
+                        }
+    
+                        totalPriceSet {
+                            shopMoney {
+                                amount
+                                currencyCode
+                            }
+                        }
+    
+                        $itemsQuery
+                        $shippingLinesQuery
+                    }
+                }
+            }
+        }
+        GRAPHQL;
 
         // -------------------------------------------------------------
-        // 2️⃣ — QueryBuilder para reemplazar placeholders
+        // 3️⃣ — QueryBuilder
         // -------------------------------------------------------------
-        $queryBuilder = function (?string $cursor) use ($queryTemplate, $start, $end, $tag) {
+        $queryBuilder = function (?string $cursor) use (
+            $queryTemplate,
+            $start,
+            $end,
+            $tag
+        ) {
+
+            $searchQuery = "(tag:$tag OR note:$tag)";
 
             return str_replace(
-                [':start', ':end', ':tag', ':cursor'], //Elementos a reeemplazar
-                [$start, $end, $tag, $cursor ? "\"$cursor\"" : 'null'], //Con estos valores
-                $queryTemplate //En el template
+                [':start', ':end', ':searchQuery', ':cursor'],
+                [
+                    $start,
+                    $end,
+                    $searchQuery,
+                    $cursor ? "\"$cursor\"" : 'null'
+                ],
+                $queryTemplate
             );
-
         };
 
         // -------------------------------------------------------------
-        // 3️⃣ — Ejecutar el query builder ($queryBuilder) para traer los datos de Shopify
+        // 4️⃣ — Ejecutar query
         // -------------------------------------------------------------
         $result = $this->getDataFromShopify(
             'orders',
             $queryBuilder,
-            ['lineItems', 'shippingLines'] //podria ser 'lineItems'
+            ['lineItems', 'shippingLines']
         );
 
         // -------------------------------------------------------------
-        // 4️⃣ — Normalizar items
+        // 5️⃣ — Logs
         // -------------------------------------------------------------
         Log::info('result de getOrdersByTagBetween');
         Log::info($result);
 
         return $result;
-        // $orders = collect($result['items'] ?? []);
     }
 
     public function getSearchOrders(int $limit = 20, $cursor = null, $search = null): array

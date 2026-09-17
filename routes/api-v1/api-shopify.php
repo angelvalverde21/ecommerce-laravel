@@ -16,6 +16,7 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
         Route::get('/pending', [OrderShopifyController::class, 'pending']); //Listar
         Route::get('/search/{search?}', [OrderShopifyController::class, 'search']); //Listar
         Route::get('/prepared', [OrderShopifyController::class, 'prepared']); //Listar
+        Route::get('/cash', [OrderShopifyController::class, 'cash']); //Listar
 
         Route::post('/', [OrderShopifyController::class, 'store']); //create
 
@@ -76,16 +77,17 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
     Route::prefix('reports')->group(function () {
 
         Route::get('/', [ReportShopifyController::class, 'index']); //Listar
+        Route::get('/inventory', [ReportShopifyController::class, 'inventory']); //Listar
         Route::get('/top', [ReportShopifyController::class, 'reportTopSellingProducts']); //Listar
 
         Route::prefix('bars')->group(function () {
             Route::get('/daily/{days?}', [ReportShopifyController::class, 'reportBarDailys']); //Listar
             Route::get('/months/{days?}', [ReportShopifyController::class, 'reportBarMonths']); //Listar
+            Route::get('/between/{day_start}/{day_end}', [ReportShopifyController::class, 'reportShowRoomBetween']); //Listar
         });
 
         Route::get('/month-all', [ReportShopifyController::class, 'monthAll']); //Listar
         Route::get('/report-cash-weekly', [ReportShopifyController::class, 'reportCashWeekly']); //Listar
-
 
     });
 

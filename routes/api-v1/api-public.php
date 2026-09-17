@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthApiController;
+use App\Http\Controllers\Api\public\AndroidController;
 use App\Http\Controllers\Api\public\StorePublicController;
 use App\Http\Controllers\Api\public\WebPublicController;
 use App\Http\Controllers\Api\public\YapePublicController;
@@ -11,15 +12,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\VerifyStore;
 
 
-// Route::get('/cache', function () {
+Route::get('/cache', function () {
 
-//     Artisan::call('cache:clear');
-//     Artisan::call('config:cache');
-//     Artisan::call('route:cache');
-//     Artisan::call('view:cache');
+    Artisan::call('cache:clear');
+    Artisan::call('config:cache');
+    Artisan::call('route:cache');
+    Artisan::call('view:cache');
 
-//     return "Cacheado!x";
-// });
+    return "Cacheado!x";
+});
 
 // Route::get('/link', function () {
 //     Artisan::call('storage:link');
@@ -34,7 +35,10 @@ Route::prefix('v1/public')->middleware('api')->group(function () {
         
         Route::post('/yape', [YapePublicController::class, 'store']);
         Route::get('/', [StorePublicController::class, 'show']);
+        Route::get('/price/{variant_id}', [AndroidController::class, 'price']);
         Route::post('/login', [AuthApiController::class, 'login']);
+
+        //Todoko
 
         Route::get('/tracking/{order_id}', [WebPublicController::class, 'tracking']);
 
@@ -44,6 +48,8 @@ Route::prefix('v1/public')->middleware('api')->group(function () {
 
         });
     });
+
+
 });
 
 //https://3b.pe/laravel/api/v1/public/sorelle

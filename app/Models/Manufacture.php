@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Traits\HasDateFiltersTrait;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 
 class Manufacture extends Model
 {
     //
+
+    use HasDateFiltersTrait;
+
     protected $guarded = ['id', 'created_at'];
 
     // public function products()
@@ -26,15 +30,24 @@ class Manufacture extends Model
 
     public function manufactureVariants()
     {
-        return $this->hasMany(ManufactureVariant::class);
+        return $this->hasMany(ManufactureVariant::class); //es la tabla de pedidos iniciales
     }
 
     public function variants()
     {
         //Aqui no la especificamos porque los modelos Manufacture y Variant sigue la convención de Laravel
         return $this->belongsToMany(Variant::class)
-            ->withPivot('quantity')
+            ->withPivot(['quantity','price'])
             ->withTimestamps();
+    }
+
+    public function scopeWithVariantsAndKardexes(Builder $query): Builder
+    {
+        return $query->with([
+            'variants.product.image',
+            'variants.optionValues',
+            'variants.manufactureKardexes',
+        ]);
     }
 
     public function user()
@@ -44,7 +57,7 @@ class Manufacture extends Model
 
     public function payments()
     {
-        return $this->morphMany(Payment::class, 'paymentable');
+        return $this->morphMany(Payment::class, 'paymentable')->orderBy('date', 'desc');
     }
 
     public function kardexes()
@@ -74,6 +87,49 @@ class Manufacture extends Model
 
         return $query->where(function ($query) use ($term) {
             $query->where('manufactures.name', 'LIKE', '%' . $term . '%');
+            // ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
+        });
+    }
+
+    public function scopeSearchProduction(Builder $query, $term)
+    {
+
+        // return $query->where('products.name', 'LIKE', '%' . $term . '%')
+        //     ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
+        // Esto da como resultado una consulta sin los parentesis
+        // WHERE products.name LIKE '%term%' OR products.tags LIKE '%term%'
+
+
+
+        //Es mejor usar esta consulta porque encapsula el query por si se concatena con otra consulta, esta no se vera afectara
+        // porque el resultado final tendra los parentesis
+        // WHERE (products.name LIKE '%term%' OR products.tags LIKE '%term%')
+
+        return $query->where(function ($query) use ($term) {
+            $query->where('manufactures.name', 'LIKE', '%' . $term . '%')
+                ->where('type', 'production');;
+            // ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
+        });
+    }
+
+
+    public function scopeSearchOrder(Builder $query, $term)
+    {
+
+        // return $query->where('products.name', 'LIKE', '%' . $term . '%')
+        //     ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
+        // Esto da como resultado una consulta sin los parentesis
+        // WHERE products.name LIKE '%term%' OR products.tags LIKE '%term%'
+
+
+
+        //Es mejor usar esta consulta porque encapsula el query por si se concatena con otra consulta, esta no se vera afectara
+        // porque el resultado final tendra los parentesis
+        // WHERE (products.name LIKE '%term%' OR products.tags LIKE '%term%')
+
+        return $query->where(function ($query) use ($term) {
+            $query->where('manufactures.name', 'LIKE', '%' . $term . '%')
+                ->where('type', 'order');;
             // ->orWhere('products.tags', 'LIKE', '%' . $term . '%');
         });
     }
@@ -119,6 +175,6 @@ class Manufacture extends Model
 
     public function purchases()
     {
-        return $this->morphMany(Purchase::class, 'purchaseable');   
+        return $this->morphMany(Purchase::class, 'purchaseable');
     }
 }

@@ -208,7 +208,12 @@ class CourierDashboardController extends Controller
      */
     public function show(Store $store, $courier_id)
     {
-        return $this->courierService->show($store, $courier_id);
+        try {
+            return responseOk($this->courierService->show($store, $courier_id), "Courier con id: $courier_id obtenido correctamente");
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError("Error al obtener el courier con id: $courier_id");
+        }
     }
 
     /**

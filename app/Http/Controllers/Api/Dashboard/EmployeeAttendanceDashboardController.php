@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
 use App\Models\Store;
+use App\Services\Dashboard\Crud\AttendanceService;
 use App\Services\Dashboard\Employee\EmployeeAttendanceService;
 use Illuminate\Http\Request;
 
@@ -11,13 +13,14 @@ use Illuminate\Http\Request;
 class EmployeeAttendanceDashboardController extends Controller
 {
 
-
     protected EmployeeAttendanceService $employeeAttendanceService;
+    protected AttendanceService $attendanceService;
 
     public function __construct()
     {
         // Pasamos el modelo que vamos a usar
         $this->employeeAttendanceService = new EmployeeAttendanceService();
+        $this->attendanceService = new AttendanceService();
     }
 
     /**
@@ -64,16 +67,14 @@ class EmployeeAttendanceDashboardController extends Controller
 
     // }
 
-    public function index(Store $store, $employee_id)
+    public function index(Store $store, int $employee_id)
     {
         $employee = $store->employees()
             ->with('attendances.employee')
             ->findOrFail($employee_id);
 
-        $data = $this->employeeAttendanceService->buildAttendances($employee);
-
         return responseOk(
-            $data,
+            $this->employeeAttendanceService->index($store, $employee->id),
             'Asistencias obtenidas correctamente desde EmployeeAttendanceDashboardController'
         );
     }
@@ -89,7 +90,6 @@ class EmployeeAttendanceDashboardController extends Controller
     {
 
         return responseOk($this->employeeAttendanceService->search($store, $employee_id, $request), "Registros de asistencia obtenidos correctamente");
-
     }
 
     /**
@@ -103,9 +103,10 @@ class EmployeeAttendanceDashboardController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Store $store, Request $request)
     {
         //
+
     }
 
     /**
@@ -139,6 +140,4 @@ class EmployeeAttendanceDashboardController extends Controller
     {
         //
     }
-
-
 }

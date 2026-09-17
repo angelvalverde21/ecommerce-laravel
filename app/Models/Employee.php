@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasDateFiltersTrait;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -14,6 +15,8 @@ use Illuminate\Database\Eloquent\Model;
 class Employee extends Model
 {
     //
+    use HasDateFiltersTrait;
+
     protected $guarded = ['id', 'created_at'];
 
     protected $with = ['user'];
@@ -30,6 +33,25 @@ class Employee extends Model
 
     public function payments()
     {
-        return $this->morphMany(Payment::class, 'paymentable');
+        return $this->morphMany(Payment::class, 'paymentable')->orderBy('date', 'desc');
+    }
+
+    public function schedules()
+    {
+        return $this->hasMany(EmployeeSchedule::class);
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        if (!$search) {
+            return $query;
+        }
+
+        return $query->whereHas('user', function ($q) use ($search) {
+            $q->where('name', 'LIKE', "%{$search}%")
+                ->orWhere('email', 'LIKE', "%{$search}%")
+                ->orWhere('phone', 'LIKE', "%{$search}%")
+                ->orWhere('document_number', 'LIKE', "%{$search}%");
+        });
     }
 }
