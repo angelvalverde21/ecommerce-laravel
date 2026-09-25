@@ -58,8 +58,9 @@ use App\Http\Controllers\Api\Shopify\PdfManufactureController;
 // });
 // http://erp.test/api/v1/dashboard/sorelle/payments/1/images
 Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'])->group(function () {
-
+ 
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
+    Route::get('/stores/current', [StoreDashboardController::class, 'current']); //Listar
 
     Route::prefix('roles')->group(function () {
 
@@ -459,6 +460,8 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     Route::prefix('couriers')->group(function () {
 
         Route::get('/', [CourierDashboardController::class, 'index']); //Listar
+        Route::get('/agency', [CourierDashboardController::class, 'agency']); //Listar
+        Route::get('/express', [CourierDashboardController::class, 'express']); //Listar
         Route::get('/active', [CourierDashboardController::class, 'active']); //Listar
         Route::get('/blocked', [CourierDashboardController::class, 'blocked']); //Listar
         Route::post('/', [CourierDashboardController::class, 'store']); //create

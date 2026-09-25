@@ -155,19 +155,28 @@ class Store extends Model
     //     );
     // }
 
-    public function batches(){
+    public function batches()
+    {
         return $this->hasMany(Batch::class);
     }
 
-    public function inventories(){
+    public function addresses()
+    {
+        return $this->morphMany(Address::class, 'addressable');
+    }
+
+    public function inventories()
+    {
         return $this->hasMany(Inventory::class);
     }
 
-    public function payments(){
+    public function payments()
+    {
         return $this->hasMany(Payment::class);
     }
 
-    public function kardexes(){
+    public function kardexes()
+    {
         return $this->hasMany(Kardex::class);
     }
 
@@ -180,5 +189,4 @@ class Store extends Model
     {
         return $this->hasMany(Acquire::class);
     }
-
 }

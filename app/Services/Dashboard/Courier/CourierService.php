@@ -15,27 +15,7 @@ class CourierService
      */
     public function search(Store $store, string $search, int $perPage = 50)
     {
-        $query = Courier::with('user')
-            ->whereHas('user', function (Builder $q) use ($store, $search) {
-
-                $q->active()
-                    ->whereHas('stores', function (Builder $sq) use ($store) {
-                        $sq->where('stores.id', $store->id);
-                    });
-
-                if (trim($search) !== '') {
-                    $q->where(function (Builder $qq) use ($search) {
-                        $qq->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%")
-                            ->orWhere('phone', 'like', "%{$search}%")
-                            ->orWhere('document_number', 'like', "%{$search}%");
-                    });
-                }
-            });
-
-        return FlatCourierUserResource::collection(
-            $query->paginate($perPage)
-        );
+        return Courier::search($search)->get();
     }
 
     /**
@@ -43,12 +23,21 @@ class CourierService
      */
     public function index(Store $store, int $perPage = 20)
     {
-        $query = Courier::with(['user','addresses'])
-            ->whereHas('user', function (Builder $q) use ($store) {
-                $q->whereHas('stores', function (Builder $sq) use ($store) {
-                    $sq->where('stores.id', $store->id);
-                });
-            });
+        $query = Courier::with(['addresses']);
+
+        return $query->paginate($perPage);
+    }
+
+    public function agency(Store $store, int $perPage = 20)
+    {
+        $query = Courier::with('addresses')->where('delivery_type', 'agency');
+
+        return $query->paginate($perPage);
+    }
+
+    public function express(Store $store, int $perPage = 20)
+    {
+        $query = Courier::with('addresses')->where('delivery_type', 'express');
 
         return $query->paginate($perPage);
     }
@@ -58,34 +47,15 @@ class CourierService
      */
     public function active(Store $store, int $perPage = 20) //Recuerda que el active o bloqued estan en un Trait HasStatusScopesTrait
     {
-        $query = Courier::with('user')
-            ->whereHas('user', function (Builder $q) use ($store) {
-                $q->active()
-                    ->whereHas('stores', function (Builder $sq) use ($store) {
-                        $sq->where('stores.id', $store->id);
-                    });
-            });
-
-        return FlatCourierUserResource::collection(
-            $query->paginate($perPage)
-        );
+        return Courier::active()->get();
     }
 
     /**
      * Obtener couriers bloqueados
      */
-    public function blocked(Store $store, int $perPage = 20) //Recuerda que el active o blocked estan en un Trait HasStatusScopesTrait
+    public function blocked(Store $store, int $perPage = 20) //Recuerda que el active o bloqued estan en un Trait HasStatusScopesTrait
     {
-        $query = Courier::blocked()
-            ->whereHas('user', function (Builder $q) use ($store) {
-                $q->whereHas('stores', function (Builder $sq) use ($store) {
-                    $sq->where('stores.id', $store->id);
-                });
-            });
-
-        return FlatCourierUserResource::collection(
-            $query->paginate($perPage)
-        );
+        return Courier::blocked()->get();
     }
 
     /**
@@ -99,11 +69,6 @@ class CourierService
                         }
                     ])
                     ->where('id', $id)
-                    ->whereHas('user', function (Builder $q) use ($store) {
-                        $q->whereHas('stores', function (Builder $sq) use ($store) {
-                            $sq->where('stores.id', $store->id);
-                        });
-                    })
                     ->firstOrFail();
 
         Log::info($courier);
@@ -116,22 +81,10 @@ class CourierService
      */
     public function update(Store $store, int $id, array $data)
     {
-        return DB::transaction(function () use ($store, $id, $data) {
+            $courier = Courier::findOrFail($id);
 
-            $courier = Courier::with('user')
-                ->where('id', $id)
-                ->whereHas('user', function (Builder $q) use ($store) {
-                    $q->whereHas('stores', function (Builder $sq) use ($store) {
-                        $sq->where('stores.id', $store->id);
-                    });
-                })
-                ->firstOrFail();
+            $courier->update($data);
 
-            $courier->user->update($data);
-
-            return new FlatCourierUserResource(
-                $courier->fresh(['user'])
-            );
-        });
+            return $courier;
     }
 }
