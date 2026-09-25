@@ -89,7 +89,7 @@ class AcquireService
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'quantity_total' => 'nullable|integer',
+            // 'quantity_total' => 'nullable|integer',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'date_start' => 'nullable|date',
             'date_end' => 'nullable|date|after_or_equal:date_start',

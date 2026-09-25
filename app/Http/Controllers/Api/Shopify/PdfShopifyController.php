@@ -60,7 +60,7 @@ class PdfShopifyController extends Controller
         $keywords = ['shalom', 'dinsides', 'indriver', 'olva', 'olva courier', 'gama', 'gamma', 'express', 'showroom', 'confianza', 'recojo en tienda', 'tienda', 'showroom'];
         // $text = "ENVIOS GRATIS / OLVA COURIER ( POR COMPRAS MAYORES A S/299 )";
 
-        Log::info(json_encode($order->lineItems));
+        // Log::info(json_encode($order->lineItems));
 
         //Calculo del monto monto total
 
@@ -146,12 +146,16 @@ class PdfShopifyController extends Controller
             // }
 
             // Log::info($courier); // "olva courier"
+
         } else {
             $courier = "";
         }
 
         //return view('livewire.erp.orders.pdf.voucher', compact('order'));
 
+
+        Log::info("empezando a ver el objeto");
+        Log::info(json_encode($order));
 
         $pdf = $pdf->loadview('pdf.voucher', compact(['order', 'courier']));
 
@@ -178,6 +182,7 @@ class PdfShopifyController extends Controller
         // $order->Addstatus('preparando_envio', $current);
 
         //return $pdf-> download ('prueba.pdf');
+        
         return $pdf->stream(time() . '-' . $order_id . '-packing.pdf');
     }
 }
