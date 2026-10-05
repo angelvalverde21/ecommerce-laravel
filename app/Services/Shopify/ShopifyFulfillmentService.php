@@ -104,7 +104,7 @@ class FulfillmentService extends ShopifyBaseService
         $existingFulfillments = $this->getFulfillmentsFromOrder($fulfillmentOrder);
 
         if (!empty($existingFulfillments)) {
-            // ✅ YA TIENE FULFILLMENTS → Verificar cuáles están OPEN
+            // YA TIENE FULFILLMENTS → Verificar cuáles están OPEN
             $openFulfillments = array_filter($existingFulfillments, function ($fulfillment) {
                 return strtolower($fulfillment['status']) === 'open';
             });
