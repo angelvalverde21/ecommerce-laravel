@@ -12,15 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('couriers', function (Blueprint $table) {
-            
+
             $table->id();
 
-            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete(); // Si se elimina el usuario, se eliminan los couriers asociados
-
+            $table->string('name');
+            $table->string('phone')->nullable();
+            $table->tinyInteger('status')
+                ->default(1)
+                ->comment('1 = active, 0 = blocked');
             //El courier acepta pago contra entrega, osea que el pago se realiza al momento de la entrega
-            $table->boolean('is_cash_on_delivery')->default(false); 
-            $table->boolean('is_freight_collect')->default(false); //El courier acepta flete por cobrar, por ejemplo shalom e indriver (pago en destino)
-            $table->boolean('is_express_shipping')->default(false); //El courier acepta envios express (rapidos)
+            $table->boolean('is_cod')->default(false); // COD significa Cash On Delivery (también visto como Collect On Delivery). el courier acepta pago contra entrega, por ejemplo shalom e indriver (pago en destino)
+            $table->boolean('freight_collect')->default(false); //El courier acepta flete por cobrar, por ejemplo shalom auqnue indriver lo tiene
+            $table->enum('delivery_type', ['agency', 'express', 'store_pickup'])->default('agency'); //El courier acepta envios express, por ejemplo indriver y shalom no lo tiene
 
             $table->timestamps();
         });

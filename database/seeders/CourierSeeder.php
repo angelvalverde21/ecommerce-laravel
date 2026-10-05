@@ -21,9 +21,9 @@ class CourierSeeder extends Seeder
             [
                 'name' => 'SHALOM',
                 'phone' => '015007878',
-                'is_cash_on_delivery' => 0, //Acepta Pago contra entrega
-                'is_freight_collect' => 1, //Acepta cobrar los costos de envio en destino, osea pago en destino
-                'is_express_shipping' => 0, //No acepta envios express, osea envios rapidos
+                'is_cod' => 0, //Acepta Pago contra entrega
+                'freight_collect' => 1, //Acepta cobrar los costos de envio en destino, osea pago en destino
+                'delivery_type' => 'agency', //No acepta envios express, osea envios rapidos
                 'email' => 'ventas@shalom.com.pe',
                 'identity_id' => 2, // Asumiendo que el courier es una persona
                 'document_number' => mt_rand(20000000000, 99999999999),
@@ -34,9 +34,9 @@ class CourierSeeder extends Seeder
             [
                 'name' => 'GAMA EXPRESS',
                 'phone' => '925778997',
-                'is_cash_on_delivery' => 1, //Acepta Pago contra entrega
-                'is_freight_collect' => 1, //Acepta cobrar los costos de envio en destino, osea pago en destino
-                'is_express_shipping' => 1, //Acepta envios express, osea envios rapidos
+                'is_cod' => 1, //Acepta Pago contra entrega
+                'freight_collect' => 1, //Acepta cobrar los costos de envio en destino, osea pago en destino
+                'delivery_type' => 'agency', //Acepta envios express, osea envios rapidos
                 'email' => 'gamaexpressperu@gmail.com',
                 'identity_id' => 2, // Asumiendo que el courier es una persona natural y tiene una identidad asociada
                 'document_number' => mt_rand(20000000000, 99999999999),
@@ -54,9 +54,9 @@ class CourierSeeder extends Seeder
             [
                 'name' => 'INDRIVER PERU S.A.C.',
                 'phone' => '015007878',
-                'is_cash_on_delivery' => 0, //No acepta Pago contra entrega
-                'is_freight_collect' => 1, //Acepta cobrar los costos de envio en destino, osea pago en destino
-                'is_express_shipping' => 1, //Acepta envios express, osea envios rapidos
+                'is_cod' => 0, //No acepta Pago contra entrega
+                'freight_collect' => 1, //Acepta cobrar los costos de envio en destino, osea pago en destino
+                'delivery_type' => 'express', //Acepta envios express, osea envios rapidos
                 'email' => 'support@indrive.com',
                 'identity_id' => 2, // Asumiendo que el courier es una persona
                 'document_number' => mt_rand(20000000000, 99999999999),
@@ -78,9 +78,9 @@ class CourierSeeder extends Seeder
             [
                 'name' => 'OLVA COURIER',
                 'phone' => '017140909',
-                'is_cash_on_delivery' => 0, //Acepta Pago contra entrega
-                'is_freight_collect' => 0, //No acepta cobrar los costos de envio en destino, osea pago en destino
-                'is_express_shipping' => 0, //No acepta envios express, osea envios rapidos
+                'is_cod' => 0, //Acepta Pago contra entrega
+                'freight_collect' => 0, //No acepta cobrar los costos de envio en destino, osea pago en destino
+                'delivery_type' => 'agency', //No acepta envios express, osea envios rapidos
                 'email' => 'atencionalcliente@olva.com.pe',
                 'identity_id' => 2, // Asumiendo que el courier es una persona
                 'document_number' => mt_rand(20000000000, 99999999999),
@@ -97,9 +97,9 @@ class CourierSeeder extends Seeder
             [
                 'name' => 'DINSIDES',
                 'phone' => '989424937',
-                'is_cash_on_delivery' => 1, //Acepta Pago contra entrega
-                'is_freight_collect' => 0, //No acepta cobrar los costos de envio en destino, osea pago en destino
-                'is_express_shipping' => 1, //Acepta envios express, osea envios rapidos
+                'is_cod' => 1, //Acepta Pago contra entrega
+                'freight_collect' => 0, //No acepta cobrar los costos de envio en destino, osea pago en destino
+                'delivery_type' => 'agency', //Acepta envios express, osea envios rapidos
                 'email' => 'contacto@dinsidescourier.com',
                 'identity_id' => 2, // Asumiendo que el courier es una persona
                 'document_number' => mt_rand(20000000000, 99999999999),
@@ -119,50 +119,33 @@ class CourierSeeder extends Seeder
 
             $this->command->info('Se ejecuta el seeder de courier: ' . $courier['name']);
 
-            $user = User::create(
-                [
-                    'name' => $courier['name'],
-                    'email' => $courier['email'],
-                    'phone' => $courier['phone'],
-                    'document_number' => $courier['document_number'],
-                    'identity_id' => $courier['identity_id'],
-                    'password' => bcrypt(md5($courier['phone'])), // Default password
-                ]
-            );
-
-            $user->stores()->attach(1); // Asignar el courier a la tienda con ID 1
-
-            $courierResp = $user->courier()->create([
-                'is_cash_on_delivery' => $courier['is_cash_on_delivery'],
-                'is_freight_collect' => $courier['is_freight_collect'],
-                'is_express_shipping' => $courier['is_express_shipping']
+            $courier = Courier::create([
+                'name' => $courier['name'],
+                'phone' => $courier['phone'],
+                'is_cod' => $courier['is_cod'],
+                'freight_collect' => $courier['freight_collect'],
+                'delivery_type' => $courier['delivery_type'],
             ]);
+
+            // $courier->stores()->attach(1); // Asignar el courier a la tienda con ID 1
 
             foreach ($courier['addresses'] as $address) {
                 //  $this->command->info('Se ejecuta el seeder de courier: ' . $address['name']);
-                $courierResp->addresses()->create($address);
+                $courier->addresses()->create($address);
             }
         }
 
         //Ahora empezamos a crear las agencias de shalom y cada una es una direccion diferente pero todas pertenecen al mismo courier
 
-        $user = User::create([
+        $courier = Courier::create([
             'name' => $shalom['name'],
-            'email' => $shalom['email'],
             'phone' => $shalom['phone'],
-            'document_number' => $shalom['document_number'],
-            'identity_id' => $shalom['identity_id'],
-            'password' => bcrypt(md5($shalom['phone'])), // Default password
+            'is_cod' => $shalom['is_cod'],
+            'freight_collect' => $shalom['freight_collect'],
+            'delivery_type' => $shalom['delivery_type'],
         ]);
 
-        $user->stores()->attach(1); // Asignar el courier a la tienda con ID 1
-
-
-        $courier = $user->courier()->create([
-            'is_cash_on_delivery' => $shalom['is_cash_on_delivery'],
-            'is_freight_collect' => $shalom['is_freight_collect'],
-            'is_express_shipping' => $shalom['is_express_shipping']
-        ]);
+        // $courier->stores()->attach(1); // Asignar el courier a la tienda con ID 1
 
         $data = File::get("database/data/agencias_shalom.json");
 
@@ -192,7 +175,6 @@ class CourierSeeder extends Seeder
                 'is_default' => 0,
                 'district_id' => $address->ubi_id,
                 'sort_order' => $order,
-
             ]);
         }
     }

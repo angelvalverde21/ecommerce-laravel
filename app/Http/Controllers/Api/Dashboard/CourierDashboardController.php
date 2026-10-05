@@ -18,24 +18,34 @@ class CourierDashboardController extends Controller
 {
 
 
-    protected CourierService $courierService;
+    protected CourierService $service;
 
     public function __construct()
     {
         // Pasamos el modelo que vamos a usar
-        $this->courierService = new CourierService();
+        $this->service = new CourierService();
     }
 
     public function index(Store $store)
     {
-        return $this->courierService->index($store, 25);
+        return $this->service->index($store, 25);
+    }
+
+    public function express(Store $store)
+    {
+        return $this->service->express($store, 25);
+    }
+
+    public function agency(Store $store)
+    {
+        return $this->service->agency($store, 25);
     }
 
     public function active(Store $store)
     {
         try {
             //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Courier
-            return responsePaginateOk($this->courierService->active($store, 25), 'Courier activos obtenidos correctamente');
+            return responsePaginateOk($this->service->active($store, 25), 'Courier activos obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
             return responseError('Error al obtener ' . 'Courier activos');
@@ -46,7 +56,7 @@ class CourierDashboardController extends Controller
     {
         try {
             //Aqui ya service ya tiene el modelo que le hemos pasado, en este caso Courier
-            return responsePaginateOk($this->courierService->blocked($store, 25), 'Courier bloqueados obtenidos correctamente');
+            return responsePaginateOk($this->service->blocked($store, 25), 'Courier bloqueados obtenidos correctamente');
         } catch (\Throwable $th) {
             Log::error($th);
             return responseError('Error al obtener ' . 'Courier bloqueados');
@@ -60,7 +70,7 @@ class CourierDashboardController extends Controller
 
             //Esto quiere decir que si search viene vacio o con espacios en blanco, se llama al index, en caso contrario prosigo y llamo al search
 
-            $couriers = trim($search) ? $this->courierService->search($store, $search, 100) : $this->index($store);
+            $couriers = trim($search) ? $this->service->search($store, $search, 100) : $this->index($store);
             return responsePaginateOk($couriers, 'Courier obtenidos correctamente (search)');
 
         } catch (\Throwable $th) {
@@ -208,7 +218,12 @@ class CourierDashboardController extends Controller
      */
     public function show(Store $store, $courier_id)
     {
-        return $this->courierService->show($store, $courier_id);
+        try {
+            return responseOk($this->service->show($store, $courier_id), "Courier con id: $courier_id obtenido correctamente");
+        } catch (\Throwable $th) {
+            Log::info($th);
+            return responseError("Error al obtener el courier con id: $courier_id");
+        }
     }
 
     /**

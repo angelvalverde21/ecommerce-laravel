@@ -40,7 +40,19 @@ class StoreDashboardController extends Controller
         try {
             // Log::info('exito');
             //selectFields esta en el modelo Product
-            return responseOk($store->with(['categories.children'])->first(), "La informacion de la tienda ha sido obtenida satisfactoriamente");
+            return responseOk($store->with(['addresses', 'categories.children'])->first(), "La informacion de la tienda ha sido obtenida satisfactoriamente");
+        } catch (\Throwable $th) {
+            //throw $th;
+            // Log::info($th);
+        }
+    }
+
+    public function current(Store $store)
+    {
+        try {
+            // Log::info('exito');
+            //selectFields esta en el modelo Product
+            return responseOk(Store::with('addresses')->where('slug', $store->slug)->get(), "La informacion de la tienda ha sido obtenida satisfactoriamente"); //ponemos get porque necesitamos un array de stores, aunque solo traiga uno
         } catch (\Throwable $th) {
             //throw $th;
             // Log::info($th);

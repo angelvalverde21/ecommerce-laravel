@@ -14,7 +14,7 @@ class StoreSeeder extends Seeder
     public function run(): void
     {
         //
-        Store::create([
+        $store = Store::create([
             "id" => 1,
             "name" => "sorelle",
             "phone" => "943402809",
@@ -22,6 +22,15 @@ class StoreSeeder extends Seeder
             "slug" => "sorelle",
             "identity_id" => "2", //2 es RUC
             "document_number" => "20478907009",
+        ]);
+
+        $store->addresses()->create([
+            "primary" => "Jr Gamarra 1331",
+            "secondary" => "Tienda 421",
+            "name" => "Tienda 421",
+            "reception_hours" => "LUNES A SABADO - 8AM A 8PM",
+            "sunday_hours" => "Cerrado",
+            "district_id" => 150115
         ]);
     }
 }
