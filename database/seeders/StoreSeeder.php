@@ -34,3 +34,7 @@ class StoreSeeder extends Seeder
         ]);
     }
 }
+
+
+// INSERT INTO addresses (primary, secondary, name, reception_hours, sunday_hours, district_id)
+// VALUES ('Jr Gamarra 1331', 'Tienda 421', 'Tienda 421', 'LUNES A SABADO - 8AM A 8PM', 'Cerrado', 150115);

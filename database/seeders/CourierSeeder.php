@@ -119,7 +119,7 @@ class CourierSeeder extends Seeder
 
             $this->command->info('Se ejecuta el seeder de courier: ' . $courier['name']);
 
-            $courier = Courier::create([
+            $courierNew = Courier::create([
                 'name' => $courier['name'],
                 'phone' => $courier['phone'],
                 'is_cod' => $courier['is_cod'],
@@ -131,7 +131,7 @@ class CourierSeeder extends Seeder
 
             foreach ($courier['addresses'] as $address) {
                 //  $this->command->info('Se ejecuta el seeder de courier: ' . $address['name']);
-                $courier->addresses()->create($address);
+                $courierNew->addresses()->create($address);
             }
         }
 
