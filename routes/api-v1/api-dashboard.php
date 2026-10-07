@@ -60,7 +60,7 @@ use App\Http\Controllers\Api\Shopify\PdfManufactureController;
 Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'])->group(function () {
  
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
-    Route::get('/stores/current', [StoreDashboardController::class, 'current']); //Listar
+    Route::get('/current', [StoreDashboardController::class, 'current']); //Listar
 
     Route::prefix('roles')->group(function () {
 
