@@ -78,7 +78,11 @@ Route::prefix('v1/{store}/dashboard/shopify')->middleware('api')->middleware(['a
 
         Route::get('/', [ReportShopifyController::class, 'index']); //Listar
         Route::get('/inventory', [ReportShopifyController::class, 'inventory']); //Listar
-        Route::get('/top', [ReportShopifyController::class, 'reportTopSellingProducts']); //Listar
+
+        Route::prefix('top')->group(function () {
+            Route::get('/', [ReportShopifyController::class, 'reportTopSellingProducts']); //Listar
+            Route::get('/between/{day_start}/{day_end}', [ReportShopifyController::class, 'reportTopSellingProductsBetween']); //Listar
+        });
 
         Route::prefix('bars')->group(function () {
             Route::get('/daily/{days?}', [ReportShopifyController::class, 'reportBarDailys']); //Listar

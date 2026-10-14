@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Services\Shopify\ShopifyReportService;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
 
 class ReportShopifyController extends Controller
@@ -57,6 +58,8 @@ class ReportShopifyController extends Controller
 
     public function reportShowRoomBetween(Store $store, $day_start, $day_end)
     {
+
+
         $report = $this->shopifyService->getReportShowRoomBetween($day_start, $day_end); //reporte en barras
 
         return response()->json($report);
@@ -77,6 +80,27 @@ class ReportShopifyController extends Controller
         return response()->json($report);
     }
 
+    public function reportTopSellingProductsBetween(Store $store, Request $request, $day_start, $day_end)
+    {
+
+    
+        Log::info("imprimiendo fechas");
+        
+        Log::info($day_start);
+        Log::info($day_end);
+        
+        Log::info("fin de imprimiendo fechas");
+
+        // Días de duración del cache (por defecto 7)
+
+        // Clave única por tienda + días
+        $cacheKey = "report_top_selling_products_Xbetween_{$store->id}";
+
+        $report = $this->shopifyService->getReportTopSellingProductsBetween($day_start, $day_end);
+
+        return response()->json($report);
+    }
+
     public function inventory(Store $store, Request $request)
     {
 
@@ -87,6 +111,5 @@ class ReportShopifyController extends Controller
         });
 
         return response()->json($report);
-
     }
 }
