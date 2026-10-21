@@ -71,7 +71,7 @@ class ReportShopifyController extends Controller
         // Días de duración del cache (por defecto 7)
 
         // Clave única por tienda + días
-        $cacheKey = "report_top_xy_selling_products_{$store->id}";
+        $cacheKey = "report_top_xy_selling_products_x_{$store->id}";
 
         $report = Cache::remember($cacheKey, now()->addHours(24), function () {
             return $this->shopifyService->getReportTopSellingProducts();

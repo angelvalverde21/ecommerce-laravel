@@ -312,7 +312,7 @@ class ShopifyReportService extends ShopifyBaseService
   }
   // ==================================== REPORTES DEL PRODUCTO MAS VENDIDOS ORDENADOS DE MAYOR A MENOR  ====================================
 
-  public function getReportTopSellingProducts($days = 90) // 10 años
+  public function getReportTopSellingProducts($days = 1800) // 10 años
   {
 
     // Crear rango de fechas
