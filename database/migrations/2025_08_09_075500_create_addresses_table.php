@@ -39,6 +39,9 @@ return new class extends Migration
             $table->string('document_number')->nullable();
             $table->string('phone')->nullable();
             $table->string('type')->nullable()->default(Address::DEFAULT_TYPE_ADDRESS['casa']); //casa, oficina, trabajo, etc
+            $table->string('purpose', 30)
+                ->nullable()
+                ->comment('shipping, billing'); //el tipo de direccion, si es para envio o facturacion, por defecto es shipping
             $table->string('primary')->nullable(); //direccion principal, por ejemplo: Av. Siempre Viva 123
             $table->string('secondary')->nullable(); //direccion secundaria, por ejemplo: Urb. Los Robles
             $table->string('references')->nullable();
