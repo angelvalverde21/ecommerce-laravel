@@ -50,6 +50,8 @@ use App\Http\Controllers\Api\Dashboard\EmployeeScheduleDashboardController;
 use App\Http\Controllers\Api\Dashboard\InventoryBatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\LocationDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufacturePaymentDashboardController;
+use App\Http\Controllers\Api\Dashboard\OrderDashboardController;
+use App\Http\Controllers\Api\Dashboard\VariantDashboardController;
 use App\Http\Controllers\Api\Dashboard\YapeDashboardController;
 use App\Http\Controllers\Api\Shopify\PdfManufactureController;
 
@@ -60,7 +62,7 @@ use App\Http\Controllers\Api\Shopify\PdfManufactureController;
 Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'])->group(function () {
  
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
-    Route::get('/stores/current', [StoreDashboardController::class, 'current']); //Listar
+    Route::get('/current', [StoreDashboardController::class, 'current']); //Listar
 
     Route::prefix('roles')->group(function () {
 
@@ -816,4 +818,25 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         });
     });
+
+    Route::prefix('orders')->group(function () {
+        Route::get('/', [OrderDashboardController::class, 'index']); //Listar
+        Route::post('/', [OrderDashboardController::class, 'store']); //create
+        Route::prefix('{order_id}')->group(function () {
+            Route::get('/', [OrderDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [OrderDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [OrderDashboardController::class, 'destroy']); //borrar
+        });
+    });
+    
+    Route::prefix('variants')->group(function () {
+        Route::get('/', [VariantDashboardController::class, 'index']); //Listar
+        Route::post('/', [VariantDashboardController::class, 'store']); //create
+        Route::prefix('{variant_id}')->group(function () {
+            Route::get('/', [VariantDashboardController::class, 'show']); //show o mostrar por id
+            Route::put('/', [VariantDashboardController::class, 'update']); //actualizar
+            Route::delete('/', [VariantDashboardController::class, 'destroy']); //borrar
+        });
+    });
+
 });
