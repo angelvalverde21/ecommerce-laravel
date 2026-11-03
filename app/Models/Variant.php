@@ -46,7 +46,9 @@ class Variant extends Model
 
     public function kardexes()
     {
-        return $this->hasMany(Kardex::class);
+        return $this->hasMany(Kardex::class)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
     }
 
     public function manufactureKardexes()

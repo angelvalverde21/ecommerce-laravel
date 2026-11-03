@@ -41,10 +41,15 @@ class ProductDashboardController extends Controller
     }
     public function index(Store $store, Request $request)
     {
+        $validated = $request->validate([
+            'sort' => 'sometimes|in:stock,recent',
+        ]);
 
-        // Log::info($request->all());
-
-       return $this->productService->index($store); //se envia el page desde el request de angular, el perPage si esta definido por defecto en el servicio
+        return $this->productService->index(
+            $store,
+            sort: $validated['sort'] ?? 'recent',
+            request: $request,
+        );
     }
 
     public function search(Store $store, Request $request)
@@ -59,7 +64,7 @@ class ProductDashboardController extends Controller
     {
         //
 
-        $product = $store->products()->with(['category', 'attributes', 'options.option_values', 'variants.product', 'variants.kardexes',  'variants.variant_option_values.optionValue'])->find($product_id);
+        $product = $store->products()->withStockTotal()->with(['category', 'attributes', 'options.option_values', 'variants.product', 'variants.kardexes',  'variants.variant_option_values.optionValue'])->find($product_id);
 
         if (!$product) {
             return responseError([], "Error al obtener el producto x", 404);

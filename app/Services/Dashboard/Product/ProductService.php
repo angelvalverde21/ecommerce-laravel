@@ -2,62 +2,81 @@
 
 namespace App\Services\Dashboard\Product;
 
-use App\Models\Product;
+use App\Models\Category;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class ProductService
 {
-
-    public function index(Store $store, int $perPage = 20)
+    public function index(Store $store, int $perPage = 20, string $sort = 'recent', ?Request $request = null)
     {
+        $request ??= request();
+        $query = $store->products()->withStockTotal()->with('category');
 
-        // laravel recibe internamente el page  dentro del request que mandamos de angular, por lo que no es necesario calcular el offset manualmente
-        // sin embargo no es asi con perPage, por lo que si queremos un valor por defecto de 20, debemos manejarlo nosotros mismos, ya sea desde el controlador o desde el servicio
-
-        $products = $store->products()
-            ->with('category')
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
-
-        return $products;
+        return $this->sortProducts($query->getQuery(), $request, $sort)
+            ->paginate($perPage)
+            ->appends($request->query());
     }
 
     public function search(Store $store, Request $request, int $perPage = 20)
     {
-
-        $search = $request->input('search', '');
-
-        if (trim($search) === '' || $search === null) {
-            Log::info("se ejectutó la búsqueda sin término de búsqueda, se devolverá el listado completo de Suppliers para el store con id: {$store->id}");
-            return $this->index($store);
-        }
-
         $validated = $request->validate([
-            'search'     => 'required|string|max:255',
+            'search' => 'nullable|string|max:255',
             'start_date' => 'nullable|date',
-            'end_date'   => 'nullable|date|after_or_equal:start_date',
-
+            'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        $search     = $validated['search'];
-        $startDate  = $validated['start_date'] ?? null;
-        $endDate    = $validated['end_date'] ?? null;
+        $query = $store->products()->withStockTotal()->with([
+            'category', 'image', 'variants.product.image',
+            'variants.variant_option_values.optionValue',
+        ]);
 
-        $query = $store->products()->with(['image', 'variants.product.image', 'variants.variant_option_values.optionValue'])->search($search);
-
-
-        if ($startDate && $endDate) {
-            $query->whereBetween('products.created_at', [
-                $startDate . ' 00:00:00',
-                $endDate   . ' 23:59:59'
-            ]);
+        $search = trim($validated['search'] ?? '');
+        if ($search !== '') {
+            $query->search($search);
+        }
+        if (!empty($validated['start_date'])) {
+            $query->where('products.created_at', '>=', $validated['start_date'].' 00:00:00');
+        }
+        if (!empty($validated['end_date'])) {
+            $query->where('products.created_at', '<=', $validated['end_date'].' 23:59:59');
         }
 
-        return $query->paginate($perPage);
+        return $this->sortProducts($query->getQuery(), $request)
+            ->paginate($perPage)
+            ->appends($request->only(['search', 'start_date', 'end_date', 'sort', 'sort_by', 'sort_direction']));
     }
 
+    private function sortProducts(Builder $query, Request $request, string $legacySort = 'recent'): Builder
+    {
+        $validated = $request->validate([
+            'sort' => 'sometimes|in:stock,recent',
+            'sort_by' => 'sometimes|in:id,name,category,created_at,stock_total,price',
+            'sort_direction' => 'sometimes|in:asc,desc',
+        ]);
+
+        $field = $validated['sort_by'] ?? (($validated['sort'] ?? $legacySort) === 'stock' ? 'stock_total' : 'created_at');
+        $direction = $validated['sort_direction'] ?? 'desc';
+        $query->reorder();
+
+        if ($field === 'category') {
+            $query->orderBy(Category::query()->select('name')
+                ->whereColumn('categories.id', 'products.category_id')->limit(1), $direction);
+        } elseif ($field === 'stock_total') {
+            // Treat products without variants as zero, just like the JSON accessor.
+            $stock = $query->getModel()->variants()->getRelated()->newQuery()
+                ->selectRaw('COALESCE(SUM(stock), 0)')
+                ->whereColumn('variants.product_id', 'products.id');
+            $query->orderBy($stock, $direction);
+        } else {
+            $query->orderBy('products.'.$field, $direction);
+        }
+
+        if ($field !== 'id') {
+            $query->orderByDesc('products.id');
+        }
+
+        return $query;
+    }
 }

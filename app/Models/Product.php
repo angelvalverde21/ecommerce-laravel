@@ -46,6 +46,16 @@ class Product extends Model
         return $query->where('status', 1);
     }
 
+    public function scopeWithStockTotal(Builder $query): Builder
+    {
+        return $query->withSum('variants as stock_total', 'stock');
+    }
+
+    public function getStockTotalAttribute($value): int
+    {
+        return (int) $value;
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);
