@@ -3,9 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Courier;
-use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
 class CourierSeeder extends Seeder
@@ -14,6 +13,11 @@ class CourierSeeder extends Seeder
      * Run the database seeds.
      */
     public function run(): void
+    {
+        DB::transaction(fn () => $this->seedCouriers());
+    }
+
+    private function seedCouriers(): void
     {
         //GAMA EXPRESS. SHALOM, INDRIVER, OLVA COURIER, DINSIDES
 
@@ -117,10 +121,9 @@ class CourierSeeder extends Seeder
 
         foreach ($couriers as $courier) {
 
-            $this->command->info('Se ejecuta el seeder de courier: ' . $courier['name']);
+            $this->command?->info('Se ejecuta el seeder de courier: ' . $courier['name']);
 
-            $courierCreate = Courier::create([
-                'name' => $courier['name'],
+            $courierCreate = Courier::updateOrCreate(['name' => $courier['name']], [
                 'phone' => $courier['phone'],
                 'is_cod' => $courier['is_cod'],
                 'freight_collect' => $courier['freight_collect'],
@@ -130,15 +133,18 @@ class CourierSeeder extends Seeder
             // $courier->stores()->attach(1); // Asignar el courier a la tienda con ID 1
 
             foreach ($courier['addresses'] as $address) {
-                 $this->command->info('Se ejecuta los addresses de: ' . $address['name']);
-                $courierCreate->addresses()->create($address);
+                $this->command?->info('Se ejecuta los addresses de: ' . $address['name']);
+                $courierCreate->addresses()->updateOrCreate([
+                    'name' => $address['name'],
+                    'primary' => $address['primary'],
+                    'district_id' => $address['district_id'],
+                ], $address);
             }
         }
 
         //Ahora empezamos a crear las agencias de shalom y cada una es una direccion diferente pero todas pertenecen al mismo courier
 
-        $courier = Courier::create([
-            'name' => $shalom['name'],
+        $courier = Courier::updateOrCreate(['name' => $shalom['name']], [
             'phone' => $shalom['phone'],
             'is_cod' => $shalom['is_cod'],
             'freight_collect' => $shalom['freight_collect'],
@@ -147,9 +153,9 @@ class CourierSeeder extends Seeder
 
         // $courier->stores()->attach(1); // Asignar el courier a la tienda con ID 1
 
-        $data = File::get("database/data/agencias_shalom.json");
+        $data = File::get(database_path('data/agencias_shalom.json'));
 
-        $addresses_shalom = json_decode($data);
+        $addresses_shalom = json_decode($data, false, 512, JSON_THROW_ON_ERROR);
 
         $order = 0;
 
@@ -157,8 +163,11 @@ class CourierSeeder extends Seeder
 
             $order++;
 
-            $courier->addresses()->create([
+            $courier->addresses()->updateOrCreate([
                 'name' => $address->lugar_over,
+                'primary' => $address->direccion,
+                'district_id' => $address->ubi_id,
+            ], [
                 'identity_id' => null,
                 'document_number' => null,
                 'phone' => $address->telefono ?? null,

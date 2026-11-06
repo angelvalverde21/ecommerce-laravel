@@ -31,6 +31,8 @@ class ManufactureDashboardController extends Controller
             $manufactures = $store->manufactures()
                 ->with(['user'])
                 ->withSum('manufactureVariants as sum_products', 'quantity')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
                 // ->withSum('purchases as sum_purchases', 'total')
                 ->get();
 
@@ -129,7 +131,11 @@ class ManufactureDashboardController extends Controller
                 ->with(['user'])
                 ->withSum('manufactureVariants as sum_products', 'quantity')
                 ->withSum('purchases as sum_purchases', 'total')
-                ->search($search)->limit(10)->get();
+                ->search($search)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get();
 
             Log::info($result);
 

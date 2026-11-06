@@ -28,8 +28,8 @@ class InventoryManagementDashboardController extends Controller
         if (!$operators->contains('id', Auth::id())) $operators->push(Auth::user()->only(['id', 'name']));
         return responseOk([
             'branches' => Branch::where('store_id', $store->id)->orderBy('name')->get(['id', 'name', 'code']),
-            'warehouses' => Warehouse::where('store_id', $store->id)->with('branch:id,name')->orderBy('name')->get(['id', 'branch_id', 'name', 'code']),
-            'locations' => Location::where('store_id', $store->id)->with('warehouse:id,name')->orderBy('name')->get(['id', 'warehouse_id', 'name', 'code']),
+            'warehouses' => Warehouse::where('store_id', $store->id)->with('branch:id,name')->orderBy('name')->get(['id', 'branch_id', 'name', 'subtitle', 'code']),
+            'locations' => Location::where('store_id', $store->id)->with('warehouse:id,name,subtitle')->orderBy('name')->get(['id', 'warehouse_id', 'name', 'code']),
             'operators' => $operators->values(), 'current_user_id' => Auth::id(),
         ]);
     }

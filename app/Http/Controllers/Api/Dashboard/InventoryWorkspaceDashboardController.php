@@ -18,7 +18,7 @@ class InventoryWorkspaceDashboardController extends Controller
         if ($inventory->scope_type === 'location') {
             $warehouses->whereHas('locations', fn ($query) => $query->whereKey($inventory->inventoriable_id)->where('store_id', $store->id));
         }
-        $warehouses = $warehouses->orderBy('name')->get(['id', 'name', 'branch_id']);
+        $warehouses = $warehouses->orderBy('name')->get(['id', 'name', 'subtitle', 'branch_id']);
         $branches = Branch::where('store_id', $store->id)->where('is_active', true);
         if ($inventory->scope_type === 'branch') $branches->whereKey($inventory->inventoriable_id);
         if (in_array($inventory->scope_type, ['warehouse', 'location'], true)) $branches->whereIn('id', $warehouses->pluck('branch_id'));
@@ -28,7 +28,7 @@ class InventoryWorkspaceDashboardController extends Controller
             'recording_locked' => $inventory->adjustments()->whereIn('status', ['approved', 'applied'])->exists(),
             'branches' => $branches->orderBy('name')->get(['id', 'name']),
             'warehouses' => $warehouses,
-            'locations' => $workspace->locations($inventory)->with(['warehouse:id,name,branch_id', 'warehouse.branch:id,name,store_id', 'parent:id,name'])->orderBy('name')->get(),
+            'locations' => $workspace->locations($inventory)->with(['warehouse:id,name,subtitle,branch_id', 'warehouse.branch:id,name,store_id', 'parent:id,name'])->orderBy('name')->get(),
         ]);
     }
 

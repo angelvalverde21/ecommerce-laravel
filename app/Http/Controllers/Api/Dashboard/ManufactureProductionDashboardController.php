@@ -92,6 +92,8 @@ class ManufactureProductionDashboardController extends Controller
         $employees = Manufacture::searchProduction($request->search) //Recuernda agrear el trait en el modelo correspondiente, en este caso Manufacture
             ->betweenDates($request->start_date, $request->end_date) //Sino hay fechas simplemente pasa de largo, no se considera
             ->limit(10)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
         return responseOk($employees);

@@ -16,7 +16,9 @@ class ManufactureProductionService
     {
 
         $manufactureOrders = $store->manufactures()->where('type', 'production')
-             ->withFinancialSummary()
+            ->withFinancialSummary()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
 
         return $manufactureOrders;

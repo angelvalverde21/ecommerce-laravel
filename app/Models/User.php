@@ -78,11 +78,6 @@ class User extends Authenticatable implements OAuthenticatable
         return $this->hasOne(Employee::class);
     }
 
-    public function courier()
-    {
-        return $this->hasOne(Courier::class);
-    }
-
     public function identity()
     {
         return $this->belongsTo(Identity::class);

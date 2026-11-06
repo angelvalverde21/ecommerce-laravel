@@ -8,6 +8,7 @@ use App\Models\{Inventory, InventoryCount, InventoryLocationProgress};
 use Illuminate\Database\QueryException;
 use App\Models\Store;
 use App\Models\Warehouse;
+use App\Support\AutomaticOrganizationCode;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -101,6 +102,8 @@ class LocationDashboardController extends Controller
 
     private function validated(Store $store, Request $request, ?int $id = null): array
     {
+        AutomaticOrganizationCode::fillMissing($request, 255);
+
         return $request->validate([
             'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('store_id', $store->id)],
             'parent_id' => ['nullable', 'integer', Rule::exists('locations', 'id')

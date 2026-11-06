@@ -56,6 +56,8 @@ class ProductionService
         return $store->productions()
             ->withFinancialSummary()
             ->with('user')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get();
     }
 

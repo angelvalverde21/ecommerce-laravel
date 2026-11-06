@@ -24,33 +24,6 @@ class Store extends Model
         return $this->hasMany(Category::class)->whereNull('parent_id');;
     }
 
-    // Store → User → Courier
-    public function couriers()
-    {
-        // return $this->hasManyThrough( //se traduce como "tiene muchos a traves de" o "tiene muchos mediante"
-        //     Courier::class,
-        //     User::class,
-        //     'store_id',   // FK en users
-        //     'user_id',    // FK en couriers
-        //     'id',         // PK en stores
-        //     'id'          // PK en users
-        // );
-
-        /*
-            Laravel asume automáticamente:
-
-            users.store_id
-            couriers.user_id
-            stores.id
-            users.id
-        */
-
-        return $this->hasManyThrough(Courier::class, User::class); //se traduce como "tiene muchos a traves de" o "tiene muchos mediante"
-
-        //Osea se lee asi: Obtener los couriers (Courier::class) de un Store a través de la tabla users (User::class) asociados a tabla stores
-
-    }
-
     // public function suppliers()
     // {
     //     return $this->hasManyThrough(Supplier::class, User::class);

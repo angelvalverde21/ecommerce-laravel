@@ -56,7 +56,11 @@ class ProductionDashboardController extends Controller
                 ->withSum('manufactureVariants as sum_products', 'quantity')
                 ->withSum('Productions as sum_Productions', 'total')
                 ->where('type', 'production')
-                ->search($search)->limit(10)->get();
+                ->search($search)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get();
 
             Log::info($result);
 

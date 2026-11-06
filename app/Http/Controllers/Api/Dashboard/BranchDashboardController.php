@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Store;
+use App\Support\AutomaticOrganizationCode;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -13,8 +14,13 @@ class BranchDashboardController extends Controller
 {
     public function index(Store $store)
     {
-        return Branch::where('store_id', $store->id)->withCount('warehouses')
+        $branches = Branch::where('store_id', $store->id)->withCount('warehouses')
             ->orderByDesc('is_main')->orderBy('name')->orderBy('id')->paginate(20);
+
+        return response()->json([
+            ...$branches->toArray(),
+            'store' => $store->only(['id', 'name', 'slug']),
+        ]);
     }
 
     public function addresses(Store $store)
@@ -24,7 +30,7 @@ class BranchDashboardController extends Controller
 
     public function show(Store $store, string $branch_id)
     {
-        return responseOk(Branch::where('store_id', $store->id)->withCount('warehouses')->findOrFail($branch_id));
+        return responseOk(Branch::where('store_id', $store->id)->with('address')->withCount('warehouses')->findOrFail($branch_id));
     }
 
     public function store(Store $store, Request $request)
@@ -60,6 +66,8 @@ class BranchDashboardController extends Controller
 
     private function validated(Store $store, Request $request, ?int $id = null): array
     {
+        AutomaticOrganizationCode::fillMissing($request);
+
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:50', Rule::unique('branches')->where('store_id', $store->id)->ignore($id)],

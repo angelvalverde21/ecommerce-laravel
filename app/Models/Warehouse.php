@@ -9,8 +9,19 @@ class Warehouse extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['store_id', 'branch_id', 'name', 'code', 'address', 'is_active'];
+    protected $fillable = ['store_id', 'branch_id', 'name', 'subtitle', 'code', 'is_active'];
     protected $casts = ['is_active' => 'boolean'];
+    protected $appends = ['address', 'address_id'];
+
+    public function getAddressAttribute($value = null): ?string
+    {
+        return $this->branch?->address?->primary;
+    }
+
+    public function getAddressIdAttribute(): ?int
+    {
+        return $this->branch?->address_id;
+    }
 
     public function store() { return $this->belongsTo(Store::class); }
     public function branch() { return $this->belongsTo(Branch::class); }

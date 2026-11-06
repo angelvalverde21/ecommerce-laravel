@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Address;
-use App\Models\store;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -16,12 +16,17 @@ use Illuminate\Validation\ValidationException;
 class AddressDashboardController extends Controller
 {
 
-    protected function getParentModel(array $validated): Model
+    protected function getParentModel(array $validated, Store $store): Model
     {
+        if ($validated['addressable_type'] === 'store') {
+            return $store;
+        }
+
         $map = [
             'customer' => \App\Models\Customer::class,
             'supplier' => \App\Models\Supplier::class,
             'employee' => \App\Models\Employee::class,
+            'courier' => \App\Models\Courier::class,
             // 'order' => \App\Models\Order::class,
             // 'purchase' => \App\Models\Purchase::class,
         ];
@@ -64,37 +69,43 @@ class AddressDashboardController extends Controller
             $validated = $request->validate([
                 'addressable_type' => [
                     'required',
-                    Rule::in(['customer', 'supplier', 'employee']) // Agrega más tipos según sea necesario
+                    Rule::in(['customer', 'supplier', 'employee', 'courier', 'store'])
                 ],
-                'addressable_id' => 'required|integer',
+                'addressable_id' => $request->input('addressable_type') === 'store'
+                    ? ['nullable', 'integer', Rule::in([$store->id])]
+                    : ['required', 'integer'],
                 'name'            => 'required|string|max:255',
-                'phone'           => 'required',
+                'phone' => in_array($request->input('addressable_type'), ['courier', 'store'], true)
+                    ? 'nullable|string|max:30'
+                    : 'required',
                 'document_number' => 'nullable|string|max:11',
                 'identity_id'       => 'nullable|integer|max:11',
                 'primary'            => 'required|string|max:255',
                 'secondary'            => 'nullable|string|max:255',
                 'references'  => 'nullable|string|max:255',
-                'district_id' => 'required',
-                'user_id' => 'required|max:11',
+                'district_id' => 'required|integer|exists:districts,id',
             ]);
 
-            $parentModel = $this->getParentModel($validated); // Esto valida que el modelo padre exista, si no existe lanza una excepción
+            $parentModel = $this->getParentModel($validated, $store);
 
             $address = $parentModel->addresses()->create([
                 'name' => $validated['name'],
-                'phone' => $validated['phone'],
-                'document_number' => $validated['document_number'],
-                'identity_id' => $validated['identity_id'],
+                'phone' => $validated['phone'] ?? null,
+                'document_number' => $validated['document_number'] ?? null,
+                'identity_id' => $validated['identity_id'] ?? null,
                 'primary' => $validated['primary'],
-                'secondary' => $validated['secondary'],
-                'references' => $validated['references'],
+                'secondary' => $validated['secondary'] ?? null,
+                'references' => $validated['references'] ?? null,
                 'district_id' => $validated['district_id'],
             ]);
 
             DB::commit();
 
-            return responseOk($address->load('district.province.department'), "Se ha procesado correctamente la creacion del courier");
+            return responseOk($address->load('district.province.department'), 'Dirección creada correctamente.');
 
+        } catch (\Illuminate\Validation\ValidationException | \Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            DB::rollBack();
+            throw $exception;
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -108,9 +119,9 @@ class AddressDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(store $store)
+    public function show(Store $store, int $address_id)
     {
-        //
+        return responseOk($store->addresses()->with('district.province.department')->findOrFail($address_id));
     }
 
     /**
@@ -136,21 +147,25 @@ class AddressDashboardController extends Controller
 
                 'addressable_type' => [
                     'required',
-                    Rule::in(['customer', 'supplier', 'employee']) // Agrega más tipos según sea necesario
+                    Rule::in(['customer', 'supplier', 'employee', 'courier', 'store'])
                 ],
-                'addressable_id' => 'required|integer',
+                'addressable_id' => $request->input('addressable_type') === 'store'
+                    ? ['nullable', 'integer', Rule::in([$store->id])]
+                    : ['required', 'integer'],
                 'name'             => 'required|string|max:255',
-                'phone'            => 'required',
+                'phone' => in_array($request->input('addressable_type'), ['courier', 'store'], true)
+                    ? 'nullable|string|max:30'
+                    : 'required',
                 'document_number'  => 'nullable|string|max:11',
                 'identity_id'      => 'nullable|integer|max:11',
                 'primary'          => 'required|string|max:255',
                 'secondary'        => 'nullable|string|max:255',
                 'references'       => 'nullable|string|max:255',
-                'district_id'      => 'required'
+                'district_id' => 'required|integer|exists:districts,id',
 
             ]);
 
-            $parentModel = $this->getParentModel($validated);
+            $parentModel = $this->getParentModel($validated, $store);
 
             $address = $parentModel->addresses()->findOrFail($address_id); // Esto valida que la dirección exista y que pertenezca al modelo padre, si no existe lanza una excepción
 
@@ -160,18 +175,21 @@ class AddressDashboardController extends Controller
             // 3. Update
             $address->update([
                 'name'            => $validated['name'],
-                'phone'           => $validated['phone'],
-                'document_number' => $validated['document_number'],
-                'identity_id'       => $validated['identity_id'],
+                'phone'           => $validated['phone'] ?? null,
+                'document_number' => $validated['document_number'] ?? null,
+                'identity_id'       => $validated['identity_id'] ?? null,
                 'primary'         => $validated['primary'],
-                'secondary'       => $validated['secondary'],
-                'references'      => $validated['references'],
+                'secondary'       => $validated['secondary'] ?? null,
+                'references'      => $validated['references'] ?? null,
                 'district_id'     => $validated['district_id'],
             ]);
 
             DB::commit();
 
             return responseOk($address->load('district.province.department'), "Se ha actualizado correctamente la dirección");
+        } catch (\Illuminate\Validation\ValidationException | \Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            DB::rollBack();
+            throw $exception;
         } catch (\Throwable $th) {
 
             DB::rollback();

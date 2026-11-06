@@ -81,7 +81,7 @@ class UpdateVariantStockTest extends TestCase
 
         $kardex = Kardex::firstOrFail();
         $this->assertInstanceOf(Inventory::class, $kardex->kardexable);
-        $this->assertEquals(1, $kardex->kardexable->user_id);
+        $this->assertEquals(1, $kardex->kardexable->created_user_id);
         $this->assertEquals(1, $kardex->store_id);
         $this->assertEquals(1, $kardex->product_id);
 

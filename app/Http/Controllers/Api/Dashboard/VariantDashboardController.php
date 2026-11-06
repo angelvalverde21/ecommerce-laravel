@@ -117,7 +117,7 @@ class VariantDashboardController extends Controller
 
                 $inventory = $store->inventories()->create([
                     'name' => $comment,
-                    'user_id' => $request->user()->id,
+                    'created_user_id' => $request->user()->id,
                 ]);
 
                 $inventory->kardexes()->create([

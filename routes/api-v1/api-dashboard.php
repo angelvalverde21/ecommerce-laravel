@@ -517,6 +517,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::get('/search/{search?}', [CourierDashboardController::class, 'search']); //buscar
 
         Route::prefix('{courier_id}')->group(function () {
+            Route::get('/addresses', [CourierDashboardController::class, 'addresses']);
             Route::get('/', [CourierDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [CourierDashboardController::class, 'update']); //actualizar
             Route::delete('/', [CourierDashboardController::class, 'destroy']); //borrar
