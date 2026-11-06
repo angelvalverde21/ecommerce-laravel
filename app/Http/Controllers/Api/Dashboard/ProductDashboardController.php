@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Models\Variant;
 use App\Services\Dashboard\Product\ProductService;
+use App\Services\Dashboard\Product\ProductDuplicationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -238,6 +239,18 @@ class ProductDashboardController extends Controller
             Log::info($th);
             return responseError("Error al guardar los datos del producto desde Product Private controller - > update", $th);
         }
+    }
+
+    public function duplicate(Store $store, $product_id, Request $request, ProductDuplicationService $duplicator)
+    {
+        $request->merge(['name' => is_string($request->name) ? trim($request->name) : $request->name]);
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $product = $duplicator->duplicate($store, (int) $product_id, $validated['name']);
+
+        return responseOk($product, 'Producto duplicado correctamente');
     }
 
     public function destroy(Store $store, $product_id)

@@ -119,6 +119,11 @@ class Product extends Model
 
     public function options()
     {
+        return $this->hasMany(Option::class)->whereNull('archived_at');
+    }
+
+    public function allOptions()
+    {
         return $this->hasMany(Option::class);
     }
 }

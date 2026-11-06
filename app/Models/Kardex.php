@@ -23,6 +23,6 @@ class Kardex extends Model
 
     public function variant()
     {
-        return $this->belongsTo(Variant::class);
+        return $this->belongsTo(Variant::class)->withoutGlobalScope(\App\Models\Scopes\ActiveVariantScope::class);
     }
 }

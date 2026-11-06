@@ -34,6 +34,8 @@ class Option extends Model
     ];
 
     protected $guarded = ['id', 'created_at'];
+    protected $hidden = ['active_name'];
+    protected $casts = ['archived_at' => 'datetime'];
 
     public function product()
     {

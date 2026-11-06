@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('locations', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('store_id')->constrained()->restrictOnDelete();
 
             // Relación con store (empresa)
-            $table->foreignId('store_id')
+            $table->foreignId('warehouse_id')
                 ->constrained()
                 ->cascadeOnDelete();
 
@@ -26,12 +27,8 @@ return new class extends Migration
                 ->nullOnDelete();
 
             // Datos básicos
-            $table->string('name');
-            $table->string('code')->nullable(); // opcional: ALM-01, TDA-101
-
-            // Opcional: tipo de ubicación
-            $table->string('type')->nullable();
-            // ejemplos: warehouse, store, zone, shelf
+            $table->string('name'); //nombre descriptivo de la ubicación, por ejemplo: Estante A, Estante B, etc
+            $table->string('code')->nullable(); // RACK01 
 
             // Control
             $table->boolean('is_active')->default(true);

@@ -47,6 +47,9 @@ class Price extends Model
     protected $guarded = ['id', 'created_at'];
 
     protected $casts = [
+        'quantity' => 'decimal:3',
+        'price' => 'decimal:2',
+        'total' => 'decimal:2',
         'value' => 'decimal:2', //Queire decir que cuando se solicite ese campo se tratara como decimal:2, o tambien "Cuando lea o escriba este campo, trátalo como este tipo"
     ];
 
@@ -56,6 +59,11 @@ class Price extends Model
     public function priceable()
     {
         return $this->morphTo();
+    }
+
+    public function label()
+    {
+        return $this->belongsTo(PriceLabel::class, 'price_label_id');
     }
 
     /* --------------------------------------------

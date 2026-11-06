@@ -84,7 +84,7 @@ class InventoryDashboardController extends Controller
 
             $inventory = $store->inventories()->create([
                 'name' => $name,
-                'user_id' => Auth::id(),
+                'created_user_id' => Auth::id(),
                 'store_id' => $store->id,
             ]);
 

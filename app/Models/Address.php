@@ -40,4 +40,9 @@ class Address extends Model
 
         return $this->belongsTo(Identity::class);
     }
+
+    public function branches()
+    {
+        return $this->hasMany(Branch::class);
+    }
 }

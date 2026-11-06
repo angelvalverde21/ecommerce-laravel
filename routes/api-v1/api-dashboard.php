@@ -22,6 +22,12 @@ use App\Http\Controllers\Api\Dashboard\ImageDashboardController;
 use App\Http\Controllers\Api\Dashboard\images\ImagePaymentController;
 use App\Http\Controllers\Api\Dashboard\Images\ImageProductController;
 use App\Http\Controllers\Api\Dashboard\InventoryDashboardController;
+use App\Http\Controllers\Api\Dashboard\InventoryManagementDashboardController;
+use App\Http\Controllers\Api\Dashboard\InventorySessionDashboardController;
+use App\Http\Controllers\Api\Dashboard\InventoryWorkspaceDashboardController;
+use App\Http\Controllers\Api\Dashboard\InventoryLocationProgressDashboardController;
+use App\Http\Controllers\Api\Dashboard\InventoryCountDashboardController;
+use App\Http\Controllers\Api\Dashboard\InventoryAdjustmentDashboardController;
 use App\Http\Controllers\Api\Dashboard\KardexDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufactureKardexDashboardController;
@@ -49,6 +55,8 @@ use App\Http\Controllers\Api\Dashboard\EmployeePaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\EmployeeScheduleDashboardController;
 use App\Http\Controllers\Api\Dashboard\InventoryBatchDashboardController;
 use App\Http\Controllers\Api\Dashboard\LocationDashboardController;
+use App\Http\Controllers\Api\Dashboard\BranchDashboardController;
+use App\Http\Controllers\Api\Dashboard\WarehouseDashboardController;
 use App\Http\Controllers\Api\Dashboard\ManufacturePaymentDashboardController;
 use App\Http\Controllers\Api\Dashboard\OrderDashboardController;
 use App\Http\Controllers\Api\Dashboard\VariantDashboardController;
@@ -272,19 +280,58 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
     Route::prefix('inventories')->group(function () {
 
+        Route::get('/{inventory_id}/work-options', [InventoryWorkspaceDashboardController::class, 'options']);
+        Route::get('/{inventory_id}/variants', [InventoryWorkspaceDashboardController::class, 'variants']);
+        Route::get('/{inventory_id}/location-progress', [InventoryLocationProgressDashboardController::class, 'index']);
+        Route::post('/{inventory_id}/location-progress', [InventoryLocationProgressDashboardController::class, 'store']);
+        Route::get('/{inventory_id}/location-progress/{progress_id}', [InventoryLocationProgressDashboardController::class, 'show']);
+        Route::put('/{inventory_id}/location-progress/{progress_id}', [InventoryLocationProgressDashboardController::class, 'update']);
+        Route::get('/{inventory_id}/adjustments', [InventoryAdjustmentDashboardController::class, 'index']);
+        Route::post('/{inventory_id}/adjustments', [InventoryAdjustmentDashboardController::class, 'store']);
+        Route::get('/{inventory_id}/adjustments/{adjustment_id}', [InventoryAdjustmentDashboardController::class, 'show']);
+        Route::put('/{inventory_id}/adjustments/{adjustment_id}', [InventoryAdjustmentDashboardController::class, 'update']);
+        Route::get('/{inventory_id}/sessions/{session_id}/counts', [InventoryCountDashboardController::class, 'index']);
+        Route::post('/{inventory_id}/sessions/{session_id}/counts', [InventoryCountDashboardController::class, 'store']);
+        Route::get('/{inventory_id}/sessions/{session_id}/counts/{count_id}', [InventoryCountDashboardController::class, 'show']);
+        Route::put('/{inventory_id}/sessions/{session_id}/counts/{count_id}', [InventoryCountDashboardController::class, 'update']);
+        Route::post('/{inventory_id}/adjustments/{adjustment_id}/{action}', [InventoryAdjustmentDashboardController::class, 'transition'])->whereIn('action', ['approve', 'reject', 'apply']);
+
+        Route::get('/catalog', [InventoryManagementDashboardController::class, 'index']);
+        Route::get('/options', [InventoryManagementDashboardController::class, 'options']);
+        Route::get('/{inventory_id}/details', [InventoryManagementDashboardController::class, 'show']);
+        Route::get('/{inventory_id}/sessions', [InventorySessionDashboardController::class, 'index']);
+        Route::post('/{inventory_id}/sessions', [InventorySessionDashboardController::class, 'store']);
+        Route::get('/{inventory_id}/sessions/{session_id}', [InventorySessionDashboardController::class, 'show']);
+        Route::put('/{inventory_id}/sessions/{session_id}', [InventorySessionDashboardController::class, 'update']);
+
         Route::get('/', [InventoryDashboardController::class, 'index']); //Listar
-        Route::post('/', [InventoryDashboardController::class, 'store']); //create
+        Route::post('/', [InventoryManagementDashboardController::class, 'store']); //create
         Route::post('/batch', [InventoryDashboardController::class, 'batch']);
 
         Route::prefix('{inventory_id}')->group(function () {
 
             Route::get('/', [InventoryDashboardController::class, 'show']); //show o mostrar por id
-            Route::put('/', [InventoryDashboardController::class, 'update']); //actualizar
+            Route::put('/', [InventoryManagementDashboardController::class, 'update']); //actualizar
             Route::delete('/', [InventoryDashboardController::class, 'destroy']); //borrar
 
         });
     });
 
+
+    Route::prefix('branches')->group(function () {
+        Route::get('/', [BranchDashboardController::class, 'index']);
+        Route::get('/addresses', [BranchDashboardController::class, 'addresses']);
+        Route::post('/', [BranchDashboardController::class, 'store']);
+        Route::get('/{branch_id}', [BranchDashboardController::class, 'show']);
+        Route::put('/{branch_id}', [BranchDashboardController::class, 'update']);
+    });
+
+    Route::prefix('warehouses')->group(function () {
+        Route::get('/', [WarehouseDashboardController::class, 'index']);
+        Route::post('/', [WarehouseDashboardController::class, 'store']);
+        Route::get('/{warehouse_id}', [WarehouseDashboardController::class, 'show']);
+        Route::put('/{warehouse_id}', [WarehouseDashboardController::class, 'update']);
+    });
 
     Route::prefix('locations')->group(function () {
 
@@ -293,9 +340,9 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         Route::prefix('{location_id}')->group(function () {
 
-            Route::get('/', [LocationDashboardController::class, 'show']); //show o mostrar por id
-            Route::put('/', [LocationDashboardController::class, 'update']); //actualizar
-            Route::delete('/', [LocationDashboardController::class, 'destroy']); //borrar
+            Route::get('/', [LocationDashboardController::class, 'show']);
+            Route::delete('/', [LocationDashboardController::class, 'destroy']);
+            Route::put('/', [LocationDashboardController::class, 'update']); //show o mostrar por id
 
         });
     });
@@ -493,6 +540,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     Route::prefix('products')->group(function () {
 
         Route::get('/setup', [ProductDashboardController::class, 'setup']); //Listar
+        Route::get('/price-labels', [PriceDashboardController::class, 'labels']);
         Route::get('/', [ProductDashboardController::class, 'index']); //Listar
         Route::post('/search', [ProductDashboardController::class, 'search']); //Listar
         Route::post('/', [ProductDashboardController::class, 'store']); //create
@@ -501,6 +549,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
             Route::get('/', [ProductDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [ProductDashboardController::class, 'update']); //actualizar
+            Route::post('/duplicate', [ProductDashboardController::class, 'duplicate']);
             Route::delete('/', [ProductDashboardController::class, 'destroy']); //borrar
 
             Route::prefix('images')->group(function () {

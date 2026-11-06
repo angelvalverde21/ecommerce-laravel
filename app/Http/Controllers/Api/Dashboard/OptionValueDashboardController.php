@@ -4,19 +4,14 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Models\Option;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
-use App\Services\Dashboard\OptionValue\OptionValueService;
+use App\Services\Dashboard\OptionValue\OptionValueDeletionService;
 
 class OptionValueDashboardController extends Controller
 {
-
-    protected OptionValueService $optionValueService;
-
-    public function __construct()
-    {
-        // Pasamos el modelo que vamos a usar
-        $this->optionValueService = new OptionValueService();
-    }
 
     /**
      * Display a listing of the resource.
@@ -39,16 +34,28 @@ class OptionValueDashboardController extends Controller
      */
     public function store(Store $store, Request $request)
     {
+        $request->merge(['value' => is_string($request->value) ? trim($request->value) : $request->value]);
         $validated = $request->validate([
             'option_id' => 'required|integer',
             'value'     => 'required|string|max:255',
         ]);
 
-        $optionValue = $this->optionValueService->store(
-            $store,
-            $validated['option_id'],
-            $validated['value']
-        );
+        $optionValue = DB::transaction(function () use ($store, $validated) {
+            $option = Option::where('store_id', $store->id)
+                ->whereNull('archived_at')
+                ->whereHas('product', fn ($query) => $query->where('store_id', $store->id))
+                ->lockForUpdate()->findOrFail($validated['option_id']);
+
+            $normalized = mb_strtoupper($validated['value'], 'UTF-8');
+            $duplicate = $option->optionValues()->get(['value'])->contains(
+                fn ($existing) => mb_strtoupper(trim($existing->value), 'UTF-8') === $normalized
+            );
+            if ($duplicate) {
+                throw ValidationException::withMessages(['value' => 'Este valor ya existe en esta opción.']);
+            }
+
+            return $option->optionValues()->create(['value' => $validated['value'], 'sort_order' => 1])->load('option');
+        });
 
         return responseOk(
             $optionValue,
@@ -84,8 +91,11 @@ class OptionValueDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(store $store)
+    public function destroy(Store $store, $product_id, $option_id, $option_value_id, OptionValueDeletionService $deletion)
     {
-        //
+        return responseOk(
+            $deletion->delete($store, (int) $product_id, (int) $option_id, (int) $option_value_id),
+            'Valor y variantes asociadas eliminados correctamente'
+        );
     }
 }

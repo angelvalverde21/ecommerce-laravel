@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Option;
 use App\Models\Store;
 use App\Services\Dashboard\Option\OptionService;
+use App\Services\Dashboard\Option\OptionRemovalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -83,8 +84,8 @@ class OptionDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(store $store)
+    public function destroy(Store $store, $product_id, $option_id, OptionRemovalService $removal)
     {
-        //
+        return responseOk($removal->remove($store, (int) $product_id, (int) $option_id), 'Opción retirada correctamente');
     }
 }
