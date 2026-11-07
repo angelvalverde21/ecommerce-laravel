@@ -46,6 +46,7 @@ class UpdateVariantStockTest extends TestCase
         DB::table('products')->insert(['id' => 1, 'store_id' => 1]);
 
         foreach ([
+            '2025_08_09_063554_create_images_table.php',
             '2025_12_26_171743_create_variants_table.php',
             '2025_12_26_171717_create_options_table.php',
             '2025_12_26_171730_create_option_values_table.php',
@@ -57,7 +58,7 @@ class UpdateVariantStockTest extends TestCase
         }
 
         Variant::create(['product_id' => 1, 'sku' => 'TEST', 'price' => 10, 'stock' => 4]);
-        $this->actingAs((new User())->forceFill(['id' => 1]));
+        $this->actingAs((new User)->forceFill(['id' => 1]));
 
         Route::put('/test-variants/{variant_id}', function (Request $request, string $variant_id) {
             return app(VariantDashboardController::class)->update(Store::findOrFail(1), $request, $variant_id);
@@ -143,5 +144,22 @@ class UpdateVariantStockTest extends TestCase
     private function movement(string $direction, int $quantity): array
     {
         return ['variant_id' => 1, 'direction' => $direction, 'quantity' => $quantity, 'comment' => 'Conteo parcial'];
+    }
+
+    public function test_variant_response_includes_the_product_image_and_its_urls(): void
+    {
+        $url = 'https://cdn.shopify.com/example-product.png';
+        \App\Models\Image::create([
+            'imageable_type' => (new \App\Models\Product)->getMorphClass(),
+            'imageable_id' => 1,
+            'thumbnail' => $url,
+            'medium' => $url,
+            'large' => $url,
+        ]);
+        $this->getJson('/test-variants/1')->assertOk()
+            ->assertJsonPath('data.product.image.url_thumbnail', $url)
+            ->assertJsonPath('data.product.image.url_medium', $url);
+        $this->putJson('/test-variants/1', $this->movement('in', 1))->assertOk()
+            ->assertJsonPath('data.product.image.url_thumbnail', $url);
     }
 }

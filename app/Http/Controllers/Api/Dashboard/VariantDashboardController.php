@@ -44,7 +44,7 @@ class VariantDashboardController extends Controller
     public function show(Store $store, string $variant_id)
     {
         try {
-            $variant = Variant::with(['product', 'variant_option_values.option', 'variant_option_values.optionValue', 'kardexes'])
+            $variant = Variant::with(['product.image', 'variant_option_values.option', 'variant_option_values.optionValue', 'kardexes'])
                 ->whereHas('product', function ($query) use ($store) {
                     $query->where('store_id', $store->id);
                 })
@@ -130,7 +130,7 @@ class VariantDashboardController extends Controller
                 ]);
 
                 return $variant->refresh()->load([
-                    'product',
+                    'product.image',
                     'variant_option_values.option',
                     'variant_option_values.optionValue',
                     'kardexes',
