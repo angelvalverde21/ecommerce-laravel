@@ -28,6 +28,9 @@ class InventoryWorkspaceTest extends TestCase
         DB::table('stores')->insert([['id' => 1], ['id' => 2]]);
         DB::table('users')->insert([['id' => 1, 'name' => 'Actual'], ['id' => 2, 'name' => 'Otro']]);
         foreach (['2026_04_10_140559_create_inventories_table.php', '2026_11_03_092614_create_inventory_sessions_table.php', '2026_11_03_094309_create_branches_table.php', '2026_11_03_095627_create_warehouses_table.php', '2026_11_06_130000_add_subtitle_to_warehouses_table.php', '2026_11_03_100000_create_locations_table.php', '2026_11_03_120000_create_inventory_location_progress_table.php', '2026_11_03_120100_create_inventory_counts_table.php', '2026_11_04_150000_unique_inventory_counts_per_session_location_variant.php', '2026_11_03_120200_create_inventory_adjustments_table.php', '2026_02_11_140029_create_kardexes_table.php', '2026_11_04_160000_add_location_to_inventory_sessions.php', '2026_11_04_170000_fix_warehouse_on_inventory_sessions.php', '2026_11_04_180000_allow_multiple_inventory_count_captures.php'] as $file) (require database_path('migrations/'.$file))->up();
+        foreach (['2025_12_26_171717_create_options_table.php', '2025_12_26_171730_create_option_values_table.php', '2025_12_26_180043_create_variant_option_values_table.php'] as $file) {
+            (require database_path('migrations/'.$file))->up();
+        }
         $branch = Branch::create(['store_id' => 1, 'name' => 'Central', 'code' => 'C']);
         $this->warehouse = Warehouse::create(['store_id' => 1, 'branch_id' => $branch->id, 'name' => 'Almacén', 'code' => 'A']);
         $this->leaf = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Estante']);
@@ -282,10 +285,21 @@ class InventoryWorkspaceTest extends TestCase
 
     public function test_grouped_counts_keep_all_captures_of_each_variant_together(): void
     {
+        $optionId = DB::table('options')->insertGetId([
+            'store_id' => 1, 'product_id' => $this->variant->product_id, 'name' => 'size', 'label' => 'Tallas',
+        ]);
+        $valueId = DB::table('option_values')->insertGetId(['option_id' => $optionId, 'value' => 'L']);
+        DB::table('variant_option_values')->insert([
+            'variant_id' => $this->variant->id, 'option_id' => $optionId, 'option_value_id' => $valueId,
+        ]);
         $inventory = $this->inventory(); $session = $this->countingSession($inventory);
         for ($i = 0; $i < 23; $i++) $this->recordCount($inventory, $session, 1);
         $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts?grouped=1';
-        $this->getJson($url)->assertOk()->assertJsonPath('total', 1)->assertJsonPath('last_page', 1)->assertJsonCount(23, 'data');
+        $this->getJson($url)->assertOk()->assertJsonPath('total', 1)->assertJsonPath('last_page', 1)->assertJsonCount(23, 'data')
+            ->assertJsonPath('data.0.variant.variant_option_values.0.option.label', 'Tallas')
+            ->assertJsonPath('data.0.variant.variant_option_values.0.option_value.value', 'L');
+        $this->getJson(str_replace('?grouped=1', '', $url))->assertOk()
+            ->assertJsonPath('data.0.variant.variant_option_values.0.option_value.value', 'L');
         $this->getJson($url.'&location_id=999')->assertOk()->assertJsonPath('total', 0)->assertJsonCount(0, 'data');
     }
 

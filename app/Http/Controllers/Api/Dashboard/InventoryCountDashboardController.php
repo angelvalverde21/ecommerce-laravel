@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Inventory, InventoryCount, Store};
+use App\Models\Inventory;
+use App\Models\InventoryCount;
+use App\Models\Store;
 use App\Services\Inventory\InventoryWorkspace;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{Auth, DB};
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class InventoryCountDashboardController extends Controller
 {
@@ -20,21 +23,23 @@ class InventoryCountDashboardController extends Controller
         if ($request->boolean('grouped')) {
             $groups = (clone $query)->select('variant_id')->selectRaw('MAX(id) as latest_id')->groupBy('variant_id')->orderByDesc('latest_id')->paginate(20)->withQueryString();
             $ids = $groups->getCollection()->pluck('variant_id');
-            $captures = (clone $query)->whereIn('variant_id', $ids)->with(['location.warehouse', 'variant.product:id,name', 'user:id,name'])->orderByDesc('counted_at')->orderByDesc('id')->get();
+            $captures = (clone $query)->whereIn('variant_id', $ids)->with(['location.warehouse', 'variant.product:id,name', 'variant.variant_option_values.option', 'variant.variant_option_values.optionValue', 'user:id,name'])->orderByDesc('counted_at')->orderByDesc('id')->get();
+
             return response()->json($groups->setCollection($captures));
         }
-        $result = $query->with(['location.warehouse', 'variant.product:id,name', 'user:id,name'])->orderByDesc('counted_at')->orderByDesc('id')->paginate(20)->withQueryString();
+        $result = $query->with(['location.warehouse', 'variant.product:id,name', 'variant.variant_option_values.option', 'variant.variant_option_values.optionValue', 'user:id,name'])->orderByDesc('counted_at')->orderByDesc('id')->paginate(20)->withQueryString();
         $result = $result->toArray();
         if (isset($data['variant_id'])) {
             $result['variant_counted_quantity'] = (int) $inventory->counts()->where('variant_id', $data['variant_id'])->where('inventory_counts.status', 'valid')->sum('quantity');
         }
+
         return response()->json($result);
     }
 
     public function show(Store $store, string $inventory_id, string $session_id, string $count_id)
     {
         return responseOk($store->inventories()->findOrFail($inventory_id)->sessions()->findOrFail($session_id)->counts()
-            ->with(['location.warehouse', 'variant.product:id,name', 'user:id,name'])->findOrFail($count_id));
+            ->with(['location.warehouse', 'variant.product:id,name', 'variant.variant_option_values.option', 'variant.variant_option_values.optionValue', 'user:id,name'])->findOrFail($count_id));
     }
 
     public function store(Store $store, Request $request, string $inventory_id, string $session_id, InventoryWorkspace $workspace)
@@ -45,23 +50,31 @@ class InventoryCountDashboardController extends Controller
             $inventory = Inventory::whereKey($inventory->id)->lockForUpdate()->firstOrFail();
             $workspace->editable($inventory);
             $session = $inventory->sessions()->findOrFail($session_id);
-            if ($session->status !== 'open') $workspace->fail('inventory_session_id', 'La sesión debe estar abierta para registrar conteos.');
+            if ($session->status !== 'open') {
+                $workspace->fail('inventory_session_id', 'La sesión debe estar abierta para registrar conteos.');
+            }
             $location = $workspace->location($inventory, (int) $data['location_id']);
-            if ((int) $location->warehouse_id !== (int) $session->warehouse_id) $workspace->fail('location_id', 'La ubicación debe pertenecer al almacén de esta sesión.');
+            if ((int) $location->warehouse_id !== (int) $session->warehouse_id) {
+                $workspace->fail('location_id', 'La ubicación debe pertenecer al almacén de esta sesión.');
+            }
             $previous = InventoryCount::whereHas('session', fn ($q) => $q->where('inventory_id', $inventory->id))
                 ->where('location_id', $data['location_id'])->where('variant_id', $data['variant_id']);
             $lastRound = (int) (clone $previous)->max('count_round');
             $round = max(1, $lastRound);
             if (($data['mode'] ?? 'accumulate') === 'recount') {
-                if (!$lastRound) $workspace->fail('mode', 'Primero registra un conteo inicial para esta variante y ubicación.');
+                if (! $lastRound) {
+                    $workspace->fail('mode', 'Primero registra un conteo inicial para esta variante y ubicación.');
+                }
                 $round = $lastRound + 1;
                 (clone $previous)->where('status', 'valid')->update(['status' => 'replaced']);
             }
             $count = $session->counts()->create(['location_id' => $data['location_id'], 'variant_id' => $data['variant_id'], 'quantity' => $data['quantity'], 'count_round' => $round, 'status' => 'valid', 'counted_at' => now(), 'user_id' => Auth::id()]);
             $this->resetProgress($inventory, (int) $data['location_id']);
+
             return $count;
         });
-        return response()->json(['data' => $count->load(['location.warehouse', 'variant.product:id,name', 'user:id,name'])], 201);
+
+        return response()->json(['data' => $count->load(['location.warehouse', 'variant.product:id,name', 'variant.variant_option_values.option', 'variant.variant_option_values.optionValue', 'user:id,name'])], 201);
     }
 
     public function update(Store $store, Request $request, string $inventory_id, string $session_id, string $count_id, InventoryWorkspace $workspace)
@@ -73,13 +86,19 @@ class InventoryCountDashboardController extends Controller
             $workspace->editable($inventory);
             $session = $inventory->sessions()->findOrFail($session_id);
             $count = $session->counts()->findOrFail($count_id);
-            if ($session->status !== 'open' || $count->status !== 'valid') $workspace->fail('status', 'Solo se corrigen conteos vigentes de una sesión abierta.');
-            if ((int) $count->user_id !== (int) Auth::id()) $workspace->fail('user_id', 'Solo el autor puede corregir este registro.');
+            if ($session->status !== 'open' || $count->status !== 'valid') {
+                $workspace->fail('status', 'Solo se corrigen conteos vigentes de una sesión abierta.');
+            }
+            if ((int) $count->user_id !== (int) Auth::id()) {
+                $workspace->fail('user_id', 'Solo el autor puede corregir este registro.');
+            }
             $count->update($data);
             $this->resetProgress($inventory, $count->location_id);
+
             return $count;
         });
-        return responseOk($count->load(['location.warehouse', 'variant.product:id,name', 'user:id,name']));
+
+        return responseOk($count->load(['location.warehouse', 'variant.product:id,name', 'variant.variant_option_values.option', 'variant.variant_option_values.optionValue', 'user:id,name']));
     }
 
     private function resetProgress(Inventory $inventory, int $locationId): void
