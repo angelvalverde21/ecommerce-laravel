@@ -17,3 +17,15 @@ Respaldo y exportación completa actualizados: `storage/app/private/backups/rack
 ## Verificación
 
 Pruebas Laravel con SQLite para jerarquía, aislamiento, selección de filas y rechazo de conteos en padres. Pruebas Angular para selección en cascada, bloqueo del escáner hasta llegar a la fila, ubicación enviada a la captura y reinicio seguro. También se verificó el selector compartido de almacenes.
+
+## Rack virtual
+
+La vista inicial de Conteos muestra un rack por zona del almacén de la sesión. Cada sububicación aparece como un nivel: SUPERIOR primero y las filas en orden numérico. Las tarjetas muestran producto, talla/color, SKU, imagen y cantidad vigente en esa ubicación. La ubicación seleccionada para capturar se destaca como «En captura».
+
+El selector de zona permite recorrer el almacén sin cambiar la ubicación donde se están registrando los conteos. «Historial» conserva la tabla por variante y sus enlaces de edición.
+
+`GET .../sessions/{session}/counts?view=rack&location_id={location}` devuelve productos agregados por variante, con páginas de 20 y un resumen completo de unidades, capturas y variantes de ese nivel. El resumen incluye todas las páginas; no suma cantidades anuladas ni reemplazadas. Una captura válida de cero permanece visible y se distingue de la ausencia de capturas.
+
+El detalle de capturas se consulta bajo demanda por variante y ubicación, también paginado, e incluye sus estados y acceso a edición. Cambiar de zona cancela las solicitudes anteriores. Una actualización de los datos de la sesión refresca el rack.
+
+Este cambio añade consultas y presentación. No modifica tablas ni registros. Verificado con pruebas Laravel de agregación, aislamiento y paginación; pruebas Angular de niveles físicos, suma por ubicación, ceros, navegación e historial; compilación completa y consulta de lectura sobre MySQL local.

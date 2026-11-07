@@ -15,11 +15,36 @@ class InventoryCountDashboardController extends Controller
 {
     public function index(Store $store, Request $request, string $inventory_id, string $session_id)
     {
-        $data = $request->validate(['variant_id' => 'nullable|integer|min:1', 'location_id' => 'nullable|integer|min:1', 'grouped' => 'sometimes|boolean']);
+        $data = $request->validate([
+            'variant_id' => 'nullable|integer|min:1',
+            'location_id' => 'required_if:view,rack|nullable|integer|min:1',
+            'grouped' => 'sometimes|boolean',
+            'view' => 'sometimes|in:rack',
+        ]);
         $inventory = $store->inventories()->findOrFail($inventory_id);
         $query = $inventory->sessions()->findOrFail($session_id)->counts()
             ->when(isset($data['variant_id']), fn ($query) => $query->where('variant_id', $data['variant_id']))
             ->when(isset($data['location_id']), fn ($query) => $query->where('location_id', $data['location_id']));
+        if (($data['view'] ?? null) === 'rack') {
+            $valid = (clone $query)->where('inventory_counts.status', 'valid');
+            $totals = (clone $valid)->selectRaw('COALESCE(SUM(quantity), 0) AS units, COUNT(*) AS captures, COUNT(DISTINCT variant_id) AS variants')->first();
+            $rack = $valid->join('variants', 'variants.id', '=', 'inventory_counts.variant_id')
+                ->join('products', 'products.id', '=', 'variants.product_id')
+                ->select('inventory_counts.variant_id')
+                ->selectRaw('SUM(inventory_counts.quantity) AS counted_quantity, COUNT(*) AS capture_count')
+                ->with(['variant.product.image', 'variant.variant_option_values.option', 'variant.variant_option_values.optionValue'])
+                ->groupBy('inventory_counts.variant_id', 'products.name')
+                ->orderBy('products.name')->orderBy('inventory_counts.variant_id')->paginate(20)->withQueryString();
+
+            return response()->json([
+                ...$rack->toArray(),
+                'summary' => [
+                    'units' => (int) $totals->units,
+                    'captures' => (int) $totals->captures,
+                    'variants' => (int) $totals->variants,
+                ],
+            ]);
+        }
         if ($request->boolean('grouped')) {
             $groups = (clone $query)->select('variant_id')->selectRaw('MAX(id) as latest_id')->groupBy('variant_id')->orderByDesc('latest_id')->paginate(20)->withQueryString();
             $ids = $groups->getCollection()->pluck('variant_id');

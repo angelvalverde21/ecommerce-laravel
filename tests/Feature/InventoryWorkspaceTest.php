@@ -31,6 +31,7 @@ class InventoryWorkspaceTest extends TestCase
         foreach (['2025_12_26_171717_create_options_table.php', '2025_12_26_171730_create_option_values_table.php', '2025_12_26_180043_create_variant_option_values_table.php'] as $file) {
             (require database_path('migrations/'.$file))->up();
         }
+        (require database_path('migrations/2025_08_09_063554_create_images_table.php'))->up();
         $branch = Branch::create(['store_id' => 1, 'name' => 'Central', 'code' => 'C']);
         $this->warehouse = Warehouse::create(['store_id' => 1, 'branch_id' => $branch->id, 'name' => 'Almacén', 'code' => 'A']);
         $this->leaf = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Estante']);
@@ -301,6 +302,45 @@ class InventoryWorkspaceTest extends TestCase
         $this->getJson(str_replace('?grouped=1', '', $url))->assertOk()
             ->assertJsonPath('data.0.variant.variant_option_values.0.option_value.value', 'L');
         $this->getJson($url.'&location_id=999')->assertOk()->assertJsonPath('total', 0)->assertJsonCount(0, 'data');
+    }
+
+    public function test_virtual_rack_sums_valid_captures_by_location_and_variant_and_preserves_zero_counts(): void
+    {
+        $inventory = $this->inventory();
+        $other = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Fila 1']);
+        $session = $this->countingSession($inventory);
+        $this->recordCount($inventory, $session, 5);
+        $this->recordCount($inventory, $session, 3);
+        $this->recordCount($inventory, $session, 13, ['location_id' => $other->id]);
+        $cancelled = $this->recordCount($inventory, $session, 99);
+        InventoryCount::findOrFail($cancelled)->update(['status' => 'cancelled']);
+        $replaced = $this->recordCount($inventory, $session, 88);
+        InventoryCount::findOrFail($replaced)->update(['status' => 'replaced']);
+        $zero = Variant::create(['product_id' => $this->variant->product_id, 'sku' => 'ZERO', 'stock' => 0]);
+        $this->recordCount($inventory, $session, 0, ['variant_id' => $zero->id]);
+        $this->recordCount($inventory, $this->countingSession($inventory), 100);
+        $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts?view=rack&location_id=';
+        $this->getJson($url.$this->leaf->id)->assertOk()->assertJsonCount(2, 'data')
+            ->assertJsonPath('summary.units', 8)->assertJsonPath('summary.captures', 3)->assertJsonPath('summary.variants', 2)
+            ->assertJsonPath('data.0.counted_quantity', 8)->assertJsonPath('data.0.capture_count', 2)
+            ->assertJsonPath('data.1.counted_quantity', 0);
+        $this->getJson($url.$other->id)->assertOk()->assertJsonPath('summary.units', 13)->assertJsonCount(1, 'data');
+        $this->getJson('/test/'.$inventory->id.'/sessions/'.$session->id.'/counts?view=rack')->assertUnprocessable();
+        $this->getJson('/test/'.$this->inventory(2)->id.'/sessions/'.$session->id.'/counts?view=rack&location_id='.$other->id)->assertNotFound();
+    }
+
+    public function test_rack_totals_cover_all_pages_not_only_the_first_twenty_variants(): void
+    {
+        $inventory = $this->inventory();
+        $session = $this->countingSession($inventory);
+        foreach (range(1, 23) as $index) {
+            $variant = Variant::create(['product_id' => $this->variant->product_id, 'sku' => 'RACK-'.$index, 'stock' => 0]);
+            $this->recordCount($inventory, $session, 2, ['variant_id' => $variant->id]);
+        }
+        $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts?view=rack&location_id='.$this->leaf->id;
+        $this->getJson($url)->assertOk()->assertJsonCount(20, 'data')->assertJsonPath('last_page', 2)
+            ->assertJsonPath('summary.units', 46)->assertJsonPath('summary.variants', 23);
+        $this->getJson($url.'&page=2')->assertOk()->assertJsonCount(3, 'data')->assertJsonPath('summary.units', 46);
     }
 
     public function test_options_include_empty_warehouses_and_respect_inventory_scope_and_store(): void
