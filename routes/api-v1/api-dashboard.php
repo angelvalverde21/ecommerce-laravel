@@ -5,6 +5,8 @@
 use App\Http\Controllers\Api\Dashboard\Acquires\AcquireDashboardController;
 use App\Http\Controllers\Api\Dashboard\Acquires\AcquireVariantDashboardController;
 use App\Http\Controllers\Api\Dashboard\AddressDashboardController;
+use App\Http\Controllers\Api\Dashboard\AreaDashboardController;
+use App\Http\Controllers\Api\Dashboard\ShopifyOrderMigrationController;
 use App\Http\Controllers\Api\Dashboard\AttendanceDashboardController;
 use App\Http\Controllers\Api\Dashboard\AttributeDashboardController;
 use App\Http\Controllers\Api\Dashboard\BarcodeDashboardController;
@@ -67,10 +69,12 @@ use App\Http\Controllers\Api\Shopify\PdfManufactureController;
 
 // });
 // http://erp.test/api/v1/dashboard/sorelle/payments/1/images
-Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'])->group(function () {
+Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api', \App\Http\Middleware\EnsureActiveErpUser::class])->group(function () {
  
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
     Route::get('/current', [StoreDashboardController::class, 'current']); //Listar
+    Route::get('/panels/{area}', [AreaDashboardController::class, 'show']);
+    Route::get('/migrations/shopify/orders', [ShopifyOrderMigrationController::class, 'show']);
 
     Route::prefix('roles')->group(function () {
 
@@ -443,7 +447,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     //usuarios que son empleados
-    Route::prefix('employees')->group(function () {
+    Route::prefix('employees')->middleware(\App\Http\Middleware\EnsurePersonnelStore::class)->group(function () {
 
         Route::get('/', [EmployeeDashboardController::class, 'index']); //Listar
         Route::get('/blocked', [EmployeeDashboardController::class, 'blocked']); //Listar
@@ -454,6 +458,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::prefix('{employee_id}')->group(function () {
 
             Route::get('/', [EmployeeDashboardController::class, 'show']); //show o mostrar por id
+            Route::get('/labor-summary', [EmployeeDashboardController::class, 'laborSummary']);
             Route::get('/orders', [EmployeeDashboardController::class, 'orders']); //show o mostrar por id
             Route::post('/orders/search', [EmployeeDashboardController::class, 'ordersSearch']); //show o mostrar por id
             Route::put('/', [EmployeeDashboardController::class, 'update']); //actualizar
@@ -709,7 +714,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
 
-    Route::prefix('attendances')->group(function () {
+    Route::prefix('attendances')->middleware(\App\Http\Middleware\EnsurePersonnelStore::class)->group(function () {
 
         Route::get('/', [AttendanceDashboardController::class, 'index']); //Listar
         Route::post('/', [AttendanceDashboardController::class, 'store']); //create

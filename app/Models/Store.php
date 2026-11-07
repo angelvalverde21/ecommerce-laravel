@@ -41,9 +41,7 @@ class Store extends Model
 
     public function employees()
     {
-        return Employee::whereHas('user.stores', function ($q) {
-            $q->where('stores.id', $this->id);
-        })->with('user');
+        return $this->hasMany(Employee::class);
     }
 
     public function users()

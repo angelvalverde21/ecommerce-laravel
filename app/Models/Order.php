@@ -22,6 +22,11 @@ class Order extends Model
         'subtotal',
         'igv',
         'total',
+        'shopify_order_id',
+        'shopify_order_name',
+        'delivery_type',
+        'currency_code',
+        'status',
     ];
 
     protected $casts = [

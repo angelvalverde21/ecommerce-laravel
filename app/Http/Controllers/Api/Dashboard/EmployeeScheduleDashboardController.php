@@ -5,124 +5,59 @@ namespace App\Http\Controllers\Api\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class EmployeeScheduleDashboardController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index(Store $store, $employee_id)
+    public function index(Store $store, int $employee_id)
     {
-        //
+        return responseOk($store->employees()->findOrFail($employee_id)->schedules()->get());
     }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create(Store $store, $employee_id)
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-
-    //  user_id Índice	bigint(20)		UNSIGNED	No	Ninguna			Cambiar Cambiar	Eliminar Eliminar	
-    // 3	salary	decimal(10,2)			Sí	NULL			Cambiar Cambiar	Eliminar Eliminar	
-    // 4	type	enum('fulltime', 'partime')	utf8mb4_unicode_ci		Sí	NULL			Cambiar Cambiar	Eliminar Eliminar	
-    // 5	comission	tinyint(4)			Sí	NULL			Cambiar Cambiar	Eliminar Eliminar	
-    // 6	work_time_start	time			Sí	09:00:00			Cambiar Cambiar	Eliminar Eliminar	
-    // 7	work_time_end	time			Sí	19:00:00			Cambiar Cambiar	Eliminar Eliminar	
-    // 8	tolerance_minutes	int(11)			No	10			Cambiar Cambiar	Eliminar Eliminar	
-    // 9	tag_sales	varchar(255)	utf8mb4_unicode_ci		Sí	NULL			Cambiar Cambiar	Eliminar Eliminar	
-    // 10	phone
-
 
     public function store(Store $store, int $employee_id, Request $request)
     {
+        $employee = $store->employees()->findOrFail($employee_id);
+        $values = $this->validateSchedule($request, $store, $employee_id);
+        $schedule = $employee->schedules()->create([...$values, 'store_id' => $store->id]);
 
-        try {
-            Log::info($request);
-            //
-            $validated = $request->validate([
-                'work_type'         => ['required', 'in:home_office,onsite'],
-                'day_of_week'       => ['nullable', 'integer', 'between:1,7'],
-                'start_time' => ['nullable', 'date_format:H:i'],
-                'end_time'   => ['required', 'date_format:H:i', 'after:start_time'],
-                'allow_extra_hours' => ['required', 'boolean'],
-                'comments' => ['nullable', 'string'],
-            ]);
+        return responseOk($schedule, 'Horario creado correctamente.');
+    }
 
-            $employee = $store->employees()->findOrFail($employee_id);
+    public function show(Store $store, int $employee_id, int $schedule_id)
+    {
+        return responseOk($store->employees()->findOrFail($employee_id)->schedules()->findOrFail($schedule_id));
+    }
 
-            $schedule = $employee->schedules()->create([
-                ...$validated,
-                'store_id' => $store->id,
-            ]);
+    public function update(Store $store, int $employee_id, int $schedule_id, Request $request)
+    {
+        $schedule = $store->employees()->findOrFail($employee_id)->schedules()->findOrFail($schedule_id);
+        $schedule->update($this->validateSchedule($request, $store, $employee_id, $schedule_id));
 
-            return responseOk($schedule, "se ha creado correctamente el registro de horario");
-        } catch (\Throwable $th) {
-            Log::info($th);
+        return responseOk($schedule, 'Horario actualizado correctamente.');
+    }
+
+    public function destroy(Store $store, int $employee_id, int $schedule_id)
+    {
+        $store->employees()->findOrFail($employee_id)->schedules()->findOrFail($schedule_id)->delete();
+
+        return responseOk([], 'Horario eliminado. Las marcaciones de asistencia se conservan.');
+    }
+
+    private function validateSchedule(Request $request, Store $store, int $employeeId, ?int $id = null): array
+    {
+        foreach (['start_time', 'end_time'] as $field) {
+            if (preg_match('/^\d{2}:\d{2}$/', (string) $request->input($field))) {
+                $request->merge([$field => $request->input($field).':00']);
+            }
         }
-    }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Store $store, $employee_id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Store $store, $employee_id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Store $store, int $employee_id, int $schedule_id)
-    {
-        try {
-
-            Log::info($request->all());
-
-            $validated = $request->validate([
-                'work_type'         => ['required', 'in:home_office,onsite,rest'],
-                'day_of_week'       => ['nullable', 'integer', 'between:1,7'],
-                'start_time'        => ['nullable', 'date_format:H:i:s'],
-                'end_time'          => ['required', 'date_format:H:i:s', 'after:start_time'],
-                'allow_extra_hours' => ['required', 'boolean'],
-                'comments'          => ['nullable', 'string'],
-            ]);
-
-            // 🔹 Verificamos que el employee pertenezca al store
-            $employee = $store->employees()->findOrFail($employee_id);
-
-            // 🔹 Verificamos que el schedule pertenezca al employee
-            $schedule = $employee->schedules()->findOrFail($schedule_id);
-
-            // 🔹 Actualizamos
-            $schedule->update($validated);
-
-            return responseOk($schedule, "Se ha actualizado correctamente el registro de horario");
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return response()->json(['error' => 'Ocurrió un error al actualizar'], 500);
-        }
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Store $store, $employee_id)
-    {
-        //
+        return $request->validate([
+            'work_type' => ['required', 'in:home_office,onsite,rest'],
+            'day_of_week' => ['required', 'integer', 'between:1,7', Rule::unique('employee_schedules')->where('employee_id', $employeeId)->where('store_id', $store->id)->ignore($id)],
+            'start_time' => ['nullable', 'required_unless:work_type,rest', 'date_format:H:i:s'],
+            'end_time' => ['nullable', 'required_unless:work_type,rest', 'date_format:H:i:s', 'after:start_time'],
+            'allow_extra_hours' => ['required', 'boolean'],
+            'comments' => ['nullable', 'string', 'max:1000'],
+        ]);
     }
 }

@@ -51,6 +51,7 @@ class AuthApiController extends Controller
 
             //Si responde que la validacion fue correcta, negamos este valor para seguir en el siguiente bloque
             $validated = $validator->validated();
+            $validated['status'] = User::ACTIVE;
 
             if (!Auth::attempt($validated)) {
 

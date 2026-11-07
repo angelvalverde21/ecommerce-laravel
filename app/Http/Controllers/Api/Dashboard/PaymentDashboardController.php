@@ -19,7 +19,7 @@ class PaymentDashboardController extends Controller
 
     use UploadImagesTrait;
 
-    protected function getParentModel(array $validated): Model
+    protected function getParentModel(array $validated, Store $store): Model
     {
         $map = [
             'manufacture' => \App\Models\Manufacture::class,
@@ -35,7 +35,7 @@ class PaymentDashboardController extends Controller
             ]);
         }
 
-        return $map[$validated['paymentable_type']]::findOrFail($validated['paymentable_id']);
+        return $map[$validated['paymentable_type']]::where('store_id', $store->id)->findOrFail($validated['paymentable_id']);
     }
 
     /**
@@ -82,7 +82,7 @@ class PaymentDashboardController extends Controller
                 'images.*' => 'image|max:2048',
             ]);
 
-            $parentModel = $this->getParentModel($validated);
+            $parentModel = $this->getParentModel($validated, $store);
 
             // DB::beginTransaction();
 
@@ -164,7 +164,7 @@ class PaymentDashboardController extends Controller
                 'date' => 'required|date'
             ]);
 
-            $parentModel = $this->getParentModel($validated);
+            $parentModel = $this->getParentModel($validated, $store);
 
             $payment = $parentModel->payments()->findOrFail($payment_id); // Verifica que el pago pertenece al modelo padre
 

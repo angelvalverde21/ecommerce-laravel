@@ -3,320 +3,112 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\SearchRequest;
-use App\Http\Resources\FlatUserResource;
-use App\Models\Employee;
-use App\Models\Payment;
+use App\Http\Requests\EmployeeRequest;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\Dashboard\Crud\AttendanceService;
+use App\Services\Dashboard\Employee\EmployeeAccountService;
+use App\Services\Dashboard\Employee\EmployeeLaborSummaryService;
 use App\Services\Dashboard\Employee\EmployeeService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
-use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 
 class EmployeeDashboardController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    protected EmployeeService $employeeService;
-    protected AttendanceService $attendanceService;
-
-    public function __construct()
+    public function laborSummary(Store $store, int $employee_id, EmployeeLaborSummaryService $service)
     {
-        // Pasamos el modelo que vamos a usar
-        $this->employeeService = new EmployeeService();
-        $this->attendanceService = new AttendanceService();
+        return responseOk($service->forEmployee($store, $employee_id));
     }
 
-    //  getOrdersByTag
-
-    public function index(Store $store)
+    public function index(Store $store, Request $request)
     {
-        //
-        try {
-
-            $employees = $store->employees()->with(['user.roles', 'attendances'])->get();
-
-            $employees = $employees->map(function ($employee) {
-
-                $completeAttendances = $this->attendanceService
-                    ->completeRangeEmployee($employee, $employee->attendances);
-
-                // Convertimos a colección por si viene como array
-                $collection = collect($completeAttendances);
-
-                $employee->attendances = $completeAttendances;
-
-                $employee->total_minutes = $collection->sum('minutes');
-                $employee->total_minutes_computed = $collection->sum('minutes_computed');
-
-                return $employee;
-            });
-
-            // $employees = FlatUserResource::collection( //FlatUserResource aplana los datos de usuario para evitar usar Employee->user en el front sino todo plano
-            //     $store->employees()->get()
-            // );
-
-            return responseOk($employees, 'Employees obtenidos correctamente');
-        } catch (\Throwable $th) {
-            //throw $th;
-            Log::info($th);
-            return responseError("Ha ocurrido un error interno al obtener los datos de los empleados");
-        }
-    }
-
-    public function search(Store $store, SearchRequest $request)
-    {
-        if ($request->hasNoFilters()) {
-            return $this->index($store);
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'in:0,1'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+        ]);
+        $query = $store->employees()->search($validated['search'] ?? null)
+            ->betweenDates($validated['start_date'] ?? null, $validated['end_date'] ?? null)
+            ->withCount(['attendances', 'schedules'])->with('user.roles');
+        if (isset($validated['status'])) {
+            $query->where('employees.status', $validated['status']);
         }
 
-        $employees = Employee::with('user')
-            ->search($request->search)
-            ->betweenDates($request->start_date, $request->end_date) //Sino hay fechas simplemente pasa de largo, no se considera
-            ->limit(10)
-            ->get();
+        $query->orderBy(User::select('name')->whereColumn('users.id', 'employees.user_id'))->orderBy('employees.id');
 
-        return responseOk($employees);
+        return responseOk($query->get()->map(fn ($employee) => app(EmployeeAccountService::class)->present($employee)), 'Empleados obtenidos correctamente.');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function search(Store $store, Request $request)
     {
-        //
-
+        return $this->index($store, $request);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Store $store, Request $request)
+    public function blocked(Store $store, Request $request)
     {
-        //
+        $request->merge(['status' => 0]);
 
-        try {
-
-
-            // VALIDACIÓN
-            $validated = $request->validate([
-                'name'            => 'required|string|max:255',
-                'email'           => 'required|email|unique:users,email',
-                'phone'           => 'nullable|string|max:20',
-                'document_number' => 'nullable|string|max:20',
-                'salary'          => 'nullable|numeric|min:0',
-                'comission'       => 'nullable|numeric|min:0|max:100',
-                'tag_sales'       => 'nullable|string|max:100',
-                'roles'           => 'required|array|min:1',
-                'roles.*'         => 'string|exists:roles,name',
-            ]);
-
-            DB::beginTransaction();
-
-            // 1. CREAR USUARIO
-            $user = $store->users()->create([
-                'name'            => $validated['name'],
-                'email'           => $validated['email'],
-                'phone'           => $validated['phone'],
-                'document_number' => $validated['document_number'],
-                'identity_id'     => $validated['identity_id'],
-                'comission'       => $validated['comission'] ?? null,
-                'password'        => bcrypt($validated['document_number']),
-            ]);
-
-            // 2. CREAR EMPLEADO ASOCIADO
-
-            $employee = $user->employee()->create(
-                [
-                    'salary'     => $validated['salary'] ?? null,
-                    'date_entry' => now(), // FECHA DE CREACIÓN DEL REGISTRO
-                    'tag_sales' => $validated['tag_sales'] ?? null,
-                ]
-            );
-
-
-            // 3. ASIGNAR ROLES (SPATIE), osea si se ha mandado roles se les debe asignar aqui
-            $user->syncRoles($validated['roles']); //se agrega el rol del futuro empleado
-
-            DB::commit();
-
-            return responseOk($employee, "Empleado creado correctamente", 201);
-        } catch (\Throwable $th) {
-
-            Log::info($th);
-
-            DB::rollback();
-
-            return responseError("Error al crear el empleado.... ");
-        }
+        return $this->index($store, $request);
     }
 
-
-    /**
-     * Display the specified resource.
-     */
-    public function  show(Store $store, $employed_id)
+    public function destroy(Store $store, int $employee_id, Request $request)
     {
-        try {
+        abort_unless($request->user()->hasAnyRole(['master', 'ceo', 'admin']), 403);
+        $employee = $store->employees()->findOrFail($employee_id);
+        DB::transaction(function () use ($employee) {
+            $employee->update(['status' => false]);
+            $employee->user()->update(['status' => false]);
+        });
 
-            $employee = Employee::with(
-                'user.roles',
-                'attendances.employee',
-                'schedules'
-            )
-                ->addSelect([
-                    'balance' => Payment::selectRaw("
-                                COALESCE(SUM(
-                                    CASE 
-                                        WHEN direction = 'in' THEN amount
-                                        WHEN direction = 'out' THEN -amount
-                                        ELSE 0
-                                    END
-                                ),0)
-                            ")
-                        ->whereColumn('payments.user_id', 'employees.user_id')
-                ])
-                ->findOrFail($employed_id);
-
-            // --- LIMPIAR ROLES ---
-            $rolesOnlyNames = $employee->user->roles->pluck('name');
-
-            unset($employee->user->roles);
-
-            $employee->user->setRelation('roles', $rolesOnlyNames);
-
-
-            // --- NORMALIZAR ASISTENCIAS ---
-            $completeAttendances = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
-
-            $employee->setRelation('attendances', collect($completeAttendances)); //Borra la relacion $employee->attendances y la reeemplaza por $completeAttendances
-
-            return responseOk($employee, "Empleado obtenido correctamente");
-
-            // return responseOk($user, "Empleado obtenido correctamente");
-        } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError("No se pudo obtener el empleado solicitado");
-        }
+        return responseOk($employee, 'Empleado desactivado. Se conservan sus asistencias, horarios y movimientos.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Store $store)
+    public function store(Store $store, EmployeeRequest $request)
     {
-        //
+        $service = app(EmployeeAccountService::class);
+        $employee = $service->save($store, $request->validated());
+
+        return response()->json(['data' => $service->present($employee), 'message' => 'Empleado y cuenta de acceso creados correctamente.'], 201);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Store $store, Request $request, $employed_id)
+    public function show(Store $store, int $employee_id, AttendanceService $attendanceService)
     {
-        try {
+        $employee = $store->employees()->with(['schedules', 'attendances'])->findOrFail($employee_id);
+        $employee->setRelation('attendances', collect($attendanceService->completeRangeEmployee($employee, $employee->attendances)));
+        $employee->balance = $employee->payments()->where('store_id', $store->id)
+            ->reorder()
+            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'in' THEN amount WHEN direction = 'out' THEN -amount ELSE 0 END), 0) AS total")
+            ->value('total');
 
-            $employee = Employee::with('user')->findOrFail($employed_id);
-
-            Log::info($employee);
-
-            //VALIDACIÓN FLEXIBLE (update parcial o completo)
-            $validated = $request->validate([
-                'name'            => 'required|string|max:255',
-                'email'           => ["required", "email", Rule::unique('users', 'email')->ignore($employee->user->id)],
-                'phone'           => 'nullable|string|max:20',
-                'document_number' => 'nullable|string|max:20',
-                'status'          => 'required|in:0,1',
-                'tag_sales'       => 'nullable|string|max:100',
-                'type'       => 'nullable|string|max:100',
-                'roles'           => 'required|array|min:1',
-                'roles.*'         => 'string|exists:roles,name',
-                'comission'       => 'nullable|numeric|min:0|max:100', //employee comission
-                'salary'          => 'nullable|numeric|min:0', //employee salary
-                // 'auto_close_end_time' => 'nullable|boolean',
-                'work_time_start' => 'nullable|date_format:H:i:s',
-                'work_time_end' => 'nullable|date_format:H:i:s',
-
-            ]);
-
-            DB::beginTransaction();
-
-            // ⭐ 1. Actualizar USER (solo campos presentes)
-
-            $employee->update(
-                [
-                    'comission' => $validated['comission'] ?? null, //actualiza comision del empleado si llega
-                    'salary'    => $validated['salary'] ?? null, //actualiza salario del empleado si llega
-                    'tag_sales' => $validated['tag_sales'] ?? null, //actualiza tag_sales del empleado si llega
-                    'type' => $validated['type'] ?? null, //actualiza tag_sales del empleado si llega
-                    // 'auto_close_end_time' => $validated['auto_close_end_time'],
-                    'work_time_start' => $validated['work_time_start'],
-                    'work_time_end' => $validated['work_time_end'],
-                ]
-            );
-
-
-            $employee->user->update(
-                [
-                    'name'            => $validated['name'] ?? null,
-                    'email'           => $validated['email'] ?? null,
-                    'phone'           => $validated['phone'] ?? null,
-                    'document_number' => $validated['document_number'] ?? null,
-                    'status'          => $validated['status'] ?? null,
-                ]
-            );
-
-
-            // ⭐ 3. Actualizar ROLES si llegan
-            if ($request->has('roles')) {
-                $employee->user->syncRoles($validated['roles']);
-            }
-
-
-            DB::commit();
-
-            return responseOk(
-                $employee->load('user.roles'),
-                "Empleado actualizado correctamente",
-                200
-            );
-        } catch (\Throwable $th) {
-
-            DB::rollback();
-            Log::info($th);
-
-            return responseError("Error al actualizar el empleado...");
-        }
+        return responseOk(app(EmployeeAccountService::class)->present($employee), 'Empleado obtenido correctamente.');
     }
 
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function orders(Store $store, Request $request)
+    public function update(Store $store, EmployeeRequest $request, int $employee_id)
     {
+        $employee = $store->employees()->findOrFail($employee_id);
+        app(EmployeeAccountService::class)->save($store, $request->validated(), $employee);
 
-        $tag = $request->input('tag', 'AYLIN');
-        $limit = $request->input('limit', 25);
-        $cursor = $request->input('cursor', null);
-
-        return $this->employeeService->getOrdersByTag($tag, $limit, $cursor);
+        return $this->show($store, $employee_id, app(AttendanceService::class));
     }
 
-    public function ordersSearch(Store $store, Request $request)
+    public function orders(Store $store, Request $request, int $employee_id, EmployeeService $service)
     {
+        $employee = $store->employees()->findOrFail($employee_id);
+        abort_unless(filled($employee->tag_sales), 422, 'Configura la etiqueta de ventas del empleado.');
 
-        $tag = $request->input('tag_sales', 'AYLIN');
-        $start = $request->input('start_date', null);
-        $end = $request->input('end_date', null);
+        return $service->getOrdersByTag($employee->tag_sales, min(100, max(1, (int) $request->input('limit', 25))), $request->input('cursor'));
+    }
 
-        return $this->employeeService->getOrdersByTagBetween($tag, $start, $end);
+    public function ordersSearch(Store $store, Request $request, int $employee_id, EmployeeService $service)
+    {
+        $employee = $store->employees()->findOrFail($employee_id);
+        $dates = $request->validate([
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+        ]);
+        abort_unless(filled($employee->tag_sales), 422, 'Configura la etiqueta de ventas del empleado.');
+
+        return $service->getOrdersByTagBetween($employee->tag_sales, $dates['start_date'], $dates['end_date']);
     }
 }

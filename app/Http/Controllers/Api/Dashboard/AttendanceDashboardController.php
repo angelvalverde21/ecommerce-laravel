@@ -3,183 +3,113 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Attendance;
 use App\Models\Store;
 use App\Services\Dashboard\Crud\AttendanceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 
 class AttendanceDashboardController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-
-
-
-    protected AttendanceService $attendanceService;
-
-    public function __construct()
-    {
-        $this->attendanceService = new AttendanceService();
-    }
-
-    public function index(Store $store)
-    {
-        //
-        $attendances = $store->attendances()->with(['employee'])->get();
-        return responseOk($attendances, 'Asistencias obtenidas correctamente');
-    }
-
-    /**
-     * Show the form for upload a new un lote.
-     */
-
-    // Función para guardar un usuario con validación
-
-    public function upload(Store $store, Request $request)
-    {
-
-        try {
-
-            $this->attendanceService->upload($store, $request);
-
-            return responseOk([], 'Asistencias subidas correctamente');
-        } catch (\Throwable $th) {
-
-            Log::info($th);
-
-            return responseError("Ha ocurrido un error al subir el archivo");
-        }
-    }
-
-    public function getEmployee(string $param): ?int
-    {
-
-        switch ($param) {
-            case '1':
-                //Ayin
-                return 3;
-                break;
-
-            case '2':
-                //Jenifer
-                return 2;
-                break;
-
-            case '5':
-                //Fiorella
-                return 6;
-                break;
-
-            case '76540879':
-                //Marina
-                return 4;
-                break;
-
-            case '74910587':
-                //josselin
-                return 8;
-                break;
-
-            case '42412498':
-                //Angel
-                return 1;
-                break;
-
-            default:
-                return null;
-                break;
-        }
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create(Store $store)
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Store $store, Request $request)
+    public function index(Store $store, Request $request, AttendanceService $service)
     {
         $validated = $request->validate([
-            'employee_id' => 'nullable|exists:employees,id',
-            'date'        => 'required|date',
-            'check_in'    => 'nullable|date_format:H:i:s',
-            'check_out'   => 'nullable|date_format:H:i:s',
-            'comment'     => 'nullable|string|max:250',
+            'employee_id' => ['nullable', 'integer'],
+            'start_date' => ['nullable', 'date_format:Y-m-d'],
+            'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'search' => ['nullable', 'string', 'max:255'],
         ]);
-    
-        $attendance = Attendance::create([
-            'store_id'    => $store->id,
-            'employee_id' => $validated['employee_id'] ?? null,
-            'date'        => $validated['date'],
-            'check_in'    => $validated['check_in'] ?? null,
-            'check_out'   => $validated['check_out'] ?? null,
-            'comment'     => $validated['comment'] ?? null,
+        $query = $store->attendances()->with('employee.schedules')
+            ->where(function ($query) use ($store) {
+                $query->whereNull('employee_id')->orWhereHas('employee', fn ($query) => $query->where('store_id', $store->id));
+            });
+        if (! empty($validated['search'])) {
+            $query->whereHas('employee', fn ($query) => $query->search($validated['search']));
+        }
+        if (! empty($validated['employee_id'])) {
+            $query->where('employee_id', $validated['employee_id']);
+        }
+        if (! empty($validated['start_date'])) {
+            $query->whereDate('date', '>=', $validated['start_date']);
+        }
+        if (! empty($validated['end_date'])) {
+            $query->whereDate('date', '<=', $validated['end_date']);
+        }
+        $page = $query->reorder()->orderByDesc('date')->orderByDesc('id')->paginate(20);
+
+        return response()->json([
+            'data' => $page->getCollection()->map(fn ($row) => $row->employee ? $service->describe($row->employee, $row) : [
+                ...$row->toArray(),
+                'employee_name' => 'Empleado sin asignar',
+                'minutes' => null,
+                'minutes_computed' => null,
+                'salary_neto' => null,
+                'salary_extra' => null,
+                'incomplete' => true,
+            ])->values(),
+            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()],
         ]);
-
-        Log::info($attendance);
-
-        $attendance->is_late = false;
-        $attendance->missing = false;
-        $attendance->work_type = "home_office";
-        $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in ?? "9:00:00");
-        $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out ?? "19:00:00");
-        $attendance->minutes = $checkIn->diffInMinutes($checkOut);
-        $attendance->minutes_computed = $attendance->minutes;
-
-        return responseOk($attendance->load('employee'), "Attendance Creado Correctamente");
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function upload(Store $store, Request $request, AttendanceService $service)
     {
-        //
+        return responseOk($service->upload($store, $request), 'Asistencias importadas correctamente.');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function store(Store $store, Request $request, AttendanceService $service)
     {
-        //
+        $validated = $request->validate($this->rules($store));
+        $employee = $store->employees()->findOrFail($validated['employee_id']);
+        $attendance = $store->attendances()->create($validated);
+
+        return responseOk($service->describe($employee, $attendance), 'Asistencia registrada correctamente.');
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Store $store, $attendance_id, Request $request)
+    public function show(Store $store, int $attendance_id, AttendanceService $service)
     {
+        $attendance = $store->attendances()->with('employee.schedules')->findOrFail($attendance_id);
 
-        
+        return responseOk($attendance->employee
+            ? $service->describe($attendance->employee, $attendance)
+            : [...$attendance->toArray(), 'employee_name' => 'Empleado sin asignar']);
+    }
+
+    public function destroy(Store $store, int $attendance_id, Request $request)
+    {
+        abort_unless($request->user()->hasAnyRole(['master', 'ceo', 'admin']), 403);
+        $store->attendances()->findOrFail($attendance_id)->delete();
+
+        return responseOk([], 'Asistencia eliminada correctamente.');
+    }
+
+    public function update(Store $store, int $attendance_id, Request $request, AttendanceService $service)
+    {
         $attendance = $store->attendances()->findOrFail($attendance_id);
-        $attendance->update($request->all());
-        Log::info($attendance);
+        $input = $request->all();
+        $request->merge([
+            'employee_id' => $input['employee_id'] ?? $attendance->employee_id,
+            'date' => $input['date'] ?? $attendance->date,
+        ]);
+        $validated = $request->validate($this->rules($store, $attendance->id));
+        $attendance->update($validated);
+        $employee = $store->employees()->findOrFail($attendance->employee_id);
 
-        $attendance->is_late = false;
-        $attendance->missing = false;
-        $attendance->work_type = "home_office";
-        $checkIn  = Carbon::createFromFormat('H:i:s', $attendance->check_in ?? "9:00:00");
-        $checkOut = Carbon::createFromFormat('H:i:s', $attendance->check_out ?? "19:00:00");
-        $attendance->minutes = $checkIn->diffInMinutes($checkOut);
-        $attendance->minutes_computed = $attendance->minutes;
-
-        return responseOk($attendance, 'Asistencia actualizada correctamente');
+        return responseOk($service->describe($employee, $attendance), 'Asistencia actualizada correctamente.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Store $store, $attendance_id)
+    private function rules(Store $store, ?int $id = null): array
     {
-        //
+        foreach (['check_in', 'check_out'] as $field) {
+            if (preg_match('/^\d{2}:\d{2}$/', (string) request($field))) {
+                request()->merge([$field => request($field).':00']);
+            }
+        }
+
+        return [
+            'employee_id' => ['required', 'integer', Rule::exists('employees', 'id')->where('store_id', $store->id)],
+            'date' => ['required', 'date_format:Y-m-d', Rule::unique('attendances')->where('store_id', $store->id)->where('employee_id', request('employee_id'))->ignore($id)],
+            'check_in' => ['nullable', 'required_with:check_out', 'date_format:H:i:s'],
+            'check_out' => ['nullable', 'date_format:H:i:s', 'after:check_in'],
+            'comment' => ['nullable', 'string', 'max:250'],
+        ];
     }
 }

@@ -18,7 +18,7 @@ class PettyCashDashboardController extends Controller
     public function index(Store $store)
     {
         //
-        $pettyCash = $store->pettyCashes()->with(['employee.user', 'gateway'])->get();
+        $pettyCash = $store->pettyCashes()->with(['employee', 'gateway'])->get();
 
         return responseOk($pettyCash, 'Caja chica obtenida correctamente');
     }
@@ -92,7 +92,7 @@ class PettyCashDashboardController extends Controller
 
         try {
         
-            $petty_cash = $store->pettyCashes()->with(['employee.user', 'gateway', 'payments.images'])->findOrFail($petty_cash_id);
+            $petty_cash = $store->pettyCashes()->with(['employee', 'gateway', 'payments.images'])->findOrFail($petty_cash_id);
         
             return responseOk($petty_cash, "Se ha procesado correctamente");
         

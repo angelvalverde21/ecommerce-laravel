@@ -10,4 +10,8 @@ class EmployeeSchedule extends Model
 
     protected $guarded = ['id', 'created_at'];
 
+    protected $casts = [
+        'allow_extra_hours' => 'boolean',
+        'day_of_week' => 'integer',
+    ];
 }

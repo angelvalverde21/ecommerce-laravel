@@ -82,6 +82,41 @@ class InventoryWorkspaceTest extends TestCase
         $this->getJson('/test/'.$inventory->id.'/options')->assertOk()->assertJsonCount(1, 'data.locations')->assertJsonPath('data.locations.0.id', $child->id);
     }
 
+    public function test_workspace_exposes_zones_and_five_rack_rows_but_counts_only_the_selected_row(): void
+    {
+        $inventory = $this->inventory();
+        $rows = collect();
+        foreach (range(1, 5) as $number) {
+            $rows->push(Location::create([
+                'store_id' => 1,
+                'warehouse_id' => $this->warehouse->id,
+                'parent_id' => $this->leaf->id,
+                'name' => 'Fila '.$number,
+                'code' => 'fila_'.$number,
+            ]));
+        }
+        Location::create(['store_id' => 2, 'warehouse_id' => $this->warehouse->id, 'name' => 'Zona ajena']);
+        Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Zona inactiva', 'is_active' => false]);
+
+        $options = $this->getJson('/test/'.$inventory->id.'/options')->assertOk()
+            ->assertJsonCount(6, 'data.location_tree')->assertJsonCount(5, 'data.locations');
+        $this->assertContains($this->leaf->id, array_column($options->json('data.location_tree'), 'id'));
+        $this->assertNotContains($this->leaf->id, array_column($options->json('data.locations'), 'id'));
+
+        $session = $this->countingSession($inventory);
+        $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts';
+        $payload = ['variant_id' => $this->variant->id, 'quantity' => 3, 'mode' => 'accumulate'];
+        $this->postJson($url, [...$payload, 'location_id' => $this->leaf->id])
+            ->assertUnprocessable()->assertJsonValidationErrors('location_id');
+        $this->postJson($url, [...$payload, 'location_id' => $rows[2]->id])
+            ->assertCreated()->assertJsonPath('data.location_id', $rows[2]->id);
+        $this->assertDatabaseHas('inventory_counts', ['location_id' => $rows[2]->id, 'quantity' => 3]);
+
+        $inventory->update(['inventoriable_type' => (new Location)->getMorphClass(), 'inventoriable_id' => $this->leaf->id]);
+        $this->getJson('/test/'.$inventory->id.'/options')->assertOk()
+            ->assertJsonCount(6, 'data.location_tree')->assertJsonCount(5, 'data.locations');
+    }
+
     public function test_counts_are_corrected_in_place_and_recounts_use_another_session(): void
     {
         $inventory = $this->inventory(); $session = $this->countingSession($inventory);

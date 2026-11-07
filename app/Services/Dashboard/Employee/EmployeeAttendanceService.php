@@ -4,58 +4,31 @@ namespace App\Services\Dashboard\Employee;
 
 use App\Models\Store;
 use App\Services\Dashboard\Crud\AttendanceService;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
-
 
 class EmployeeAttendanceService
 {
+    public function __construct(private AttendanceService $attendanceService) {}
 
-    protected AttendanceService $attendanceService;
-
-    public function __construct()
+    public function index(Store $store, int $employee_id): array
     {
-        $this->attendanceService = new AttendanceService();
+        $employee = $store->employees()->with(['attendances', 'schedules'])->findOrFail($employee_id);
+
+        return $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
     }
 
-    public function index(Store $store, int $employee_id)
+    public function search(Store $store, int $employee_id, Request $request): array
     {
+        $dates = $request->validate([
+            'start_date' => ['required', 'date_format:Y-m-d'],
+            'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date', 'before_or_equal:'.now()->addYear()->toDateString()],
+        ]);
+        abort_if(\Carbon\CarbonImmutable::parse($dates['start_date'])->diffInDays($dates['end_date']) > 366, 422, 'Selecciona un rango de hasta un año.');
+        $employee = $store->employees()->with([
+            'schedules',
+            'attendances' => fn ($query) => $query->whereBetween('date', [$dates['start_date'], $dates['end_date']]),
+        ])->findOrFail($employee_id);
 
-        Log::info("index");
-
-        $employee = $store->employees()
-            ->with(['attendances'])
-            ->findOrFail($employee_id);
-
-        $data = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
-
-        return $data;
-    }
-
-    public function search(Store $store, $employee_id, Request $request)
-    {
-
-        Log::info("search");
-
-        $start = $request->input('start_date');
-        $end   = $request->input('end_date');
-
-        $employee = $store->employees()
-            ->with(['attendances' => function ($query) use ($start, $end) {
-
-                if ($start && $end) {
-                    $query->whereBetween('date', [$start, $end]);
-                }
-            }, 'attendances.employee'])
-            ->findOrFail($employee_id);
-
-
-        $data = $this->attendanceService->completeRangeEmployee($employee, $employee->attendances);
-
-        return $data;
+        return $this->attendanceService->completeRangeEmployee($employee, $employee->attendances, $dates['start_date'], $dates['end_date']);
     }
 }
