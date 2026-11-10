@@ -49,6 +49,7 @@ class InventoryWorkspaceTest extends TestCase
         Route::get('/test/{inventory_id}/sessions/{session_id}/counts', fn (Request $request, string $inventory_id, string $session_id) => app(InventoryCountDashboardController::class)->index(Store::findOrFail(1), $request, $inventory_id, $session_id));
         Route::post('/test/{inventory_id}/sessions/{session_id}/counts', fn (Request $request, string $inventory_id, string $session_id) => app(InventoryCountDashboardController::class)->store(Store::findOrFail(1), $request, $inventory_id, $session_id, $workspace()));
         Route::put('/test/{inventory_id}/sessions/{session_id}/counts/{count_id}', fn (Request $request, string $inventory_id, string $session_id, string $count_id) => app(InventoryCountDashboardController::class)->update(Store::findOrFail(1), $request, $inventory_id, $session_id, $count_id, $workspace()));
+        Route::delete('/test/{inventory_id}/sessions/{session_id}/counts/{count_id}', fn (string $inventory_id, string $session_id, string $count_id) => app(InventoryCountDashboardController::class)->destroy(Store::findOrFail(1), $inventory_id, $session_id, $count_id, $workspace()));
         Route::post('/test/{inventory_id}/adjustments/{id}/{action}', fn (Request $request, string $inventory_id, string $id, string $action) => app(InventoryAdjustmentDashboardController::class)->transition(Store::findOrFail(1), $request, $inventory_id, $id, $action, $workspace()));
     }
 
@@ -157,6 +158,97 @@ class InventoryWorkspaceTest extends TestCase
         $this->getJson('/test/'.$foreign->id.'/progress')->assertNotFound();
         $other = $this->countingSession($this->inventory());
         $this->postJson('/test/'.$inventory->id.'/sessions/'.$other->id.'/counts', [...$payload, 'quantity' => 1])->assertNotFound();
+    }
+
+    public function test_deleting_a_capture_updates_totals_and_progress_without_changing_stock_or_kardex(): void
+    {
+        $inventory = $this->inventory();
+        $session = $this->countingSession($inventory);
+        $first = $this->recordCount($inventory, $session, 25);
+        $second = $this->recordCount($inventory, $session, 13);
+        $otherSession = $this->countingSession($inventory);
+        $other = $this->recordCount($inventory, $otherSession, 4);
+        $inventory->locationProgress()->update(['status' => 'verified', 'verified_by' => 1, 'verified_at' => now(), 'counted_at' => now()]);
+        $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts/';
+        $this->deleteJson($url.$first)->assertNoContent();
+        $this->assertDatabaseMissing('inventory_counts', ['id' => $first]);
+        $this->assertDatabaseHas('inventory_counts', ['id' => $second, 'quantity' => 13]);
+        $this->assertSame(17, (int) $inventory->counts()->sum('quantity'));
+        $this->getJson(rtrim($url, '/').'?view=rack&location_id='.$this->leaf->id)
+            ->assertOk()->assertJsonPath('summary.units', 13)->assertJsonPath('summary.captures', 1);
+        $progress = $inventory->locationProgress()->firstOrFail();
+        $this->assertSame('in_progress', $progress->status);
+        $this->assertNull($progress->verified_at);
+        $this->assertNull($progress->counted_at);
+        $this->deleteJson($url.$second)->assertNoContent();
+        $this->assertSame('in_progress', $progress->fresh()->status);
+        $this->deleteJson('/test/'.$inventory->id.'/sessions/'.$otherSession->id.'/counts/'.$other)->assertNoContent();
+        $this->assertSame('pending', $progress->fresh()->status);
+        $this->assertNull($progress->fresh()->started_at);
+        $this->assertDatabaseCount('inventory_counts', 0);
+        $this->assertSame(10, $this->variant->fresh()->stock);
+        $this->assertDatabaseCount('kardexes', 0);
+    }
+
+    public function test_capture_deletion_rejects_other_authors_closed_sessions_and_locked_inventories(): void
+    {
+        $inventory = $this->inventory();
+        $session = $this->countingSession($inventory);
+        $id = $this->recordCount($inventory, $session, 5);
+        $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts/'.$id;
+        $this->actingAs(User::findOrFail(2));
+        $this->deleteJson($url)->assertForbidden();
+        $this->actingAs(User::findOrFail(1));
+        $session->update(['status' => 'closed']);
+        $this->deleteJson($url)->assertUnprocessable();
+        $session->update(['status' => 'open']);
+        foreach (['cancelled', 'replaced'] as $status) {
+            InventoryCount::findOrFail($id)->update(['status' => $status]);
+            $this->deleteJson($url)->assertUnprocessable();
+        }
+        InventoryCount::findOrFail($id)->update(['status' => 'valid']);
+        foreach (['completed', 'cancelled'] as $status) {
+            $inventory->update(['status' => $status]);
+            $this->deleteJson($url)->assertUnprocessable();
+        }
+        $inventory->update(['status' => 'in_progress']);
+        $adjustment = $inventory->adjustments()->create([
+            'variant_id' => $this->variant->id, 'system_quantity' => 10, 'counted_quantity' => 5, 'difference' => -5, 'status' => 'approved',
+        ]);
+        foreach (['approved', 'applied'] as $status) {
+            $adjustment->update(['status' => $status]);
+            $this->deleteJson($url)->assertUnprocessable();
+        }
+        $adjustment->update(['status' => 'pending']);
+        $foreign = $this->inventory(2);
+        $this->deleteJson('/test/'.$foreign->id.'/sessions/'.$session->id.'/counts/'.$id)->assertNotFound();
+        $otherSession = $this->countingSession($this->inventory());
+        $this->deleteJson('/test/'.$inventory->id.'/sessions/'.$otherSession->id.'/counts/'.$id)->assertNotFound();
+        $this->assertDatabaseHas('inventory_counts', ['id' => $id, 'quantity' => 5]);
+        $this->assertSame(10, $this->variant->fresh()->stock);
+        $this->assertDatabaseCount('kardexes', 0);
+    }
+
+    public function test_a_progress_failure_rolls_back_capture_deletion(): void
+    {
+        $inventory = $this->inventory();
+        $session = $this->countingSession($inventory);
+        $id = $this->recordCount($inventory, $session, 5);
+        $this->recordCount($inventory, $session, 2);
+        $inventory->locationProgress()->update(['status' => 'verified', 'verified_at' => now(), 'verified_by' => 1]);
+        \App\Models\InventoryLocationProgress::updating(function () {
+            throw new \RuntimeException('Progress update failed');
+        });
+        try {
+            app(InventoryCountDashboardController::class)->destroy(Store::findOrFail(1), (string) $inventory->id, (string) $session->id, (string) $id, app(InventoryWorkspace::class));
+            $this->fail('Deletion must fail with its progress update.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Progress update failed', $exception->getMessage());
+        } finally {
+            \App\Models\InventoryLocationProgress::flushEventListeners();
+        }
+        $this->assertDatabaseHas('inventory_counts', ['id' => $id, 'quantity' => 5]);
+        $this->assertDatabaseCount('inventory_counts', 2);
     }
 
     public function test_adjustments_require_review_and_apply_once_for_positive_zero_and_negative_differences(): void
@@ -304,7 +396,7 @@ class InventoryWorkspaceTest extends TestCase
         $this->getJson($url.'&location_id=999')->assertOk()->assertJsonPath('total', 0)->assertJsonCount(0, 'data');
     }
 
-    public function test_virtual_rack_sums_valid_captures_by_location_and_variant_and_preserves_zero_counts(): void
+    public function test_virtual_rack_returns_each_capture_separately_and_sums_only_valid_captures(): void
     {
         $inventory = $this->inventory();
         $other = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Fila 1']);
@@ -320,27 +412,89 @@ class InventoryWorkspaceTest extends TestCase
         $this->recordCount($inventory, $session, 0, ['variant_id' => $zero->id]);
         $this->recordCount($inventory, $this->countingSession($inventory), 100);
         $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts?view=rack&location_id=';
-        $this->getJson($url.$this->leaf->id)->assertOk()->assertJsonCount(2, 'data')
+        $this->getJson($url.$this->leaf->id)->assertOk()->assertJsonCount(5, 'data')
             ->assertJsonPath('summary.units', 8)->assertJsonPath('summary.captures', 3)->assertJsonPath('summary.variants', 2)
-            ->assertJsonPath('data.0.counted_quantity', 8)->assertJsonPath('data.0.capture_count', 2)
-            ->assertJsonPath('data.1.counted_quantity', 0);
+            ->assertJsonPath('data.0.quantity', 0)->assertJsonPath('total', 5);
+        $captures = $this->getJson($url.$this->leaf->id)->json('data');
+        $this->assertSame([0, 88, 99, 3, 5], array_column($captures, 'quantity'));
+        $this->assertCount(5, array_unique(array_column($captures, 'id')));
         $this->getJson($url.$other->id)->assertOk()->assertJsonPath('summary.units', 13)->assertJsonCount(1, 'data');
         $this->getJson('/test/'.$inventory->id.'/sessions/'.$session->id.'/counts?view=rack')->assertUnprocessable();
         $this->getJson('/test/'.$this->inventory(2)->id.'/sessions/'.$session->id.'/counts?view=rack&location_id='.$other->id)->assertNotFound();
     }
 
-    public function test_rack_totals_cover_all_pages_not_only_the_first_twenty_variants(): void
+    public function test_rack_paginates_individual_captures_even_when_the_same_variant_is_repeated(): void
     {
         $inventory = $this->inventory();
         $session = $this->countingSession($inventory);
         foreach (range(1, 23) as $index) {
-            $variant = Variant::create(['product_id' => $this->variant->product_id, 'sku' => 'RACK-'.$index, 'stock' => 0]);
-            $this->recordCount($inventory, $session, 2, ['variant_id' => $variant->id]);
+            $this->recordCount($inventory, $session, 2);
         }
         $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts?view=rack&location_id='.$this->leaf->id;
         $this->getJson($url)->assertOk()->assertJsonCount(20, 'data')->assertJsonPath('last_page', 2)
-            ->assertJsonPath('summary.units', 46)->assertJsonPath('summary.variants', 23);
+            ->assertJsonPath('summary.units', 46)->assertJsonPath('summary.variants', 1)->assertJsonPath('total', 23);
         $this->getJson($url.'&page=2')->assertOk()->assertJsonCount(3, 'data')->assertJsonPath('summary.units', 46);
+    }
+
+    public function test_rack_headers_receive_lightweight_totals_without_loading_captures(): void
+    {
+        $inventory = $this->inventory();
+        $session = $this->countingSession($inventory);
+        $other = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Fila 2']);
+        $this->recordCount($inventory, $session, 25);
+        $this->recordCount($inventory, $session, 13);
+        $cancelled = $this->recordCount($inventory, $session, 99);
+        InventoryCount::findOrFail($cancelled)->update(['status' => 'cancelled']);
+        $this->recordCount($inventory, $session, 0, ['location_id' => $other->id]);
+        $this->recordCount($inventory, $this->countingSession($inventory), 100);
+        $url = '/test/'.$inventory->id.'/sessions/'.$session->id.'/counts?view=rack-summary';
+        $this->getJson($url)->assertOk()->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.location_id', $this->leaf->id)
+            ->assertJsonPath('data.0.units', 38)->assertJsonPath('data.0.captures', 2)->assertJsonPath('data.0.variants', 1)
+            ->assertJsonPath('data.1.units', 0)->assertJsonPath('data.1.captures', 1)
+            ->assertJsonMissingPath('data.0.variant')->assertJsonMissingPath('data.0.quantity');
+        $this->deleteJson('/test/'.$inventory->id.'/sessions/'.$session->id.'/counts/'.$cancelled)->assertUnprocessable();
+        $foreign = $this->inventory(2);
+        $this->getJson('/test/'.$foreign->id.'/sessions/'.$session->id.'/counts?view=rack-summary')->assertNotFound();
+        $emptySession = $this->countingSession($inventory);
+        $this->getJson('/test/'.$inventory->id.'/sessions/'.$emptySession->id.'/counts?view=rack-summary')
+            ->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_variant_lookup_reports_other_locations_across_sessions_of_the_same_inventory(): void
+    {
+        $inventory = $this->inventory();
+        $rack = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Estante A']);
+        $this->leaf->update(['parent_id' => $rack->id, 'name' => 'Fila 1']);
+        $current = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Estante C']);
+        $empty = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Estante sin unidades']);
+        $otherVariantLocation = Location::create(['store_id' => 1, 'warehouse_id' => $this->warehouse->id, 'name' => 'Otra talla']);
+        $session = $this->countingSession($inventory);
+        $this->recordCount($inventory, $session, 5);
+        $this->recordCount($inventory, $session, 7);
+        foreach (['cancelled', 'replaced'] as $status) {
+            $id = $this->recordCount($inventory, $session, 99);
+            InventoryCount::findOrFail($id)->update(['status' => $status]);
+        }
+        $session->update(['status' => 'closed']);
+        $activeSession = $this->countingSession($inventory);
+        $this->recordCount($inventory, $activeSession, 4);
+        $this->recordCount($inventory, $activeSession, 0, ['location_id' => $empty->id]);
+        $this->recordCount($inventory, $activeSession, 3, ['location_id' => $current->id]);
+        $differentVariant = Variant::create(['product_id' => $this->variant->product_id, 'sku' => 'OTHER-SIZE', 'stock' => 0, 'status' => 1]);
+        $this->recordCount($inventory, $activeSession, 20, ['variant_id' => $differentVariant->id, 'location_id' => $otherVariantLocation->id]);
+        $oldInventory = $this->inventory();
+        $this->recordCount($oldInventory, $this->countingSession($oldInventory), 100, ['location_id' => $empty->id]);
+        $url = '/test/'.$inventory->id.'/sessions/'.$activeSession->id.'/counts?variant_id='.$this->variant->id.'&location_id='.$current->id;
+        $this->getJson($url)->assertOk()->assertJsonCount(1, 'other_locations')
+            ->assertJsonPath('other_locations.0.location_id', $this->leaf->id)
+            ->assertJsonPath('other_locations.0.location_path', 'Estante A / Fila 1')
+            ->assertJsonPath('other_locations.0.quantity', 16)
+            ->assertJsonPath('other_locations.0.warehouse_id', $this->warehouse->id);
+        $this->getJson('/test/'.$inventory->id.'/sessions/'.$activeSession->id.'/counts?variant_id='.$differentVariant->id.'&location_id='.$otherVariantLocation->id)
+            ->assertOk()->assertJsonCount(0, 'other_locations');
+        $foreign = $this->inventory(2);
+        $this->getJson('/test/'.$foreign->id.'/sessions/'.$activeSession->id.'/counts?variant_id='.$this->variant->id.'&location_id='.$current->id)->assertNotFound();
     }
 
     public function test_options_include_empty_warehouses_and_respect_inventory_scope_and_store(): void

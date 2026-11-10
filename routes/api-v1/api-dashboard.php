@@ -298,6 +298,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::post('/{inventory_id}/sessions/{session_id}/counts', [InventoryCountDashboardController::class, 'store']);
         Route::get('/{inventory_id}/sessions/{session_id}/counts/{count_id}', [InventoryCountDashboardController::class, 'show']);
         Route::put('/{inventory_id}/sessions/{session_id}/counts/{count_id}', [InventoryCountDashboardController::class, 'update']);
+        Route::delete('/{inventory_id}/sessions/{session_id}/counts/{count_id}', [InventoryCountDashboardController::class, 'destroy']);
         Route::post('/{inventory_id}/adjustments/{adjustment_id}/{action}', [InventoryAdjustmentDashboardController::class, 'transition'])->whereIn('action', ['approve', 'reject', 'apply']);
 
         Route::get('/catalog', [InventoryManagementDashboardController::class, 'index']);
