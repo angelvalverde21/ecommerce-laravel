@@ -46,6 +46,7 @@ class PurchaseService
             'observations' => 'nullable|string',
             'purchase_start' => 'nullable|date',
             'purchase_end' => 'nullable|date',
+            'production_stage_id' => 'sometimes|nullable|integer',
         ]);
 
         return array_merge($validated, [
@@ -76,6 +77,7 @@ class PurchaseService
 
         //Obtenemos el Modelo que quiere un purchase
         $parentModel = $this->getParentModel($purchaseValidated);
+        $this->validateStage($store, $parentModel, $purchaseValidated, true);
 
         try {
 
@@ -112,6 +114,7 @@ class PurchaseService
         $validated = $this->purchaseValidate($store, $request);
 
         $parentModel = $this->getParentModel($validated);
+        $this->validateStage($store, $parentModel, $validated, false);
 
         try {
 
@@ -127,7 +130,7 @@ class PurchaseService
             $purchase->update($validated);
 
             // validar items
-            $purchaseItems = $this->purchaseItemsValidate($request); //purchaseItemsData lo usamos para validar y recalcular el dato del total
+            $purchaseItems = $this->purchaseItemsData($request);
 
             // eliminar items actuales
             $purchase->items()->delete();
@@ -162,9 +165,21 @@ class PurchaseService
     {
         return collect($this->purchaseItemsValidate($request))
             ->map(function ($item) {
-                $item['total'] = $item['quantity'] * $item['price'];
+                $item['subtotal'] = round($item['quantity'] * $item['price'], 2);
                 return $item;
             })
             ->toArray();
+    }
+
+    private function validateStage(Store $store, Model $parent, array $data, bool $creating): void
+    {
+        abort_unless((int) $parent->store_id === (int) $store->id, 404);
+        $isProduction = $parent instanceof \App\Models\Manufacture && $parent->type === 'production';
+        if ($isProduction && ($creating || array_key_exists('production_stage_id', $data)) && empty($data['production_stage_id'])) {
+            throw ValidationException::withMessages(['production_stage_id' => 'Selecciona la etapa de producción.']);
+        }
+        if (!empty($data['production_stage_id']) && (!$isProduction || !$parent->stages()->whereKey($data['production_stage_id'])->exists())) {
+            throw ValidationException::withMessages(['production_stage_id' => 'La etapa no pertenece a esta producción.']);
+        }
     }
 }

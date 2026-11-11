@@ -12,7 +12,7 @@ class ProductService
     public function index(Store $store, int $perPage = 20, string $sort = 'recent', ?Request $request = null)
     {
         $request ??= request();
-        $query = $store->products()->withStockTotal()->with('category');
+        $query = $store->products()->withStockTotal()->with(['category', 'image']);
 
         return $this->sortProducts($query->getQuery(), $request, $sort)
             ->paginate($perPage)

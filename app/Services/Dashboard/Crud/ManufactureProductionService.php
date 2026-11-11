@@ -31,13 +31,13 @@ class ManufactureProductionService
             'name' => 'required|string|max:255',
         ]);
 
-        $manufacture = $store->manufactures()->create(
+        $manufacture = DB::transaction(fn () => $store->manufactures()->create(
             [
                 'name' => $data['name'],
                 'user_id' => Auth::id(),
                 'type' => 'production',
             ]
-        );
+        ));
 
         return $manufacture;
     }

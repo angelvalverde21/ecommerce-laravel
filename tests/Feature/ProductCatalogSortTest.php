@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Api\Dashboard\ProductDashboardController;
+use App\Models\Product;
 use App\Models\Store;
 use App\Services\Dashboard\Product\ProductService;
 use Illuminate\Database\Schema\Blueprint;
@@ -33,6 +34,8 @@ class ProductCatalogSortTest extends TestCase
         });
         Schema::create('images', function (Blueprint $table) {
             $table->id(); $table->morphs('imageable');
+            $table->string('thumbnail'); $table->string('medium'); $table->string('large');
+            $table->timestamps();
         });
         Schema::create('variant_option_values', function (Blueprint $table) {
             $table->id(); $table->integer('variant_id'); $table->integer('option_value_id');
@@ -79,6 +82,21 @@ class ProductCatalogSortTest extends TestCase
     {
         $this->getJson('/test-catalog')->assertOk()->assertJsonPath('data.0.id', 3);
         $this->getJson('/test-catalog?sort=stock')->assertOk()->assertJsonPath('data.0.id', 2);
+    }
+
+    public function test_catalog_includes_product_thumbnail_without_searching(): void
+    {
+        $image = Product::findOrFail(3)->images()->create([
+            'thumbnail' => 'products/catalog-thumbnail.jpg',
+            'medium' => 'products/catalog-medium.jpg',
+            'large' => 'products/catalog-large.jpg',
+        ]);
+
+        $this->getJson('/test-catalog')->assertOk()
+            ->assertJsonPath('data.0.id', 3)
+            ->assertJsonPath('data.0.image.id', $image->id)
+            ->assertJsonPath('data.0.image.url_thumbnail', $image->url_thumbnail)
+            ->assertJsonPath('data.1.image', null);
     }
 
     public function test_invalid_sort_parameters_are_rejected(): void

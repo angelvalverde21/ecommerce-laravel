@@ -27,6 +27,9 @@ class ProductionProgressService
             ->where('created_at', '<=', $now)->orderByDesc('created_at')->orderByDesc('id')
             ->get(['id', 'name', 'created_at']);
         $ids = $productions->pluck('id');
+        $stages = Schema::hasTable('production_stages')
+            ? DB::table('production_stages')->whereIn('manufacture_id', $ids)->orderBy('position')->get()->groupBy('manufacture_id')
+            : collect();
         $plans = DB::table('manufacture_variant')->whereIn('manufacture_id', $ids)
             ->select('manufacture_id', 'variant_id')->selectRaw('SUM(quantity) AS planned')
             ->groupBy('manufacture_id', 'variant_id')->get()->groupBy('manufacture_id');
@@ -38,7 +41,7 @@ class ProductionProgressService
             ->selectRaw('MAX(created_at) AS last_activity_at')
             ->groupBy('kardexable_id', 'variant_id')->get()->groupBy('kardexable_id');
 
-        $rows = $productions->map(function ($production) use ($plans, $receipts) {
+        $rows = $productions->map(function ($production) use ($plans, $receipts, $stages) {
             $plan = $plans->get($production->id, collect());
             $received = $receipts->get($production->id, collect())->keyBy('variant_id');
             $plannedUnits = 0;
@@ -70,12 +73,25 @@ class ProductionProgressService
                 'progress_percent' => $this->percentage($completedUnits, $plannedUnits),
                 'status' => $status,
                 'needs_review' => $received->contains(fn ($row) => $row->received < 0),
+                'stages' => $stages->get($production->id, collect())->map(fn ($stage) => [
+                    'id' => $stage->id,
+                    'code' => $stage->code,
+                    'name' => $stage->name,
+                    'status' => $stage->status,
+                    'responsible' => $stage->responsible,
+                    'expected_end' => $stage->expected_end,
+                    'sample_quantity' => $stage->sample_quantity,
+                    'sample_review' => $stage->sample_review,
+                    'overdue' => $stage->expected_end && $stage->expected_end < now('America/Lima')->toDateString()
+                        && !in_array($stage->status, ['completed', 'not_applicable']),
+                ])->values()->all(),
                 'path' => 'manufactures/productions/'.$production->id,
             ];
         });
         $planned = (int) $rows->sum('planned_units');
         $completed = (int) $rows->sum('completed_units');
-        $visible = $rows->filter(fn ($row) => $row['status'] !== 'completed' || $row['last_activity_at'] >= $from->toDateTimeString())
+        $visible = $rows->filter(fn ($row) => $row['status'] !== 'completed' || $row['last_activity_at'] >= $from->toDateTimeString()
+            || collect($row['stages'])->contains(fn ($stage) => !in_array($stage['status'], ['completed', 'not_applicable'])))
             ->sortBy(fn ($row) => $row['status'] === 'completed' ? 1 : 0)->values();
 
         return [

@@ -14,6 +14,22 @@ class Manufacture extends Model
 
     protected $guarded = ['id', 'created_at'];
 
+    protected static function booted(): void
+    {
+        static::created(function (Manufacture $manufacture) {
+            if ($manufacture->type === 'production' && \Illuminate\Support\Facades\Schema::hasTable('production_stages')) {
+                foreach (ProductionStage::DEFINITIONS as $position => [$code, $name]) {
+                    $manufacture->stages()->create(compact('code', 'name', 'position'));
+                }
+            }
+        });
+    }
+
+    public function stages()
+    {
+        return $this->hasMany(ProductionStage::class)->orderBy('position');
+    }
+
     // public function products()
     // {
     //     Aqui especificamos la tabla intermedia

@@ -193,6 +193,9 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::post('/search/{search?}', [ManufactureProductionDashboardController::class, 'search']); //buscar
 
             Route::prefix('{production_id}')->group(function () {
+                Route::get('/stages', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'index']);
+                Route::put('/stages/{stage_id}', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'update']);
+                Route::put('/stages/{stage_id}/purchases/{purchase_id}', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'assignPurchase']);
 
                 // Route::get('/', [ManufactureProductionDashboardController::class, 'show']); //show o mostrar por id
                 Route::put('/', [ManufactureProductionDashboardController::class, 'update']); //actualizar
