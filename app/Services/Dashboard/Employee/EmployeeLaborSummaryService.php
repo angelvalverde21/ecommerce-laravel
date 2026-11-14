@@ -60,7 +60,7 @@ class EmployeeLaborSummaryService
         }
 
         return [
-            'employee' => $employee->only(['id', 'name', 'salary', 'type']),
+            'employee' => $employee->only(['id', 'name', 'salary', 'type', 'status', 'payroll_uses_attendance']),
             'as_of' => $today->toDateString(),
             'periods' => $periods,
         ];

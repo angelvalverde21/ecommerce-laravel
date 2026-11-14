@@ -38,7 +38,9 @@ class AreaDashboardService
             'sections' => $sections,
         ];
         if ($area === 'ceo') {
+            $report['employee_payroll'] = app(\App\Services\Dashboard\Employee\EmployeePayrollSummaryService::class)->forStore($store);
             $report['production_progress'] = app(ProductionProgressService::class)->forStore($store, $from, $now);
+            $report['delivery_overview'] = app(\App\Services\Delivery\DeliveryOverviewService::class)->forStore($store);
         }
 
         return $report;

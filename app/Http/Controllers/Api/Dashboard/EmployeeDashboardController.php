@@ -64,6 +64,17 @@ class EmployeeDashboardController extends Controller
         return responseOk($employee, 'Empleado desactivado. Se conservan sus asistencias, horarios y movimientos.');
     }
 
+    public function status(Store $store, int $employee_id, Request $request)
+    {
+        abort_unless($request->user()->hasAnyRole(['master', 'ceo', 'admin']), 403);
+        $values = $request->validate(['status' => ['required', 'boolean']]);
+        $employee = $store->employees()->findOrFail($employee_id);
+        $employee->update($values);
+
+        return responseOk(app(EmployeeAccountService::class)->present($employee),
+            $employee->status ? 'Empleado habilitado para los cálculos.' : 'Empleado excluido de los cálculos. Se conserva su historial.');
+    }
+
     public function store(Store $store, EmployeeRequest $request)
     {
         $service = app(EmployeeAccountService::class);

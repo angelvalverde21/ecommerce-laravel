@@ -14,22 +14,10 @@ class Manufacture extends Model
 
     protected $guarded = ['id', 'created_at'];
 
-    protected static function booted(): void
+    public function stageProgress()
     {
-        static::created(function (Manufacture $manufacture) {
-            if ($manufacture->type === 'production' && \Illuminate\Support\Facades\Schema::hasTable('production_stages')) {
-                foreach (ProductionStage::DEFINITIONS as $position => [$code, $name]) {
-                    $manufacture->stages()->create(compact('code', 'name', 'position'));
-                }
-            }
-        });
+        return $this->hasMany(ProductionStageProgress::class);
     }
-
-    public function stages()
-    {
-        return $this->hasMany(ProductionStage::class)->orderBy('position');
-    }
-
     // public function products()
     // {
     //     Aqui especificamos la tabla intermedia
@@ -187,6 +175,12 @@ class Manufacture extends Model
                     ), 0)
                 ");
             }, 'sum_kardexes');
+    }
+
+    public function scopeWithDeliveryTrackingCount(Builder $query): Builder
+    {
+        return $query->withCount(['purchases as tracked_purchases_count' => fn (Builder $purchases) =>
+            $purchases->whereColumn('purchases.store_id', 'manufactures.store_id')->whereHas('deliveryTracking')]);
     }
 
     public function purchases()

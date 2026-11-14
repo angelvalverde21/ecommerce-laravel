@@ -52,6 +52,7 @@ class EmployeeRequest extends FormRequest
                 ->ignore($employee?->user_id)],
             'biometric_code' => ['nullable', 'string', 'max:50', Rule::unique('employees')->where('store_id', $store->id)->ignore($id)],
             'status' => ['sometimes', 'boolean'],
+            'payroll_uses_attendance' => ['sometimes', 'boolean'],
             'roles' => [$creatingAccount ? 'required' : 'sometimes', 'array', 'min:1'],
             'roles.*' => ['string', 'distinct', Rule::exists('roles', 'name')->where('guard_name', 'api')],
             'salary' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],

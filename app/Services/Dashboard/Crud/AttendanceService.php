@@ -14,6 +14,28 @@ use Illuminate\Validation\ValidationException;
 
 class AttendanceService
 {
+    public function prepareManualAttendance(Employee $employee, array $values, ?Attendance $attendance = null): array
+    {
+        $values['work_type'] = $values['work_type'] ?? $attendance?->work_type ?? 'onsite';
+        $customHours = (bool) ($values['remote_hours_custom'] ?? false);
+        unset($values['remote_hours_custom']);
+        if ($values['work_type'] !== 'home_office') {
+            return $values;
+        }
+        $employee->loadMissing('schedules');
+        $schedule = $employee->schedules->firstWhere('day_of_week', CarbonImmutable::parse($values['date'])->dayOfWeekIso);
+        $start = $schedule?->start_time ?? $employee->work_time_start;
+        $end = $schedule?->end_time ?? $employee->work_time_end;
+        if ($schedule?->work_type === 'rest' || !$start || !$end || $this->minutes($start, $end) <= 0) {
+            throw ValidationException::withMessages(['work_type' => 'Configura un horario laboral válido para este día antes de registrar trabajo remoto.']);
+        }
+        if (!$customHours) {
+            $values['check_in'] = null;
+            $values['check_out'] = null;
+        }
+        return $values;
+    }
+
     public function upload(Store $store, Request $request): array
     {
         $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:10240']]);
@@ -109,7 +131,7 @@ class AttendanceService
             $key = $date->format('Y-m-d');
             $schedule = $schedules->get($date->dayOfWeekIso);
             $attendance = $records->get($key);
-            if (! $attendance && ! $schedule) {
+            if (! $attendance && (! $schedule || !$employee->status || $employee->payroll_uses_attendance === false)) {
                 continue;
             }
             $rows[] = $this->describe($employee, $attendance, $key);
@@ -125,30 +147,35 @@ class AttendanceService
         $schedule = $employee->schedules->firstWhere('day_of_week', CarbonImmutable::parse($day)->dayOfWeekIso);
         $start = $schedule?->start_time ?? $employee->work_time_start;
         $end = $schedule?->end_time ?? $employee->work_time_end;
-        $type = $attendance ? 'onsite' : ($schedule?->work_type ?? 'onsite');
-        $missing = ! $attendance && ! in_array($type, ['home_office', 'rest'], true);
-        $in = $attendance?->check_in;
-        $out = $attendance?->check_out;
+        $type = $attendance ? ($attendance->work_type ?? 'onsite') : ($schedule?->work_type ?? 'onsite');
+        $remote = $type === 'home_office';
+        $customHours = $remote && $attendance?->check_in && $attendance?->check_out;
+        $missing = ! $attendance && $employee->payroll_uses_attendance !== false && ! in_array($type, ['home_office', 'rest'], true);
+        $in = $remote && !$customHours ? null : $attendance?->check_in;
+        $out = $remote && !$customHours ? null : $attendance?->check_out;
         $minutes = $in && $out ? $this->minutes($in, $out) : 0;
-        if (! $attendance && $type === 'home_office' && $start && $end) {
+        if ($remote && !$customHours && $start && $end) {
             $minutes = $this->minutes($start, $end);
         }
         $computed = $minutes;
-        $allowExtra = $schedule?->allow_extra_hours ?? $employee->allow_extra_hours ?? true;
-        if ($attendance && ! $allowExtra && $in && $out && $end) {
-            $limit = CarbonImmutable::parse($end)->addMinutes($employee->tolerance_minutes ?? 15)->format('H:i:s');
-            $computed = $this->minutes($in, min($out, $limit));
-        }
-        $late = $in && $start
+        $late = !$remote && $in && $start
             ? CarbonImmutable::parse($start)->diffInMinutes(CarbonImmutable::parse($in), false) > ($employee->tolerance_minutes ?? 15)
             : false;
-        $break = $type === 'onsite' && $employee->type === 'fulltime' ? min(60, $computed) : 0;
-        $salaryDay = $employee->salary !== null ? round((float) $employee->salary / 30, 0) : null;
-        $salaryNet = $salaryDay === null ? null : round($salaryDay * max(0, $computed - $break) / 480, 2);
-        if (! $attendance && in_array($type, ['home_office', 'rest'], true)) {
+        $breakSkipped = (bool) ($attendance?->break_skipped ?? false);
+        $scheduledBreak = min(60, $computed);
+        $break = !$breakSkipped && in_array($type, ['onsite', 'home_office'], true) ? $scheduledBreak : 0;
+        $paid = max(0, $computed - $break);
+        $salaryDay = $employee->status && $employee->salary !== null ? round((float) $employee->salary / 30, 0) : null;
+        $salaryNet = $salaryDay === null ? null : round($salaryDay * $paid / 480, 2);
+        if ($remote && !$customHours) {
+            $salaryNet = $salaryDay === null ? null : round($salaryDay + ($breakSkipped ? $salaryDay * $scheduledBreak / 480 : 0), 2);
+        } elseif (! $attendance && $type === 'rest') {
             $salaryNet = $salaryDay;
         } elseif ($missing) {
             $salaryNet = $salaryDay === null ? null : -$salaryDay;
+        }
+        if ($employee->payroll_uses_attendance === false) {
+            $salaryNet = $salaryDay;
         }
 
         return [
@@ -157,26 +184,32 @@ class AttendanceService
             'employee_id' => $employee->id,
             'employee_name' => $employee->name,
             'employee_work_type' => $employee->type,
+            'calculation_excluded' => !$employee->status,
+            'payroll_uses_attendance' => $employee->payroll_uses_attendance ?? true,
             'date' => $day,
             'check_in' => $in,
             'check_out' => $out,
+            'remote_hours_custom' => (bool) $customHours,
+            'scheduled_start' => $start,
+            'scheduled_end' => $end,
             'comment' => $attendance?->comment,
             'minutes' => $minutes,
             'minutes_computed' => $computed,
             'break_minutes' => $break,
-            'paid_minutes' => max(0, $computed - $break),
+            'break_skipped' => $breakSkipped,
+            'paid_minutes' => $paid,
             'salary_day' => $salaryDay,
             'salary_neto' => $salaryNet,
             'salary_extra' => $salaryDay === null ? null : ($missing ? -$salaryDay : round($salaryNet - $salaryDay, 2)),
             'missing' => $missing,
             'is_late' => $late,
             'work_type' => $type,
-            'missing_text' => $attendance ? null : match ($type) {
+            'missing_text' => $remote ? 'REMOTO' : ($attendance ? null : match ($type) {
                 'home_office' => 'REMOTO',
                 'rest' => 'DESCANZO',
                 default => 'FALTO',
-            },
-            'incomplete' => $attendance && (! $in || ! $out),
+            }),
+            'incomplete' => !$remote && $attendance && (! $in || ! $out),
         ];
     }
 

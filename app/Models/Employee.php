@@ -21,6 +21,7 @@ class Employee extends Model
     protected $casts = [
         'salary' => 'decimal:2',
         'status' => 'boolean',
+        'payroll_uses_attendance' => 'boolean',
         'allow_extra_hours' => 'boolean',
         'tolerance_minutes' => 'integer',
     ];

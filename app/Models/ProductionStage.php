@@ -17,29 +17,7 @@ class ProductionStage extends Model
 
     protected $guarded = ['id', 'created_at'];
 
-    protected $casts = [
-        'expected_end' => 'date:Y-m-d',
-        'completed_at' => 'datetime',
-        'reviewed_at' => 'datetime',
-        'sample_photos' => 'array',
-        'sample_quantity' => 'integer',
-        'revision' => 'integer',
-    ];
-
-    public function manufacture()
-    {
-        return $this->belongsTo(Manufacture::class);
-    }
-
-    public function events()
-    {
-        return $this->hasMany(ProductionStageEvent::class)->orderByDesc('id');
-    }
-
-    public function reviewer()
-    {
-        return $this->belongsTo(User::class, 'reviewed_by');
-    }
+    protected $casts = ['show_in_stepper' => 'boolean', 'delivery_tracking_default' => 'boolean'];
 
     public function purchases()
     {

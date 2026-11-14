@@ -27,8 +27,18 @@ class ProductionProgressService
             ->where('created_at', '<=', $now)->orderByDesc('created_at')->orderByDesc('id')
             ->get(['id', 'name', 'created_at']);
         $ids = $productions->pluck('id');
-        $stages = Schema::hasTable('production_stages')
-            ? DB::table('production_stages')->whereIn('manufacture_id', $ids)->orderBy('position')->get()->groupBy('manufacture_id')
+        $purchaseCountsAvailable = Schema::hasColumns('purchases', ['production_stage_id', 'purchaseable_type', 'purchaseable_id', 'store_id']);
+        $purchaseCounts = $purchaseCountsAvailable
+            ? DB::table('purchases')->where('store_id', $store->id)
+                ->where('purchaseable_type', (new Manufacture)->getMorphClass())->whereIn('purchaseable_id', $ids)
+                ->select('purchaseable_id', 'production_stage_id')->selectRaw('COUNT(*) AS purchase_count')
+                ->groupBy('purchaseable_id', 'production_stage_id')->get()->groupBy('purchaseable_id')
+            : collect();
+        $definitions = Schema::hasColumn('production_stages', 'show_in_stepper')
+            ? DB::table('production_stages')->where('show_in_stepper', true)->orderBy('position')->get()
+            : collect();
+        $progress = Schema::hasTable('production_stage_progress')
+            ? DB::table('production_stage_progress')->whereIn('manufacture_id', $ids)->get()->groupBy('manufacture_id')
             : collect();
         $plans = DB::table('manufacture_variant')->whereIn('manufacture_id', $ids)
             ->select('manufacture_id', 'variant_id')->selectRaw('SUM(quantity) AS planned')
@@ -41,7 +51,20 @@ class ProductionProgressService
             ->selectRaw('MAX(created_at) AS last_activity_at')
             ->groupBy('kardexable_id', 'variant_id')->get()->groupBy('kardexable_id');
 
-        $rows = $productions->map(function ($production) use ($plans, $receipts, $stages) {
+        $rows = $productions->map(function ($production) use ($plans, $receipts, $definitions, $progress, $purchaseCounts, $purchaseCountsAvailable) {
+            $saved = $progress->get($production->id, collect())->keyBy('stage_id');
+            $counts = $purchaseCounts->get($production->id, collect())->keyBy('production_stage_id');
+            $stages = $definitions->map(function ($definition) use ($saved, $counts, $purchaseCountsAvailable) {
+                $stage = (object) array_merge([
+                    'status' => 'pending', 'responsible' => null, 'expected_end' => null,
+                    'sample_quantity' => null, 'sample_review' => 'pending',
+                ], (array) $saved->get($definition->id, (object) []), (array) $definition);
+                if ($purchaseCountsAvailable) {
+                    $stage->purchases_count = (int) ($counts->get($definition->id)?->purchase_count ?? 0);
+                    $stage->status = ProductionStageStateService::resolve($stage->status, $stage->purchases_count);
+                }
+                return $stage;
+            });
             $plan = $plans->get($production->id, collect());
             $received = $receipts->get($production->id, collect())->keyBy('variant_id');
             $plannedUnits = 0;
@@ -73,11 +96,14 @@ class ProductionProgressService
                 'progress_percent' => $this->percentage($completedUnits, $plannedUnits),
                 'status' => $status,
                 'needs_review' => $received->contains(fn ($row) => $row->received < 0),
-                'stages' => $stages->get($production->id, collect())->map(fn ($stage) => [
+                'stages' => $stages->map(fn ($stage) => [
                     'id' => $stage->id,
                     'code' => $stage->code,
+                    'slug' => $stage->slug,
+                    'show_in_stepper' => true,
                     'name' => $stage->name,
                     'status' => $stage->status,
+                    'purchases_count' => $stage->purchases_count ?? null,
                     'responsible' => $stage->responsible,
                     'expected_end' => $stage->expected_end,
                     'sample_quantity' => $stage->sample_quantity,

@@ -103,6 +103,9 @@ class IndependentEmployeeTest extends TestCase
         (require database_path('migrations/2026_11_07_020000_remove_duplicate_employee_identity_fields.php'))->up();
         (require database_path('migrations/2026_11_07_030000_keep_only_work_fields_on_employees.php'))->up();
         (require database_path('migrations/2026_11_07_040000_restore_employee_work_status.php'))->up();
+        (require database_path('migrations/2026_11_14_190000_add_work_type_to_attendances.php'))->up();
+        (require database_path('migrations/2026_11_14_200000_add_break_skipped_to_attendances.php'))->up();
+        (require database_path('migrations/2026_11_14_210000_add_payroll_uses_attendance_to_employees.php'))->up();
         $this->actingAs($user->fresh(), 'api');
     }
 
@@ -161,6 +164,130 @@ class IndependentEmployeeTest extends TestCase
         $this->postJson('/api/v1/sorelle/dashboard/employees/search', ['search' => 'New employee'])->assertOk()->assertJsonCount(1, 'data');
     }
 
+    public function test_manual_remote_attendance_uses_the_selected_day_schedule_without_punches_or_deductions(): void
+    {
+        Employee::findOrFail(3)->schedules()->create(['store_id' => 1, 'day_of_week' => 2, 'work_type' => 'onsite', 'start_time' => '09:00:00', 'end_time' => '18:00:00']);
+        $response = $this->postJson('/api/v1/sorelle/dashboard/attendances', [
+            'employee_id' => 3, 'date' => '2026-11-03', 'work_type' => 'home_office',
+            'check_in' => '12:00', 'check_out' => '13:00', 'comment' => 'Remoto autorizado',
+        ])->assertOk()->assertJsonPath('data.work_type', 'home_office')->assertJsonPath('data.missing_text', 'REMOTO')
+            ->assertJsonPath('data.check_in', null)->assertJsonPath('data.check_out', null)
+            ->assertJsonPath('data.paid_minutes', 480)->assertJsonPath('data.break_minutes', 60)->assertJsonPath('data.missing', false)->assertJsonPath('data.incomplete', false)->assertJsonPath('data.is_late', false);
+        $this->assertEquals(0, $response->json('data.salary_extra'));
+        $this->assertDatabaseHas('attendances', ['id' => $response->json('data.id'), 'work_type' => 'home_office', 'check_in' => null, 'check_out' => null]);
+        $this->assertSame('onsite', Employee::find(3)->schedules()->first()->work_type);
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-11-06 12:00', 'America/Lima'));
+        try {
+            $this->getJson('/api/v1/sorelle/dashboard/employees/3/labor-summary')->assertOk()->assertJsonPath('data.periods.0.remote_days', 1);
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+        $this->postJson('/api/v1/sorelle/dashboard/employees/3/attendances/search', ['start_date' => '2026-11-03', 'end_date' => '2026-11-03'])
+            ->assertOk()->assertJsonPath('data.0.work_type', 'home_office')->assertJsonPath('data.0.incomplete', false);
+        $id = $response->json('data.id');
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['work_type' => 'onsite', 'check_in' => '09:00', 'check_out' => '18:00'])
+            ->assertOk()->assertJsonPath('data.work_type', 'onsite')->assertJsonPath('data.check_in', '09:00:00')->assertJsonPath('data.paid_minutes', 480);
+    }
+
+    public function test_remote_custom_hours_are_paid_preserved_and_can_return_to_schedule(): void
+    {
+        $employee = Employee::findOrFail(3);
+        $employee->update(['salary' => 1650]);
+        $employee->schedules()->create(['store_id' => 1, 'day_of_week' => 2, 'work_type' => 'home_office', 'start_time' => '10:00:00', 'end_time' => '19:00:00']);
+        $input = ['employee_id' => 3, 'date' => '2026-11-03', 'work_type' => 'home_office', 'remote_hours_custom' => true];
+        $this->postJson('/api/v1/sorelle/dashboard/attendances', $input)->assertUnprocessable()->assertJsonValidationErrors(['check_in', 'check_out']);
+        $response = $this->postJson('/api/v1/sorelle/dashboard/attendances', [...$input, 'check_in' => '10:00', 'check_out' => '20:00'])
+            ->assertOk()->assertJsonPath('data.remote_hours_custom', true)->assertJsonPath('data.paid_minutes', 540)
+            ->assertJsonPath('data.check_out', '20:00:00')->assertJsonPath('data.work_type', 'home_office');
+        $this->assertEquals(6.88, $response->json('data.salary_extra'));
+        $id = $response->json('data.id');
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['comment' => 'Horas autorizadas'])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 540)->assertJsonPath('data.remote_hours_custom', true);
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['break_skipped' => true])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 600);
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['remote_hours_custom' => false, 'break_skipped' => false])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 480)->assertJsonPath('data.check_in', null)->assertJsonPath('data.check_out', null);
+    }
+
+    public function test_remote_requires_a_working_schedule_and_can_replace_existing_physical_punches(): void
+    {
+        $employee = Employee::findOrFail(3);
+        $employee->update(['work_time_start' => null, 'work_time_end' => null]);
+        $this->postJson('/api/v1/sorelle/dashboard/attendances', ['employee_id' => 3, 'date' => '2026-11-03', 'work_type' => 'home_office'])
+            ->assertUnprocessable()->assertJsonValidationErrors('work_type');
+        $employee->schedules()->create(['store_id' => 1, 'day_of_week' => 2, 'work_type' => 'rest', 'start_time' => '09:00:00', 'end_time' => '18:00:00']);
+        $this->postJson('/api/v1/sorelle/dashboard/attendances', ['employee_id' => 3, 'date' => '2026-11-03', 'work_type' => 'home_office'])
+            ->assertUnprocessable()->assertJsonValidationErrors('work_type');
+        $employee->schedules()->create(['store_id' => 1, 'day_of_week' => 1, 'work_type' => 'onsite', 'start_time' => '08:00:00', 'end_time' => '16:00:00']);
+        $id = $employee->attendances()->first()->id;
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['work_type' => 'home_office'])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 420)->assertJsonPath('data.check_in', null)->assertJsonPath('data.check_out', null);
+        $this->assertDatabaseMissing('attendances', ['employee_id' => 3, 'date' => '2026-11-03']);
+    }
+
+    public function test_every_shift_deducts_rest_unless_skipped_manually_and_actual_extra_time_still_counts(): void
+    {
+        $employee = Employee::findOrFail(3);
+        $employee->update(['type' => 'partime']);
+        $employee->schedules()->create(['store_id' => 1, 'day_of_week' => 4, 'work_type' => 'onsite', 'start_time' => '10:00:00', 'end_time' => '19:00:00', 'allow_extra_hours' => true]);
+        $response = $this->postJson('/api/v1/sorelle/dashboard/attendances', [
+            'employee_id' => 3, 'date' => '2026-11-05', 'check_in' => '10:00', 'check_out' => '19:00',
+        ])->assertOk()->assertJsonPath('data.minutes', 540)->assertJsonPath('data.paid_minutes', 480)
+            ->assertJsonPath('data.break_minutes', 60)->assertJsonPath('data.break_skipped', false);
+        $id = $response->json('data.id');
+        $this->assertEquals(0, $response->json('data.salary_extra'));
+        $withoutBreak = $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['break_skipped' => true])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 540)->assertJsonPath('data.break_minutes', 0)->assertJsonPath('data.break_skipped', true);
+        $this->assertEquals(6.25, $withoutBreak->json('data.salary_extra'));
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['comment' => 'El empleado avisó que no tomó descanso'])
+            ->assertOk()->assertJsonPath('data.break_skipped', true)->assertJsonPath('data.paid_minutes', 540);
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['break_skipped' => false])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 480);
+        $lateExit = $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['check_in' => '10:00', 'check_out' => '20:00'])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 540)->assertJsonPath('data.break_minutes', 60);
+        $this->assertEquals(6.25, $lateExit->json('data.salary_extra'));
+    }
+
+    public function test_remote_scheduled_and_manual_days_discount_rest_and_only_explicit_skipping_adds_the_hour(): void
+    {
+        $employee = Employee::findOrFail(3);
+        $employee->schedules()->create(['store_id' => 1, 'day_of_week' => 2, 'work_type' => 'home_office', 'start_time' => '10:00:00', 'end_time' => '19:00:00']);
+        $this->postJson('/api/v1/sorelle/dashboard/employees/3/attendances/search', ['start_date' => '2026-11-03', 'end_date' => '2026-11-03'])
+            ->assertOk()->assertJsonPath('data.0.paid_minutes', 480)->assertJsonPath('data.0.break_minutes', 60);
+        $response = $this->postJson('/api/v1/sorelle/dashboard/attendances', [
+            'employee_id' => 3, 'date' => '2026-11-03', 'work_type' => 'home_office', 'break_skipped' => true,
+        ])->assertOk()->assertJsonPath('data.paid_minutes', 540)->assertJsonPath('data.break_minutes', 0)
+            ->assertJsonPath('data.break_skipped', true)->assertJsonPath('data.check_in', null)->assertJsonPath('data.check_out', null);
+        $this->assertEquals(6.25, $response->json('data.salary_extra'));
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$response->json('data.id'), ['break_skipped' => false])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 480)->assertJsonPath('data.break_minutes', 60);
+    }
+
+    public function test_actual_worked_time_is_not_capped_by_legacy_overtime_settings(): void
+    {
+        $employee = Employee::findOrFail(3);
+        $employee->update(['salary' => 1650, 'tolerance_minutes' => 15]);
+        $employee->schedules()->create(['store_id' => 1, 'day_of_week' => 5, 'work_type' => 'onsite',
+            'start_time' => '10:00:00', 'end_time' => '19:00:00', 'allow_extra_hours' => false]);
+        $response = $this->postJson('/api/v1/sorelle/dashboard/attendances', [
+            'employee_id' => 3, 'date' => '2026-10-30', 'check_in' => '13:26', 'check_out' => '19:59',
+        ])->assertOk()->assertJsonPath('data.minutes', 393)->assertJsonPath('data.minutes_computed', 393)
+            ->assertJsonPath('data.paid_minutes', 333)->assertJsonPath('data.break_minutes', 60)->assertJsonPath('data.is_late', true);
+        $this->assertEquals(-16.84, $response->json('data.salary_extra'));
+        $id = $response->json('data.id');
+        $worked = $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['check_in' => '10:15', 'check_out' => '19:23'])
+            ->assertOk()->assertJsonPath('data.minutes', 548)->assertJsonPath('data.minutes_computed', 548)
+            ->assertJsonPath('data.paid_minutes', 488)->assertJsonPath('data.break_minutes', 60);
+        $this->assertEquals(0.92, $worked->json('data.salary_extra'));
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['check_in' => '10:00', 'check_out' => '19:59'])
+            ->assertOk()->assertJsonPath('data.minutes', 599)->assertJsonPath('data.paid_minutes', 539);
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['break_skipped' => true])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 599)->assertJsonPath('data.break_minutes', 0);
+        $employee->schedules()->first()->update(['allow_extra_hours' => true]);
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['break_skipped' => false])
+            ->assertOk()->assertJsonPath('data.paid_minutes', 539)->assertJsonPath('data.break_minutes', 60);
+    }
+
     public function test_attendance_without_weekly_schedule_is_visible_and_uses_employee_name(): void
     {
         Employee::find(3)->update(['date_entry' => '2026-11-03']);
@@ -202,6 +329,10 @@ class IndependentEmployeeTest extends TestCase
         $this->assertDatabaseHas('attendances', ['employee_id' => 3, 'date' => '2026-11-04', 'check_out' => null]);
         $service->upload(Store::find(1), $request);
         $this->assertDatabaseCount('attendances', 3);
+        $this->assertDatabaseHas('attendances', ['employee_id' => 3, 'date' => '2026-11-03', 'break_skipped' => false]);
+        DB::table('attendances')->where('employee_id', 3)->where('date', '2026-11-03')->update(['break_skipped' => true]);
+        $service->upload(Store::find(1), $request);
+        $this->assertDatabaseHas('attendances', ['employee_id' => 3, 'date' => '2026-11-03', 'break_skipped' => true]);
         $request = Request::create('/test', 'POST');
         $request->files->set('file', UploadedFile::fake()->createWithContent('unknown.csv', $csv."0;UNKNOWN;Person;05/11/2026 09:00\n"));
         try {
@@ -376,6 +507,59 @@ class IndependentEmployeeTest extends TestCase
         foreach (['phone', 'identity_id', 'document_number', 'roles'] as $field) {
             $this->assertArrayNotHasKey($field, $attributes);
         }
+    }
+
+    public function test_disabling_employee_excludes_pay_and_virtual_absences_without_deleting_history_or_blocking_login(): void
+    {
+        $employee = Employee::findOrFail(3);
+        $employee->schedules()->create(['store_id' => 1, 'day_of_week' => 1, 'work_type' => 'onsite', 'start_time' => '09:00:00', 'end_time' => '18:00:00']);
+        $this->patchJson('/api/v1/sorelle/dashboard/employees/3/status', ['status' => false])
+            ->assertOk()->assertJsonPath('data.status', false);
+        $this->assertDatabaseHas('users', ['id' => 1, 'status' => 1]);
+        $this->assertDatabaseHas('attendances', ['employee_id' => 3, 'date' => '2026-11-02']);
+        $this->getJson('/api/v1/sorelle/dashboard/attendances')->assertOk()->assertJsonCount(0, 'data');
+        $this->postJson('/api/v1/sorelle/dashboard/employees/3/attendances/search', ['start_date' => '2026-11-01', 'end_date' => '2026-11-10'])
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.calculation_excluded', true)
+            ->assertJsonPath('data.0.salary_extra', null)->assertJsonPath('data.0.salary_neto', null)
+            ->assertJsonPath('data.0.paid_minutes', 540);
+        $this->patchJson('/api/v1/sorelle/dashboard/employees/3/status', ['status' => true])
+            ->assertOk()->assertJsonPath('data.status', true);
+        $this->getJson('/api/v1/sorelle/dashboard/attendances')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.calculation_excluded', false);
+        $this->patchJson('/api/v1/sorelle/dashboard/employees/3/status', ['status' => 'invalid'])->assertUnprocessable();
+        $this->patchJson('/api/v1/other/dashboard/employees/3/status', ['status' => false])->assertForbidden();
+        $user = User::findOrFail(1);
+        $user->syncRoles(['sales']);
+        $this->actingAs($user->fresh(), 'api')->patchJson('/api/v1/sorelle/dashboard/employees/3/status', ['status' => false])->assertForbidden();
+        $this->assertTrue(Employee::findOrFail(3)->status);
+    }
+
+    public function test_active_employee_can_receive_full_pay_without_attendance_and_disabled_status_still_takes_priority(): void
+    {
+        $this->assertTrue(Employee::findOrFail(3)->payroll_uses_attendance);
+        $employee = Employee::findOrFail(3);
+        $employee->schedules()->create(['store_id' => 1, 'day_of_week' => 1, 'work_type' => 'onsite', 'start_time' => '09:00:00', 'end_time' => '18:00:00']);
+        $this->putJson('/api/v1/sorelle/dashboard/employees/3', ['name' => 'Original name', 'payroll_uses_attendance' => false])
+            ->assertOk()->assertJsonPath('data.payroll_uses_attendance', false)->assertJsonPath('data.status', true);
+        $this->assertDatabaseHas('users', ['id' => 1, 'status' => 1]);
+        $this->postJson('/api/v1/sorelle/dashboard/employees/3/attendances/search', ['start_date' => '2026-11-03', 'end_date' => '2026-11-10'])
+            ->assertOk()->assertJsonCount(0, 'data');
+        $this->postJson('/api/v1/sorelle/dashboard/employees/3/attendances/search', ['start_date' => '2026-11-02', 'end_date' => '2026-11-10'])
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.payroll_uses_attendance', false);
+        $row = app(AttendanceService::class)->describe($employee->fresh(), $employee->attendances()->first());
+        $this->assertEquals(50, $row['salary_neto']);
+        $this->assertEquals(0, $row['salary_extra']);
+        $this->getJson('/api/v1/sorelle/dashboard/employees/3/labor-summary')->assertOk()
+            ->assertJsonPath('data.employee.payroll_uses_attendance', false);
+        $this->patchJson('/api/v1/sorelle/dashboard/employees/3/status', ['status' => false])->assertOk();
+        $row = app(AttendanceService::class)->describe($employee->fresh(), $employee->attendances()->first());
+        $this->assertNull($row['salary_neto']);
+        $this->assertNull($row['salary_extra']);
+        $this->patchJson('/api/v1/sorelle/dashboard/employees/3/status', ['status' => true])->assertOk();
+        $this->putJson('/api/v1/sorelle/dashboard/employees/3', ['name' => 'Original name', 'payroll_uses_attendance' => true])
+            ->assertOk()->assertJsonPath('data.payroll_uses_attendance', true);
+        $this->postJson('/api/v1/sorelle/dashboard/employees/3/attendances/search', ['start_date' => '2026-11-03', 'end_date' => '2026-11-10'])
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.missing', true);
     }
 
     public function test_work_status_is_stored_on_employee_and_can_differ_from_account_access(): void

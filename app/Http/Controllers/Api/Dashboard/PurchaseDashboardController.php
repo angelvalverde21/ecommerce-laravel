@@ -93,16 +93,24 @@ class PurchaseDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($store, string $purchase_id)
+    public function destroy(Store $store, string $purchase_id)
     {
 
         try {
 
-            DB::transaction(function () use ($purchase_id) {
-                $purchase = Purchase::findOrFail($purchase_id);
+            DB::transaction(function () use ($store, $purchase_id) {
+                $purchase = $store->purchases()->findOrFail($purchase_id);
+                $parent = $purchase->purchaseable;
+                $stageId = $purchase->production_stage_id;
+                if ($parent instanceof \App\Models\Manufacture) {
+                    app(\App\Services\Dashboard\ProductionStageStateService::class)->synchronize($parent, [$stageId]);
+                }
 
                 $purchase->items()->delete();
                 $purchase->delete();
+                if ($parent instanceof \App\Models\Manufacture) {
+                    app(\App\Services\Dashboard\ProductionStageStateService::class)->synchronize($parent, [$stageId]);
+                }
             });
 
 

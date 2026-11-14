@@ -73,6 +73,10 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
  
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
     Route::get('/current', [StoreDashboardController::class, 'current']); //Listar
+    Route::post('/delivery-trackings', [\App\Http\Controllers\Api\Dashboard\DeliveryTrackingDashboardController::class, 'store']);
+    Route::get('/delivery-trackings/{tracking_id}', [\App\Http\Controllers\Api\Dashboard\DeliveryTrackingDashboardController::class, 'show']);
+    Route::get('/delivery-trackings/{tracking_id}/events', [\App\Http\Controllers\Api\Dashboard\DeliveryTrackingDashboardController::class, 'events']);
+    Route::put('/delivery-trackings/{tracking_id}', [\App\Http\Controllers\Api\Dashboard\DeliveryTrackingDashboardController::class, 'update']);
     Route::get('/panels/{area}', [AreaDashboardController::class, 'show']);
     Route::get('/migrations/shopify/orders', [ShopifyOrderMigrationController::class, 'show']);
 
@@ -194,6 +198,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
             Route::prefix('{production_id}')->group(function () {
                 Route::get('/stages', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'index']);
+                Route::post('/stages/classify-purchases', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'classifyPurchases']);
                 Route::put('/stages/{stage_id}', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'update']);
                 Route::put('/stages/{stage_id}/purchases/{purchase_id}', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'assignPurchase']);
 
@@ -463,6 +468,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
             Route::get('/', [EmployeeDashboardController::class, 'show']); //show o mostrar por id
             Route::get('/labor-summary', [EmployeeDashboardController::class, 'laborSummary']);
+            Route::patch('/status', [EmployeeDashboardController::class, 'status']);
             Route::get('/orders', [EmployeeDashboardController::class, 'orders']); //show o mostrar por id
             Route::post('/orders/search', [EmployeeDashboardController::class, 'ordersSearch']); //show o mostrar por id
             Route::put('/', [EmployeeDashboardController::class, 'update']); //actualizar

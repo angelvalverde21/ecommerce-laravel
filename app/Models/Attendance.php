@@ -11,6 +11,7 @@ class Attendance extends Model
     const TOLERANCE = 15;
 
     protected $guarded = ['id', 'created_at'];
+    protected $casts = ['break_skipped' => 'boolean'];
 
     public function employee()
     {

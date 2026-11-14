@@ -47,6 +47,10 @@ class PurchaseService
             'purchase_start' => 'nullable|date',
             'purchase_end' => 'nullable|date',
             'production_stage_id' => 'sometimes|nullable|integer',
+            'delivery' => 'sometimes|array',
+            'delivery.enabled' => 'required_with:delivery|boolean',
+            'delivery.expected_on' => 'required_if:delivery.enabled,true|nullable|date_format:Y-m-d',
+            'delivery.handed_over_on' => 'nullable|date_format:Y-m-d',
         ]);
 
         return array_merge($validated, [
@@ -78,11 +82,16 @@ class PurchaseService
         //Obtenemos el Modelo que quiere un purchase
         $parentModel = $this->getParentModel($purchaseValidated);
         $this->validateStage($store, $parentModel, $purchaseValidated, true);
+        $delivery = $purchaseValidated['delivery'] ?? [];
+        unset($purchaseValidated['delivery']);
 
         try {
 
             DB::beginTransaction();
 
+            if ($parentModel instanceof \App\Models\Manufacture) {
+                app(\App\Services\Dashboard\ProductionStageStateService::class)->synchronize($parentModel, [$purchaseValidated['production_stage_id'] ?? null]);
+            }
             $purchase = $parentModel->purchases()->create($purchaseValidated);
 
             //Se recalcula el total porsiacaso
@@ -92,13 +101,23 @@ class PurchaseService
             //Creamos los items del purchase
             $purchase->items()->createMany($purchaseItems);
 
+            if ($delivery['enabled'] ?? false) {
+                app(\App\Services\Delivery\DeliveryTrackingService::class)->create($purchase, $delivery, Auth::guard('api')->user());
+            }
+
+            if ($parentModel instanceof \App\Models\Manufacture) {
+                app(\App\Services\Dashboard\ProductionStageStateService::class)->synchronize($parentModel, [$purchase->production_stage_id]);
+            }
+
             DB::commit();
 
-            return $purchase->load(['supplier.user', 'items.unit']);
+            return $purchase->load(['supplier.user', 'items.unit', 'deliveryTracking']);
             
         } catch (\Throwable $th) {
 
             DB::rollBack();
+
+            if ($th instanceof ValidationException) { throw $th; }
 
             Log::error($th->getMessage(), [
                 'file' => $th->getFile(),
@@ -112,6 +131,7 @@ class PurchaseService
     public function update(Store $store, Request $request, $purchase_id)
     {
         $validated = $this->purchaseValidate($store, $request);
+        unset($validated['delivery']); // Delivery changes use their audited endpoint.
 
         $parentModel = $this->getParentModel($validated);
         $this->validateStage($store, $parentModel, $validated, false);
@@ -122,6 +142,10 @@ class PurchaseService
 
             //Obteniendo el modelo padre
             $purchase = $parentModel->purchases()->findOrFail($purchase_id);
+            $stageIds = [$purchase->production_stage_id, $validated['production_stage_id'] ?? $purchase->production_stage_id];
+            if ($parentModel instanceof \App\Models\Manufacture) {
+                app(\App\Services\Dashboard\ProductionStageStateService::class)->synchronize($parentModel, $stageIds);
+            }
 
             //Actualizando con los datos recibidos
 
@@ -138,9 +162,12 @@ class PurchaseService
             // crear items nuevos
             $purchase->items()->createMany($purchaseItems);
 
+            if ($parentModel instanceof \App\Models\Manufacture) {
+                app(\App\Services\Dashboard\ProductionStageStateService::class)->synchronize($parentModel, $stageIds);
+            }
             DB::commit();
 
-            return $purchase->load(['supplier.user', 'items.unit']);
+            return $purchase->load(['supplier.user', 'items.unit', 'deliveryTracking']);
             
         } catch (\Throwable $th) {
 
@@ -157,7 +184,7 @@ class PurchaseService
 
     public function show($store, $purchase_id)
     {
-        $purchase = $store->purchases()->with(['supplier.user', 'items.unit', 'payments.images'])->findOrFail($purchase_id);
+        $purchase = $store->purchases()->with(['supplier.user', 'items.unit', 'payments.images', 'deliveryTracking'])->findOrFail($purchase_id);
         return $purchase;
     }
 
@@ -178,8 +205,8 @@ class PurchaseService
         if ($isProduction && ($creating || array_key_exists('production_stage_id', $data)) && empty($data['production_stage_id'])) {
             throw ValidationException::withMessages(['production_stage_id' => 'Selecciona la etapa de producción.']);
         }
-        if (!empty($data['production_stage_id']) && (!$isProduction || !$parent->stages()->whereKey($data['production_stage_id'])->exists())) {
-            throw ValidationException::withMessages(['production_stage_id' => 'La etapa no pertenece a esta producción.']);
+        if (!empty($data['production_stage_id']) && (!$isProduction || !\App\Models\ProductionStage::whereKey($data['production_stage_id'])->exists())) {
+            throw ValidationException::withMessages(['production_stage_id' => 'Selecciona una sección válida del catálogo de producción.']);
         }
     }
 }

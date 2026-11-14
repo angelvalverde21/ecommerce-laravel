@@ -42,6 +42,7 @@ class ManufactureService
     {
         return $store->manufactures()->with('payments')
             ->withFinancialSummary()
+            ->withDeliveryTrackingCount()
             ->withVariantsAndKardexes()
             ->findOrFail($manufacture_id);
     }

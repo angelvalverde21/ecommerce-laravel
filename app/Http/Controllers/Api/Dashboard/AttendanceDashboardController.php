@@ -20,7 +20,7 @@ class AttendanceDashboardController extends Controller
         ]);
         $query = $store->attendances()->with('employee.schedules')
             ->where(function ($query) use ($store) {
-                $query->whereNull('employee_id')->orWhereHas('employee', fn ($query) => $query->where('store_id', $store->id));
+                $query->whereNull('employee_id')->orWhereHas('employee', fn ($query) => $query->where('store_id', $store->id)->where('status', true));
             });
         if (! empty($validated['search'])) {
             $query->whereHas('employee', fn ($query) => $query->search($validated['search']));
@@ -59,6 +59,7 @@ class AttendanceDashboardController extends Controller
     {
         $validated = $request->validate($this->rules($store));
         $employee = $store->employees()->findOrFail($validated['employee_id']);
+        $validated = $service->prepareManualAttendance($employee, $validated);
         $attendance = $store->attendances()->create($validated);
 
         return responseOk($service->describe($employee, $attendance), 'Asistencia registrada correctamente.');
@@ -88,8 +89,15 @@ class AttendanceDashboardController extends Controller
         $request->merge([
             'employee_id' => $input['employee_id'] ?? $attendance->employee_id,
             'date' => $input['date'] ?? $attendance->date,
+            'work_type' => $input['work_type'] ?? $attendance->work_type ?? 'onsite',
+            'remote_hours_custom' => $input['remote_hours_custom'] ?? ($attendance->work_type === 'home_office' && $attendance->check_in && $attendance->check_out),
         ]);
+        if ($request->input('work_type') === 'home_office' && $request->boolean('remote_hours_custom')) {
+            $request->mergeIfMissing(['check_in' => $attendance->check_in, 'check_out' => $attendance->check_out]);
+        }
         $validated = $request->validate($this->rules($store, $attendance->id));
+        $employee = $store->employees()->findOrFail($validated['employee_id']);
+        $validated = $service->prepareManualAttendance($employee, $validated, $attendance);
         $attendance->update($validated);
         $employee = $store->employees()->findOrFail($attendance->employee_id);
 
@@ -107,8 +115,11 @@ class AttendanceDashboardController extends Controller
         return [
             'employee_id' => ['required', 'integer', Rule::exists('employees', 'id')->where('store_id', $store->id)],
             'date' => ['required', 'date_format:Y-m-d', Rule::unique('attendances')->where('store_id', $store->id)->where('employee_id', request('employee_id'))->ignore($id)],
-            'check_in' => ['nullable', 'required_with:check_out', 'date_format:H:i:s'],
-            'check_out' => ['nullable', 'date_format:H:i:s', 'after:check_in'],
+            'work_type' => ['sometimes', 'required', Rule::in(['onsite', 'home_office'])],
+            'break_skipped' => ['sometimes', 'boolean'],
+            'remote_hours_custom' => ['sometimes', 'boolean'],
+            'check_in' => [Rule::excludeIf(request('work_type') === 'home_office' && !request()->boolean('remote_hours_custom')), Rule::requiredIf(request('work_type') === 'home_office' && request()->boolean('remote_hours_custom')), 'nullable', 'required_with:check_out', 'date_format:H:i:s'],
+            'check_out' => [Rule::excludeIf(request('work_type') === 'home_office' && !request()->boolean('remote_hours_custom')), Rule::requiredIf(request('work_type') === 'home_office' && request()->boolean('remote_hours_custom')), 'nullable', 'date_format:H:i:s', 'after:check_in'],
             'comment' => ['nullable', 'string', 'max:250'],
         ];
     }

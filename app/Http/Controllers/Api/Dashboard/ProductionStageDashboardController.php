@@ -13,6 +13,16 @@ use Illuminate\Validation\ValidationException;
 
 class ProductionStageDashboardController extends Controller
 {
+    public function classifyPurchases(Store $store, int $production_id, \App\Services\Dashboard\ProductionPurchaseClassifier $classifier)
+    {
+        $production = $this->production($store, $production_id);
+        $result = $classifier->classify($production);
+        return responseOk([
+            'assigned' => $result['assigned'], 'remaining' => $result['remaining'],
+            'purchases' => $production->purchases()->with(['supplier.user', 'items.unit', 'payments.images', 'deliveryTracking'])->get(),
+        ]);
+    }
+
     private function production(Store $store, int $productionId)
     {
         $user = Auth::user();
@@ -22,16 +32,17 @@ class ProductionStageDashboardController extends Controller
 
     public function index(Store $store, int $production_id)
     {
-        return responseOk($this->production($store, $production_id)->stages()
-            ->with(['reviewer:id,name', 'events' => fn ($query) => $query->limit(100), 'events.user:id,name'])->get());
+        return responseOk(app(\App\Services\Dashboard\ProductionStageService::class)->forProduction($this->production($store, $production_id)));
     }
 
-    public function update(Store $store, Request $request, int $production_id, int $stage_id)
+    public function update(Store $store, Request $request, int $production_id, string $stage_id)
     {
         $production = $this->production($store, $production_id);
+        $definition = $this->section($stage_id);
+        abort_unless($definition->show_in_stepper, 422, 'Otros gastos no tiene estado de avance.');
         $data = $request->validate([
             'revision' => 'required|integer|min:0',
-            'status' => ['required', Rule::in(['pending', 'in_progress', 'completed', 'not_applicable'])],
+            'status' => ['required', Rule::in(['pending', 'in_progress', 'completed'])],
             'responsible' => 'nullable|string|max:255',
             'expected_end' => 'nullable|date_format:Y-m-d',
             'notes' => 'nullable|string|max:5000',
@@ -44,8 +55,17 @@ class ProductionStageDashboardController extends Controller
             'review_notes' => 'nullable|string|max:5000',
         ]);
 
-        $stage = DB::transaction(function () use ($production, $stage_id, $data) {
-            $stage = $production->stages()->lockForUpdate()->findOrFail($stage_id);
+        $stage = DB::transaction(function () use ($production, $definition, $data) {
+            $production->newQuery()->whereKey($production->id)->lockForUpdate()->firstOrFail();
+            $purchaseCount = $production->purchases()->where('production_stage_id', $definition->id)->count();
+            if ($data['status'] === 'completed' && !$purchaseCount) {
+                throw ValidationException::withMessages(['status' => 'Registra al menos una compra en esta etapa antes de completarla.']);
+            }
+            if ($data['status'] !== 'completed') {
+                $data['status'] = \App\Services\Dashboard\ProductionStageStateService::resolve(null, $purchaseCount);
+            }
+            $stage = $production->stageProgress()->firstOrCreate(['stage_id' => $definition->id]);
+            $stage->refresh()->setRelation('stage', $definition);
             if ($stage->revision !== $data['revision']) {
                 throw ValidationException::withMessages(['revision' => 'Otra persona actualizó esta etapa. Recarga para revisar los cambios.']);
             }
@@ -55,9 +75,6 @@ class ProductionStageDashboardController extends Controller
             if ($stage->expected_end && array_key_exists('expected_end', $data)
                 && $stage->expected_end->format('Y-m-d') !== $data['expected_end'] && empty(trim($dateReason ?? ''))) {
                 throw ValidationException::withMessages(['date_change_reason' => 'Indica el motivo del cambio de fecha.']);
-            }
-            if ($data['status'] === 'not_applicable' && empty(trim($data['notes'] ?? ''))) {
-                throw ValidationException::withMessages(['notes' => 'Indica por qué no aplica esta etapa.']);
             }
             if ($stage->code !== 'samples') {
                 foreach (['sample_quantity', 'sample_details', 'sample_photos', 'sample_review', 'review_notes'] as $field) {
@@ -100,16 +117,30 @@ class ProductionStageDashboardController extends Controller
             return $stage;
         });
 
-        return responseOk($stage->load(['reviewer:id,name', 'events.user:id,name']));
+        return responseOk(app(\App\Services\Dashboard\ProductionStageService::class)->present($definition, $stage->load(['reviewer:id,name', 'events.user:id,name']), $production->id));
     }
 
-    public function assignPurchase(Store $store, Request $request, int $production_id, int $stage_id, int $purchase_id)
+    public function assignPurchase(Store $store, Request $request, int $production_id, string $stage_id, int $purchase_id)
     {
         $production = $this->production($store, $production_id);
-        $stage = $production->stages()->findOrFail($stage_id);
-        $purchase = $production->purchases()->findOrFail($purchase_id);
-        $purchase->update(['production_stage_id' => $stage->id]);
+        $stage = $this->section($stage_id);
+        $purchase = DB::transaction(function () use ($production, $stage, $purchase_id) {
+            $purchase = $production->purchases()->findOrFail($purchase_id);
+            $stageIds = [$purchase->production_stage_id, $stage->id];
+            $state = app(\App\Services\Dashboard\ProductionStageStateService::class);
+            $state->synchronize($production, $stageIds);
+            $purchase->update(['production_stage_id' => $stage->id]);
+            $state->synchronize($production, $stageIds);
+            return $purchase;
+        });
 
-        return responseOk($purchase->load(['supplier.user', 'items.unit']));
+        return responseOk($purchase->load(['supplier.user', 'items.unit', 'payments.images', 'deliveryTracking']));
+    }
+
+    private function section(string $identifier): ProductionStage
+    {
+        return ctype_digit($identifier)
+            ? ProductionStage::findOrFail((int) $identifier)
+            : ProductionStage::where('slug', $identifier)->firstOrFail();
     }
 }
