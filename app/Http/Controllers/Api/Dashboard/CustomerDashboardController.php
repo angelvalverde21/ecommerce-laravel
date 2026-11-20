@@ -3,203 +3,92 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\FlatUserResource;
-use App\Models\Customer;
-use App\Models\Store;
-use App\Models\User;
-use App\Services\Dashboard\UserRelatedService;
+use App\Models\{Customer, Store, User};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CustomerDashboardController extends Controller
 {
+    private function customers(Store $store)
+    {
+        return Customer::query()->whereHas('user.stores', fn ($query) => $query->where('stores.id', $store->id));
+    }
+
+    // Customer URLs retain the existing user ID contract.
+    private function customerUser(Store $store, int $userId): User
+    {
+        return $this->customers($store)->where('user_id', $userId)->with('user')->firstOrFail()->user;
+    }
 
     public function index(Store $store)
     {
-        try {
-            
-            $customers = Customer::with('user') //entity_id=1 quiere decir para los usuarios registrados con dni
-                ->whereHas('user', function ($q) use ($store) {
-                    $q->whereHas('stores', function ($sq) use ($store) {
-                        $sq->where('stores.id', $store->id);
-                    });
-                })
-                ->get();
-
-            return responseOk($customers, 'Datos de clientes obtenidos correctamente');
-            
-        } catch (\Throwable $th) {
-            Log::error($th);
-            return responseError('Error al obtener los datos de clientes');
-        }
+        return responseOk($this->customers($store)->with('user')->get(), 'Clientes obtenidos correctamente');
     }
 
-    public function search(Store $store, $search)
+    public function search(Store $store, string $search = '')
     {
-
-        try {
-
-            //Esto quiere decir que si search viene vacio o con espacios en blanco, se llama al index, en caso contrario prosigo y llamo al search
-
-            return respondePaginateOk(trim($search) ? $this->service->search($store, $search, 100) : $this->index($store), $this->name . ' obtenidos correctamente (search)');
-        
-        } catch (\Throwable $th) {
-
-            Log::error($th);
-            
-            return responseError('Error al buscar ' . $this->name);
-
-        }
+        $term = trim($search);
+        $customers = $this->customers($store)->with('user')
+            ->when($term !== '', fn ($query) => $query->whereHas('user', fn ($user) => $user
+                ->where(fn ($fields) => $fields->where('name', 'like', "%{$term}%")
+                    ->orWhere('email', 'like', "%{$term}%")->orWhere('phone', 'like', "%{$term}%")
+                    ->orWhere('document_number', 'like', "%{$term}%"))))
+            ->get();
+        return responseOk($customers, 'Clientes encontrados');
     }
 
-    public function blocked()
+    public function blocked(Store $store)
     {
-        try {
-            $customers = Customer::with('user') //entity_id=1 quiere decir para los usuarios registrados con dni
-                ->where('status', 0) //solo bloqueados
-                ->get();
-
-            return responseOk($customers, "Clientes bloqueados obtenidos correctamente");
-        } catch (\Throwable $th) {
-            Log::info($th);
-            return responseError("Ha ocurrido un error interno al obtener los clientes bloqueados");
-        }
+        return responseOk($this->customers($store)->whereHas('user', fn ($query) => $query->where('status', 0))
+            ->with('user')->get(), 'Clientes bloqueados');
     }
 
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Store $store, Request $request)
     {
-        //
-
-        try {
-
-            // VALIDACIÓN
-            $validated = $request->validate([
-                'name'            => 'required|string|max:255',
-                'email'           => 'required|email|unique:users,email',
-                'phone'           => 'nullable|string|max:20',
-                'document_number' => 'nullable|string|max:20',
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'phone' => 'nullable|string|max:20',
+            'document_number' => 'nullable|string|max:20',
+        ]);
+        $customer = DB::transaction(function () use ($data, $store) {
+            $user = User::create([
+                'name' => $data['name'], 'email' => $data['email'],
+                'phone' => $data['phone'] ?? null, 'document_number' => $data['document_number'] ?? null,
+                'password' => bcrypt(Str::random(48)),
             ]);
-
-            DB::beginTransaction();
-
-            // 1. CREAR USUARIO
-            $user = $store->users()->create([
-                'name'            => $validated['name'],
-                'email'           => $validated['email'],
-                'phone'           => $validated['phone'],
-                'document_number' => $validated['document_number'],
-                'identity_id' => $validated['identity_id'],
-                'password'        => bcrypt($validated['document_number']),
-            ]);
-
-            $customer = $user->customer()->create();
-
-            DB::commit();
-
-            return responseOk($customer, "Customer creado correctamente", 201);
-        } catch (\Throwable $th) {
-
-            Log::info($th);
-
-            DB::rollback();
-
-            return responseError("Error al crear el customer.... ");
-        }
+            $user->stores()->attach($store->id);
+            return $user->customer()->create()->load('user');
+        });
+        return responseOk($customer, 'Cliente creado correctamente', 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Store $store, $customer_id)
+    public function show(Store $store, int $customer_id)
     {
-        try {
-            // Obtener usuario con employee y roles
-            $user = User::with(['roles'])->findOrFail($customer_id);
-
-            // --- ELIMINAR RELACIÓN ORIGINAL ---
-            $rolesOnlyNames = $user->roles->pluck('name');
-
-            unset($user->roles);             // quita la relación de Eloquent
-            $user->setRelation('roles', $rolesOnlyNames); // asigna array limpio
-
-            return responseOk($user, "Customer obtenido correctamente");
-        } catch (\Throwable $th) {
-            return responseError("No se pudo obtener el Customer solicitado");
-        }
+        $user = $this->customerUser($store, $customer_id)->load('roles');
+        $roles = $user->roles->pluck('name');
+        $user->unsetRelation('roles')->setRelation('roles', $roles);
+        return responseOk($user, 'Cliente obtenido correctamente');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Store $store)
+    public function update(Request $request, Store $store, int $customer_id)
     {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Store $store, $customer_id)
-    {
-        try {
-
-            $user = User::findOrFail($customer_id);
-
-            // ⭐ Validación flexible (parcial o completa)
-            $validated = $request->validate([
-                'name'            => 'sometimes|required|string|max:255',
-                'email'           => "sometimes|required|email|unique:users,email,$customer_id",
-                'phone'           => 'sometimes|nullable|string|max:20',
-                'document_number' => 'sometimes|nullable|string|max:20',
-                'roles'           => 'sometimes|required|array|min:1',
-                'roles.*'         => 'string|exists:roles,name',
-                'status'          => 'sometimes|required|in:0,1',
-            ]);
-
-            DB::beginTransaction();
-
-            // 1. Actualizar USER (solo campos presentes)
-            $user->update($validated);
-
-            // 2. Sincronizar roles solo si llegan
-            if ($request->has('roles')) {
-                $user->syncRoles($validated['roles']);
-            }
-
-            DB::commit();
-
-            return responseOk(
-                $user->load('roles'),
-                "Cliente actualizado correctamente",
-                200
-            );
-        } catch (\Throwable $th) {
-
-            DB::rollback();
-            Log::info($th);
-
-            return responseError("Error al actualizar el cliente...");
-        }
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Store $store)
-    {
-        //
+        $user = $this->customerUser($store, $customer_id);
+        $data = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => 'sometimes|nullable|string|max:20',
+            'document_number' => 'sometimes|nullable|string|max:20',
+            'roles' => 'sometimes|required|array|min:1',
+            'roles.*' => 'string|exists:roles,name',
+            'status' => 'sometimes|required|in:0,1',
+        ]);
+        DB::transaction(function () use ($user, $data) {
+            $user->update(collect($data)->except('roles')->all());
+            if (array_key_exists('roles', $data)) $user->syncRoles($data['roles']);
+        });
+        return responseOk($user->fresh()->load('roles'), 'Cliente actualizado correctamente');
     }
 }

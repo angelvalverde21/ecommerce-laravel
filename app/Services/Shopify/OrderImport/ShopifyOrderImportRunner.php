@@ -287,7 +287,7 @@ class ShopifyOrderImportRunner
         $unmatched = 0;
         foreach ($items as $item) {
             $sku = $item['sku'] ?? $item['variant']['sku'] ?? null;
-            $variantId = $this->matchVariant($sku, $storeId);
+            $variantId = $this->matchVariant($item['variant']['id'] ?? null, $storeId);
             if (! $variantId) {
                 $unmatched++;
             }
@@ -321,15 +321,15 @@ class ShopifyOrderImportRunner
         return [$snapshots, $normalized, $unmatched];
     }
 
-    private function matchVariant(?string $sku, int $storeId): ?int
+    private function matchVariant(?string $shopifyId, int $storeId): ?int
     {
-        if (! $sku) {
+        if (!$shopifyId || !preg_match('~^(?:gid://shopify/ProductVariant/)?([1-9][0-9]*)$~', $shopifyId, $parts)) {
             return null;
         }
         $matches = DB::table('variants')
             ->join('products', 'products.id', '=', 'variants.product_id')
             ->where('products.store_id', $storeId)
-            ->where('variants.sku', $sku)
+            ->whereIn('variants.shopify_variant_id', ['gid://shopify/ProductVariant/'.$parts[1], $parts[1]])
             ->limit(2)->get(['variants.id']);
 
         return $matches->count() === 1 ? (int) $matches->first()->id : null;

@@ -82,16 +82,17 @@ class ShopifyOrderImportTest extends TestCase
             $table->timestamps();
         });
         (require database_path('migrations/2026_11_06_150000_prepare_shopify_order_import.php'))->up();
+        (require database_path('migrations/2026_11_16_100000_add_shopify_variant_id_to_variants.php'))->up();
         DB::table('stores')->insert([
             ['id' => 1, 'name' => 'Sorelle', 'slug' => 'sorelle'],
             ['id' => 2, 'name' => 'Other', 'slug' => 'other'],
         ]);
         DB::table('products')->insert([['id' => 1, 'store_id' => 1], ['id' => 2, 'store_id' => 2]]);
         DB::table('variants')->insert([
-            ['id' => 1, 'product_id' => 1, 'sku' => 'MATCH'],
-            ['id' => 2, 'product_id' => 2, 'sku' => 'FOREIGN'],
-            ['id' => 3, 'product_id' => 1, 'sku' => 'AMBIGUOUS'],
-            ['id' => 4, 'product_id' => 1, 'sku' => 'AMBIGUOUS'],
+            ['id' => 1, 'product_id' => 1, 'sku' => 'MATCH', 'shopify_variant_id' => 'gid://shopify/ProductVariant/100'],
+            ['id' => 2, 'product_id' => 2, 'sku' => 'FOREIGN', 'shopify_variant_id' => 'gid://shopify/ProductVariant/200'],
+            ['id' => 3, 'product_id' => 1, 'sku' => 'AMBIGUOUS', 'shopify_variant_id' => 'gid://shopify/ProductVariant/300'],
+            ['id' => 4, 'product_id' => 1, 'sku' => 'AMBIGUOUS', 'shopify_variant_id' => '300'],
         ]);
     }
 
@@ -145,7 +146,7 @@ class ShopifyOrderImportTest extends TestCase
             'id' => 'gid://shopify/LineItem/'.$id,
             'name' => 'Historical product', 'sku' => $sku, 'quantity' => 1,
             'currentQuantity' => 1,
-            'variant' => ['id' => 'gid://shopify/ProductVariant/100', 'sku' => $sku],
+            'variant' => ['id' => 'gid://shopify/ProductVariant/'.match ($sku) { 'FOREIGN' => '200', 'AMBIGUOUS' => '300', default => '100' }, 'sku' => $sku],
             'discountedUnitPriceSet' => $this->money('10.00'),
             'discountedTotalSet' => $this->money('10.00'),
         ];
@@ -190,6 +191,44 @@ class ShopifyOrderImportTest extends TestCase
         $this->assertFalse($plan['schema_ready']);
         $this->assertContains('order_items', $plan['missing_tables']);
         $this->artisan('shopify:orders-import', ['store' => 'sorelle', '--execute' => true])->assertFailed();
+        Http::assertNothingSent();
+    }
+
+    public function test_items_match_only_shopify_variant_ids_even_when_skus_change_or_are_missing(): void
+    {
+        $records = [$this->order()];
+        for ($id = 1; $id <= 8; $id++) $records[] = $this->item($id);
+        $records[1]['sku'] = 'DIFFERENT-SKU';
+        $records[1]['variant']['sku'] = 'DIFFERENT-SKU';
+        $records[2]['sku'] = null;
+        $records[2]['variant']['sku'] = null;
+        $records[3]['variant']['id'] = '100';
+        $records[4]['variant']['id'] = 'gid://shopify/ProductVariant/999';
+        $records[5]['variant'] = null;
+        $records[6]['variant']['id'] = 'gid://shopify/Product/100';
+        $records[7]['variant']['id'] = 'gid://shopify/ProductVariant/200';
+        $records[8]['variant']['id'] = 'gid://shopify/ProductVariant/300';
+        $runner = new ShopifyOrderImportRunner($this->source($records, 1));
+        $run = $this->start($runner);
+        $this->assertTrue($runner->advance($run));
+        foreach ([1, 2, 3] as $id) {
+            $this->assertDatabaseHas('order_items', ['shopify_line_item_id' => 'gid://shopify/LineItem/'.$id, 'variant_id' => 1]);
+        }
+        foreach ([4, 5, 6, 7, 8] as $id) {
+            $this->assertDatabaseHas('order_items', ['shopify_line_item_id' => 'gid://shopify/LineItem/'.$id, 'variant_id' => null]);
+        }
+        $this->assertSame(5, (int) $run->fresh()->unmatched_variants);
+        $this->assertDatabaseHas('order_items', ['shopify_line_item_id' => 'gid://shopify/LineItem/4', 'sku' => 'MATCH', 'shopify_variant_id' => 'gid://shopify/ProductVariant/999']);
+        Http::assertNothingSent();
+    }
+
+    public function test_preparation_requires_the_shopify_reference_column_before_allowing_import(): void
+    {
+        (require database_path('migrations/2026_11_16_100000_add_shopify_variant_id_to_variants.php'))->down();
+        $plan = app(ShopifyOrderImportPlan::class)->forStore(Store::findOrFail(1));
+        $this->assertFalse($plan['schema_ready']);
+        $this->assertFalse(collect($plan['checks'])->firstWhere('label', 'Referencia Shopify en las variantes locales')['ready']);
+        $this->assertDatabaseCount('orders', 0);
         Http::assertNothingSent();
     }
 

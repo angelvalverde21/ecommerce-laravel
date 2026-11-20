@@ -17,6 +17,9 @@ class AttendanceService
     public function prepareManualAttendance(Employee $employee, array $values, ?Attendance $attendance = null): array
     {
         $values['work_type'] = $values['work_type'] ?? $attendance?->work_type ?? 'onsite';
+        if ($attendance?->absence_justified && (!empty($values['check_in']) || !empty($values['check_out']) || $values['work_type'] === 'home_office')) {
+            throw ValidationException::withMessages(['date' => 'Este día tiene una falta justificada. No se pueden añadir marcaciones ni trabajo remoto.']);
+        }
         $customHours = (bool) ($values['remote_hours_custom'] ?? false);
         unset($values['remote_hours_custom']);
         if ($values['work_type'] !== 'home_office') {
@@ -149,6 +152,7 @@ class AttendanceService
         $end = $schedule?->end_time ?? $employee->work_time_end;
         $type = $attendance ? ($attendance->work_type ?? 'onsite') : ($schedule?->work_type ?? 'onsite');
         $remote = $type === 'home_office';
+        $justified = (bool) ($attendance?->absence_justified ?? false);
         $customHours = $remote && $attendance?->check_in && $attendance?->check_out;
         $missing = ! $attendance && $employee->payroll_uses_attendance !== false && ! in_array($type, ['home_office', 'rest'], true);
         $in = $remote && !$customHours ? null : $attendance?->check_in;
@@ -157,11 +161,14 @@ class AttendanceService
         if ($remote && !$customHours && $start && $end) {
             $minutes = $this->minutes($start, $end);
         }
+        if ($justified) {
+            $minutes = $start && $end ? $this->minutes($start, $end) : 540;
+        }
         $computed = $minutes;
-        $late = !$remote && $in && $start
+        $late = !$justified && !$remote && $in && $start
             ? CarbonImmutable::parse($start)->diffInMinutes(CarbonImmutable::parse($in), false) > ($employee->tolerance_minutes ?? 15)
             : false;
-        $breakSkipped = (bool) ($attendance?->break_skipped ?? false);
+        $breakSkipped = !$justified && (bool) ($attendance?->break_skipped ?? false);
         $scheduledBreak = min(60, $computed);
         $break = !$breakSkipped && in_array($type, ['onsite', 'home_office'], true) ? $scheduledBreak : 0;
         $paid = max(0, $computed - $break);
@@ -175,6 +182,9 @@ class AttendanceService
             $salaryNet = $salaryDay === null ? null : -$salaryDay;
         }
         if ($employee->payroll_uses_attendance === false) {
+            $salaryNet = $salaryDay;
+        }
+        if ($justified) {
             $salaryNet = $salaryDay;
         }
 
@@ -193,6 +203,11 @@ class AttendanceService
             'scheduled_start' => $start,
             'scheduled_end' => $end,
             'comment' => $attendance?->comment,
+            'absence_justified' => $justified,
+            'justification_reason' => $attendance?->justification_reason,
+            'justified_by' => $attendance?->justified_by,
+            'justified_at' => $attendance?->justified_at?->toIso8601String(),
+            'justification_documents' => $justified ? $attendance->images->map(fn ($image) => app(\App\Services\Dashboard\Employee\AttendanceDocumentService::class)->present($image))->values()->all() : [],
             'minutes' => $minutes,
             'minutes_computed' => $computed,
             'break_minutes' => $break,
@@ -209,7 +224,7 @@ class AttendanceService
                 'rest' => 'DESCANZO',
                 default => 'FALTO',
             }),
-            'incomplete' => !$remote && $attendance && (! $in || ! $out),
+            'incomplete' => !$justified && !$remote && $attendance && (! $in || ! $out),
         ];
     }
 

@@ -70,6 +70,44 @@ use App\Http\Controllers\Api\Shopify\PdfManufactureController;
 // });
 // http://erp.test/api/v1/dashboard/sorelle/payments/1/images
 Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api', \App\Http\Middleware\EnsureActiveErpUser::class])->group(function () {
+    Route::prefix('photo-session-tasks')->group(function () {
+        $tasks = \App\Http\Controllers\Api\Dashboard\PhotoSessionTaskDashboardController::class;
+        Route::get('/', [$tasks, 'index']);
+        Route::post('/', [$tasks, 'store']);
+        Route::put('{task_id}', [$tasks, 'update'])->whereNumber('task_id');
+        Route::put('{task_id}/status', [$tasks, 'status'])->whereNumber('task_id');
+        Route::get('{task_id}/events', [$tasks, 'events'])->whereNumber('task_id');
+    });
+    Route::prefix('photo-sessions')->middleware(\App\Http\Middleware\EnsurePhotoSessionAccess::class)->group(function () {
+        $sessions = \App\Http\Controllers\Api\Dashboard\PhotoSessionDashboardController::class;
+        $contacts = \App\Http\Controllers\Api\Dashboard\PhotoContactDashboardController::class;
+        $locations = \App\Http\Controllers\Api\Dashboard\PhotoLocationDashboardController::class;
+        Route::get('locations', [$locations, 'index']); Route::post('locations', [$locations, 'store']);
+        Route::get('locations/{photo_location_id}', [$locations, 'show'])->whereNumber('photo_location_id');
+        Route::put('locations/{photo_location_id}', [$locations, 'update'])->whereNumber('photo_location_id');
+        Route::get('contacts', [$contacts, 'index']);
+        Route::post('contacts', [$contacts, 'store']);
+        Route::get('contacts/{contact_id}', [$contacts, 'show'])->whereNumber('contact_id');
+        Route::put('contacts/{contact_id}', [$contacts, 'update'])->whereNumber('contact_id');
+        $assets = \App\Http\Controllers\Api\Dashboard\PhotoSessionAssetDashboardController::class;
+        Route::get('options', [$sessions, 'options']);
+        Route::get('/', [$sessions, 'index']);
+        Route::post('/', [$sessions, 'store']);
+        Route::get('{photo_session}', [$sessions, 'show'])->whereNumber('photo_session');
+        Route::put('{photo_session}', [$sessions, 'update'])->whereNumber('photo_session');
+        Route::put('{photo_session}/assignments', [$sessions, 'assignments'])->whereNumber('photo_session');
+        Route::prefix('{photo_session}/assets')->whereNumber('photo_session')->group(function () use ($assets) {
+            Route::get('/', [$assets, 'index']); Route::post('/', [$assets, 'store']);
+            Route::get('{asset_id}/parts/{part}', [$assets, 'part'])->whereNumber('part');
+            Route::post('{asset_id}/complete', [$assets, 'complete']);
+            Route::post('{asset_id}/abort', [$assets, 'abort']);
+            Route::post('{asset_id}/previews', [$assets, 'previews']);
+            Route::post('{asset_id}/previews/batch', [$assets, 'previewBatch']);
+            Route::post('{asset_id}/previews/complete', [$assets, 'confirmPreviews']);
+            Route::get('{asset_id}/download', [$assets, 'download']);
+            Route::put('{asset_id}', [$assets, 'update']);
+        });
+    });
  
     Route::get('/', [StoreDashboardController::class, 'show']); //Listar
     Route::get('/current', [StoreDashboardController::class, 'current']); //Listar
@@ -79,6 +117,15 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     Route::put('/delivery-trackings/{tracking_id}', [\App\Http\Controllers\Api\Dashboard\DeliveryTrackingDashboardController::class, 'update']);
     Route::get('/panels/{area}', [AreaDashboardController::class, 'show']);
     Route::get('/migrations/shopify/orders', [ShopifyOrderMigrationController::class, 'show']);
+    Route::get('/initial-import/shopify', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'index']);
+    Route::post('/initial-import/shopify', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'store']);
+    Route::post('/initial-import/shopify/{run_id}/resume', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'resume']);
+    Route::get('/initial-import/orders', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'orders']);
+    Route::post('/initial-import/orders/updates', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'findNewOrders']);
+    Route::get('/initial-import/orders/updates/{update_id}', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'orderUpdate'])->whereNumber('update_id');
+    Route::get('/initial-import/orders/{order_id}', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'order'])->whereNumber('order_id');
+    Route::get('/initial-import/orders/{order_id}/events', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'events'])->whereNumber('order_id');
+    Route::get('/initial-import/orders/{order_id}/attachments/{attachment_id}', [\App\Http\Controllers\Api\Dashboard\InitialShopifyImportController::class, 'attachment'])->whereNumber('order_id')->whereNumber('attachment_id');
 
     Route::prefix('roles')->group(function () {
 
@@ -176,6 +223,8 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::post('/', [SupplierDashboardController::class, 'store']); //create
 
         Route::prefix('{supplier_id}')->group(function () {
+            Route::get('/addresses', [\App\Http\Controllers\Api\Dashboard\SupplierAddressDashboardController::class, 'index']);
+            Route::post('/addresses/{address_id}/default', [\App\Http\Controllers\Api\Dashboard\SupplierAddressDashboardController::class, 'setDefault']);
 
             Route::get('/', [SupplierDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [SupplierDashboardController::class, 'update']); //actualizar
@@ -191,6 +240,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::post('/search/{search?}', [ManufactureDashboardController::class, 'search']); //buscar
 
         Route::prefix('productions')->group(function () {
+            Route::get('/stage-templates', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'templates']);
 
             Route::get('/', [ManufactureProductionDashboardController::class, 'index']); //Listar
             Route::post('/', [ManufactureProductionDashboardController::class, 'store']); //create
@@ -198,7 +248,12 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
             Route::prefix('{production_id}')->group(function () {
                 Route::get('/stages', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'index']);
+                Route::get('/stage-configuration', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'configuration']);
+                Route::put('/stage-configuration', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'configure']);
                 Route::post('/stages/classify-purchases', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'classifyPurchases']);
+                Route::get('/stages/{stage_id}/attachments', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'attachments']);
+                Route::post('/stages/{stage_id}/attachments', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'uploadAttachment']);
+                Route::get('/stages/{stage_id}/attachments/{attachment_id}', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'downloadAttachment']);
                 Route::put('/stages/{stage_id}', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'update']);
                 Route::put('/stages/{stage_id}/purchases/{purchase_id}', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'assignPurchase']);
 
@@ -225,6 +280,13 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         });
 
         Route::prefix('{manufacture_id}')->group(function () {
+
+            Route::get('/receptions', [\App\Http\Controllers\Api\Dashboard\InventoryReceptionDashboardController::class, 'index']);
+            Route::post('/receptions', [\App\Http\Controllers\Api\Dashboard\InventoryReceptionDashboardController::class, 'store']);
+            Route::put('/receptions/{reception_id}', [\App\Http\Controllers\Api\Dashboard\InventoryReceptionDashboardController::class, 'update']);
+            Route::post('/receptions/{reception_id}/post', [\App\Http\Controllers\Api\Dashboard\InventoryReceptionDashboardController::class, 'post']);
+            Route::get('/receptions/{reception_id}/print', [\App\Http\Controllers\Api\Dashboard\InventoryReceptionDashboardController::class, 'print']);
+            Route::post('/receptions/{reception_id}/reverse', [\App\Http\Controllers\Api\Dashboard\InventoryReceptionDashboardController::class, 'reverse']);
 
             Route::get('/', [ManufactureDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [ManufactureDashboardController::class, 'update']); //actualizar
@@ -729,8 +791,11 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::get('/', [AttendanceDashboardController::class, 'index']); //Listar
         Route::post('/', [AttendanceDashboardController::class, 'store']); //create
         Route::post('/upload', [AttendanceDashboardController::class, 'upload']); //create
+        Route::post('/justify', [\App\Http\Controllers\Api\Dashboard\AttendanceJustificationController::class, 'store']);
 
         Route::prefix('{attendance_id}')->group(function () {
+            Route::post('/justification-documents', [\App\Http\Controllers\Api\Dashboard\AttendanceJustificationController::class, 'upload']);
+            Route::get('/justification-documents/{document_id}', [\App\Http\Controllers\Api\Dashboard\AttendanceJustificationController::class, 'download']);
 
             Route::get('/', [AttendanceDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [AttendanceDashboardController::class, 'update']); //actualizar
@@ -747,6 +812,10 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
         Route::prefix('{purchase_id}')->group(function () {
 
+            Route::get('/attachments', [\App\Http\Controllers\Api\Dashboard\PurchaseAttachmentDashboardController::class, 'index']);
+            Route::post('/attachments', [\App\Http\Controllers\Api\Dashboard\PurchaseAttachmentDashboardController::class, 'store']);
+            Route::get('/attachments/{attachment_id}', [\App\Http\Controllers\Api\Dashboard\PurchaseAttachmentDashboardController::class, 'download']);
+            Route::get('/attachments/{attachment_id}/preview', [\App\Http\Controllers\Api\Dashboard\PurchaseAttachmentDashboardController::class, 'preview']);
             Route::get('/', [PurchaseDashboardController::class, 'show']); //show o mostrar por id
             Route::put('/', [PurchaseDashboardController::class, 'update']); //actualizar
             Route::delete('/', [PurchaseDashboardController::class, 'destroy']); //borrar

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Manufacture extends Model
 {
+    public function supplierAddress() { return $this->belongsTo(Address::class, 'supplier_address_id'); }
     //
 
     use HasDateFiltersTrait;

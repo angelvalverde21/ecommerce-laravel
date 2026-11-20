@@ -69,6 +69,8 @@ class ManufactureDashboardController extends Controller
                 'budget' => 'nullable|numeric',
                 'supplier_id' => 'nullable|exists:suppliers,id',
                 'type' => 'required|string|max:255',
+                'stage_ids' => 'sometimes|required|array|min:1',
+                'stage_ids.*' => 'required|integer|distinct|exists:production_stages,id',
                 'manufacture_start' => 'nullable|date',
                 'manufacture_end' => 'nullable|date|after_or_equal:manufacture_start',
             ]);
@@ -86,6 +88,9 @@ class ManufactureDashboardController extends Controller
                 ]
             );
 
+            if ($manufacture->type === 'production') {
+                app(\App\Services\Dashboard\ProductionStageService::class)->initialize($manufacture, $data['stage_ids'] ?? null);
+            }
             DB::commit();
 
             return responseOk($manufacture, "Se ha procesado correctamente");
@@ -95,6 +100,7 @@ class ManufactureDashboardController extends Controller
 
             DB::rollback();
 
+            if ($th instanceof \Illuminate\Validation\ValidationException) { throw $th; }
             return responseError("Error registrar la produccion.... ");
         }
     }
@@ -104,7 +110,7 @@ class ManufactureDashboardController extends Controller
      */
     public function show(Store $store, $manufacture_id)
     {
-        return responseOk($this->service->show($store, $manufacture_id), "Datos obtenidos con exito de la manufactura");
+        return responseOk($this->service->show($store, $manufacture_id, request()->boolean('include_kardex', true), request()->boolean('summary_only')), "Datos obtenidos con exito de la manufactura");
     }
 
     /**

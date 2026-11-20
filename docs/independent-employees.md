@@ -16,6 +16,39 @@ Se conservaron los identificadores de los 8 empleados, sus cuentas, las 650 asis
 
 ## Asistencias y resumen laboral
 
+El dashboard del CEO incluye una tabla de pagos de empleados activos de la tienda,
+con base quincenal, descuentos, extras, pago individual y suma total calculados en el
+servidor. Solo aparece el día 15 y fin de mes; si la fecha cae domingo, aparece el
+sábado anterior, usando el calendario de Lima. La quincena mantiene su fecha de fin
+nominal y los ajustes se calculan hasta el día efectivo de pago. Esta sección es
+independiente del filtro de 7/30/90 días. Un sueldo o información insuficiente queda
+pendiente de revisión: se muestra un subtotal identificado y no un total completo.
+
+«Justificar falta» registra motivo obligatorio, usuario y fecha en la asistencia,
+reconoce la jornada programada (8 horas netas si no hay horario) y elimina el descuento
+por falta, sin generar extras. No reemplaza marcaciones existentes ni un día remoto
+o de descanso. Se reserva a master, ceo y admin de la tienda. El módulo compartido
+UploadDropzone aparece desde el inicio y permite seleccionar archivos antes de guardar.
+Al guardar, se persiste la justificación y después se envían los archivos a su asistencia.
+La selección se conserva si falla el guardado; las cargas fallidas pueden reintentarse
+sin duplicar la justificación. También se pueden añadir documentos posteriormente.
+Son opcionales, PDF/JPEG/PNG/WebP de hasta 10 MB;
+sin archivos se indica «Sustento pendiente». Se reutiliza la relación polimórfica
+`images`, almacenando los archivos en disco privado y descargándolos por una ruta
+autenticada que valida tienda, asistencia y documento. La migración
+`2026_11_15_100000_add_absence_justification_to_attendances.php` agrega los campos
+de justificación con valor predeterminado false y conserva las marcaciones existentes.
+
+Las imágenes de sustento guardan `thumbnail` (hasta 360 px de ancho), `medium` (hasta
+750 px) y `large` (original), sin ampliar imágenes pequeñas ni alterar la proporción.
+Las variantes reducidas son WebP. Los PDF conservan únicamente el documento original.
+`AttendanceDocumentService` centraliza almacenamiento, metadatos y recuperación de
+variantes de imágenes anteriores que solo tenían original. Las descargas aceptan
+`variant=thumbnail|medium|large` y mantienen los mismos controles de acceso.
+La interfaz obtiene las variantes autenticadas como blobs y utiliza `ImageIndex`
+en modo de consulta, sin su cargador ni eliminación genéricos. Los enlaces temporales
+de las vistas previas se liberan al cerrar el formulario.
+
 `employees.payroll_uses_attendance` (boolean, true por defecto) controla si las
 asistencias afectan al pago, independientemente del estado laboral y del acceso al ERP.
 Se configura en Información laboral con «Usar asistencias para calcular el pago».

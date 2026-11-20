@@ -50,6 +50,7 @@ class DeliveryTrackingTest extends TestCase
             $table->timestamps();
         });
         Schema::create('purchases', function (Blueprint $table) {
+            $table->unsignedBigInteger('supplier_address_id')->nullable();
             $table->id();
             $table->integer('store_id');
             $table->morphs('purchaseable');

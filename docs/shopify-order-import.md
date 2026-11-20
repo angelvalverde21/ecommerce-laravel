@@ -1,6 +1,6 @@
 # Migración de pedidos de Shopify
 
-Estado de esta entrega: sección y scripts preparados, ejecución deshabilitada. No se aplicó la migración de estructura, no se modificó `.env` y no se descargaron ni importaron pedidos reales. Las pruebas utilizan SQLite en memoria y respuestas simuladas.
+Estado de esta entrega: sección y scripts preparados, ejecución deshabilitada. La migración de estructura de pedidos sigue pendiente; no se modificó `.env` y no se descargaron ni importaron pedidos reales. Las pruebas utilizan SQLite en memoria y respuestas simuladas. La referencia permanente de variante se incorpora por separado con `2026_11_16_100000_add_shopify_variant_id_to_variants.php`.
 
 ## Pantalla
 
@@ -35,6 +35,7 @@ No se borran pedidos. Si existen pedidos antiguos sin tienda o referencias Shopi
 2. Aplicar específicamente el archivo de estructura pendiente y revisar las tablas; no ejecutar indiscriminadamente todas las migraciones pendientes del proyecto:
 
    ```powershell
+   php artisan migrate --path=database/migrations/2026_11_16_100000_add_shopify_variant_id_to_variants.php
    php artisan migrate --path=database/migrations/2026_11_06_150000_prepare_shopify_order_import.php
    ```
 
@@ -78,7 +79,7 @@ No se borran pedidos. Si existen pedidos antiguos sin tienda o referencias Shopi
 - La ejecución puede retomarse tras una interrupción. Una vez descargado, conserva los conteos esperados para reanudar sin depender de la vigencia del enlace remoto. Una exportación remota fallida, cancelada o expirada detiene la ejecución; al reanudar solicita una exportación nueva.
 - El bloqueo de consola y la restricción de ejecución activa por tienda evitan iniciar dos procesos independientes. Una ejecución pendiente o fallida debe reanudarse con su UUID.
 - Omite pedidos existentes por tienda e ID Shopify, reconociendo tanto el GID completo como su parte numérica. No sobrescribe cambios locales. Los IDs propios de la base se generan nuevamente.
-- Vincula variantes por SKU solo si existe una coincidencia inequívoca dentro de la tienda local. Conserva las líneas sin coincidencia o ambiguas con `variant_id = NULL`, sus IDs Shopify y su contenido original; incrementa el contador para revisión.
+- Vincula variantes exclusivamente por el ID Shopify recibido en `lineItem.variant.id`, comparándolo con `variants.shopify_variant_id` dentro de la tienda local. Admite el GID `gid://shopify/ProductVariant/123` y su representación numérica `123`, sin convertir IDs grandes a números de coma flotante. No usa SKU, nombres ni la tabla temporal `shopify_variants` para decidir la asociación. Si no hay ID válido, falta la correspondencia, pertenece a otra tienda o existen coincidencias ambiguas, conserva la línea con `variant_id = NULL`, sus IDs originales y SKU, e incrementa el contador de revisión. El índice acelera la búsqueda; cualquier duplicidad de referencias dentro de la tienda se considera ambigua. Antes de importar deben cargarse las correspondencias confirmadas en la nueva columna, que inicia en NULL y no deduce vínculos automáticamente.
 - Conserva importes en moneda de la tienda Shopify, sin conversiones, y también los conjuntos de importes originales en JSON. Usa decimales, no operaciones de coma flotante. Un importe incompatible con la precisión local detiene el pedido y requiere revisión antes de continuar.
 - Conserva las fechas de origen convertidas a la zona horaria de Laravel. Mapea el estado operativo local y mantiene separados los estados financiero y de entrega originales. La cancelación tiene prioridad; luego envío, preparación y pago.
 - Las direcciones internacionales o sin ubigeo comprobable quedan con distrito nulo y se contabilizan para revisión. Solo asocia un distrito peruano si encuentra un código de seis dígitos existente en `districts`, en el código postal o en atributos `ubigeo`, `district_id` o `codigo_ubigeo`. No asigna un distrito por defecto.
@@ -88,7 +89,7 @@ Tras ejecutar en el futuro, revisar los conteos, las líneas sin variante, los d
 
 ## Validación local realizada
 
-- `php artisan test --compact --filter=ShopifyOrderImportTest`: SQLite en memoria y Shopify simulado; comprueba preparación sin escrituras ni red, permisos y tienda, compatibilidad con esquema antiguo vacío, más de diez líneas, cancelados antiguos, asociación por SKU, transacciones, checkpoints, duplicados, descargas incompletas y ausencia del token en la descarga.
+- `php artisan test --compact --filter=ShopifyOrderImportTest`: SQLite en memoria y Shopify simulado; comprueba preparación sin escrituras ni red, permisos y tienda, compatibilidad con esquema antiguo vacío, más de diez líneas, cancelados antiguos, asociación por ID Shopify (incluso sin SKU o con SKU cambiado), referencias numéricas/GID, ausencia de asociación por SKU, transacciones, checkpoints, duplicados, descargas incompletas y ausencia del token en la descarga.
 - Pruebas Angular de la pantalla: botón bloqueado, revisión local, errores, prevención de solicitudes duplicadas y permisos del menú.
 - Pruebas del límite de solicitudes: recuperación de puntos, `Retry-After`, máximo de cinco intentos y ausencia de reintentos automáticos en mutaciones ambiguas. Las esperas están simuladas en las pruebas.
 - Compilación de Angular y formato de los archivos PHP nuevos.

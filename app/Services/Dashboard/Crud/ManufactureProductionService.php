@@ -29,15 +29,19 @@ class ManufactureProductionService
         //
         $data = $request->validate([
             'name' => 'required|string|max:255',
+            'stage_ids' => 'sometimes|required|array|min:1',
+            'stage_ids.*' => 'required|integer|distinct|exists:production_stages,id',
         ]);
 
-        $manufacture = DB::transaction(fn () => $store->manufactures()->create(
-            [
+        $manufacture = DB::transaction(function () use ($store, $data) {
+            $manufacture = $store->manufactures()->create([
                 'name' => $data['name'],
                 'user_id' => Auth::id(),
                 'type' => 'production',
-            ]
-        ));
+            ]);
+            app(\App\Services\Dashboard\ProductionStageService::class)->initialize($manufacture, $data['stage_ids'] ?? null);
+            return $manufacture;
+        });
 
         return $manufacture;
     }

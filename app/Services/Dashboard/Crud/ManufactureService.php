@@ -38,28 +38,31 @@ class ManufactureService
     //     return $manufacture;
     // }
 
-    public function show(Store $store, $manufacture_id): Manufacture
+    public function show(Store $store, $manufacture_id, bool $includeKardex = true, bool $summaryOnly = false): Manufacture
     {
-        return $store->manufactures()->with('payments')
+        $query = $store->manufactures()
             ->withFinancialSummary()
-            ->withDeliveryTrackingCount()
-            ->withVariantsAndKardexes()
-            ->findOrFail($manufacture_id);
+            ->withDeliveryTrackingCount();
+        if (!$summaryOnly) {
+            $query->with('payments');
+            if ($includeKardex) $query->withVariantsAndKardexes();
+            else $query->with(['variants.product.image', 'variants.optionValues']);
+        }
+        return $query->findOrFail($manufacture_id);
     }
 
-    public function variants(Store $store, int $manufacture_id)
+    public function variants(Store $store, int $manufacture_id, bool $includeKardex = true)
     {
         //
 
-        return $store->manufactures()
+        $query = $store->manufactures()
             ->findOrFail($manufacture_id)
             ->manufactureVariants()
             ->with([
                 'variant.product.image',
                 'variant.optionValues',
-                'variant.manufactureKardexes' => fn($q) =>
-                $q->where('kardexable_id', $manufacture_id)
-            ])
-            ->get();
+            ]);
+        if ($includeKardex) $query->with(['variant.manufactureKardexes' => fn($q) => $q->where('kardexable_id', $manufacture_id)]);
+        return $query->get();
     }
 }

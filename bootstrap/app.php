@@ -9,6 +9,12 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Support\Facades\Request;
 
+// Apache on Windows shares a process between threads. Keep dotenv values
+// request-local instead of changing the shared process environment with putenv.
+if (PHP_OS_FAMILY === 'Windows' && PHP_SAPI === 'apache2handler') {
+    \Illuminate\Support\Env::disablePutenv();
+}
+
 // use App\Http\Middleware\VerifyStore;
 
 return Application::configure(basePath: dirname(__DIR__))

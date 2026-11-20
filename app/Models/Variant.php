@@ -12,6 +12,7 @@ class Variant extends Model
         'product_id',
         'title',
         'sku',
+        'shopify_variant_id',
         'price',
         'stock',
         'status',

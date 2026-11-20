@@ -87,6 +87,10 @@ class SupplierDashboardController extends Controller
      */
     public function store(Store $store, Request $request)
     {
+        // Compatibility for older clients; suppliers themselves never store an address column.
+        if (is_string($request->input('address'))) $request->merge(['address' => [
+            'primary' => $request->input('address'), 'district_id' => $request->input('district_id'),
+        ]]);
         //
 
         Log::info($request);
@@ -98,9 +102,13 @@ class SupplierDashboardController extends Controller
             $validated = $request->validate([
                 'name'            => 'required|string|max:255',
                 'phone'           => 'required|string|max:20',
-                'address'         => 'required|string',
+                'email'           => 'nullable|email|max:255|unique:users,email',
+                'address'         => 'required|array',
+                'address.primary' => 'required|string|max:255',
+                'address.secondary' => 'nullable|string|max:255',
+                'address.references' => 'nullable|string|max:255',
+                'address.district_id' => 'required|integer|exists:districts,id',
                 'document_number' => 'nullable|string|max:20',
-                'district_id'     => 'required|integer|exists:districts,id',
                 'identity_id'     => 'nullable|integer|exists:identities,id',
             ]);
 
@@ -108,9 +116,10 @@ class SupplierDashboardController extends Controller
             $user = User::create([
                 'name'            => $validated['name'],
                 'phone'           => $validated['phone'],
-                'document_number' => $validated['document_number'],
-                'identity_id'     => $validated['identity_id'],
-                'password'        => bcrypt($validated['document_number']),
+                'email'           => $validated['email'] ?? null,
+                'document_number' => $validated['document_number'] ?? null,
+                'identity_id'     => $validated['identity_id'] ?? null,
+                'password'        => bcrypt(\Illuminate\Support\Str::random(48)),
             ]);
 
             // 2. ASIGNAR USUARIO A LA TIENDA
@@ -121,11 +130,14 @@ class SupplierDashboardController extends Controller
 
             $supplier->addresses()->create([
                 'name' => $validated['name'],
-                'identity_id' => $validated['identity_id'],
-                'document_number' => $validated['document_number'],
+                'identity_id' => $validated['identity_id'] ?? null,
+                'document_number' => $validated['document_number'] ?? null,
                 'phone' => $validated['phone'],
-                'district_id' => $validated['district_id'],
-                'primary' => $validated['address'],
+                'district_id' => $validated['address']['district_id'],
+                'primary' => $validated['address']['primary'],
+                'secondary' => $validated['address']['secondary'] ?? null,
+                'references' => $validated['address']['references'] ?? null,
+                'is_default' => true,
                 'type' => 'Trabajo'
             ]);
 
@@ -135,6 +147,9 @@ class SupplierDashboardController extends Controller
                 $supplier->fresh(['user', 'addresses']),
                 "Se ha procesado correctamente la creacion del Supplier"
             );
+        } catch (\Illuminate\Validation\ValidationException | \Illuminate\Database\Eloquent\ModelNotFoundException $th) {
+            DB::rollBack();
+            throw $th;
         } catch (\Throwable $th) {
 
             Log::info($th);
@@ -153,7 +168,7 @@ class SupplierDashboardController extends Controller
 
         try {
             //
-            $supplier = Supplier::findOrFail($supplier_id);
+            $supplier = $store->suppliers()->with('user')->findOrFail($supplier_id);
 
             Log::info($supplier);
 
@@ -166,7 +181,7 @@ class SupplierDashboardController extends Controller
                     Rule::unique('users', 'email')->ignore($supplier->user->id),
                 ],
                 'phone'           => 'sometimes|nullable|string|max:20',
-                'identity_id'       => 'nullable|integer|max:20',
+                'identity_id'       => 'nullable|integer|exists:identities,id',
                 'document_number' => 'nullable|string|max:20',
                 'status'          => 'sometimes|required|in:0,1',
                 'is_cash_on_delivery' => 'sometimes|nullable|boolean',
@@ -177,16 +192,9 @@ class SupplierDashboardController extends Controller
             DB::beginTransaction();
 
             // 1. ACTUALIZAR USER (solo lo que venga en el request)
-            $supplier->user->update(
-                [
-                    'name'            => $validated['name'] ?? $supplier->user->name,
-                    'email'           => $validated['email'] ?? $supplier->user->email,
-                    'phone'           => $validated['phone'] ?? $supplier->user->phone,
-                    'document_number' => $validated['document_number'] ?? $supplier->user->document_number,
-                    'identity_id'       => $validated['identity_id'] ?? $supplier->user->identity,
-                    'status'          => $validated['status'] ?? $supplier->user->status,
-                ]
-            );
+            $supplier->user->update(\Illuminate\Support\Arr::only($validated, [
+                'name', 'email', 'phone', 'document_number', 'identity_id', 'status',
+            ]));
 
             // 2. ACTUALIZAR Supplier
             // $supplier->update();
@@ -200,6 +208,9 @@ class SupplierDashboardController extends Controller
                 "Supplier actualizado correctamente",
                 200
             );
+        } catch (\Illuminate\Validation\ValidationException | \Illuminate\Database\Eloquent\ModelNotFoundException $th) {
+            DB::rollBack();
+            throw $th;
         } catch (\Throwable $th) {
 
             DB::rollback();

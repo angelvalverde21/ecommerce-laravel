@@ -24,6 +24,7 @@ class Address extends Model
 
 
     protected $guarded = ['id', 'created_at'];
+    protected $casts = ['is_default' => 'boolean'];
 
     public function district()
     {

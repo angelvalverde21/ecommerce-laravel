@@ -13,9 +13,16 @@ class ProductionStageProgress extends Model
     protected $attributes = ['status' => 'pending', 'revision' => 0, 'sample_review' => 'pending'];
 
     protected $casts = [
+        'is_enabled' => 'boolean',
+        'reuses_mold' => 'boolean',
         'expected_end' => 'date:Y-m-d', 'completed_at' => 'datetime', 'reviewed_at' => 'datetime',
         'sample_photos' => 'array', 'sample_quantity' => 'integer', 'revision' => 'integer',
     ];
+
+    public function attachments(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
 
     public function stage()
     {

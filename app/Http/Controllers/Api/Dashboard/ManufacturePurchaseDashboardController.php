@@ -21,6 +21,7 @@ class ManufacturePurchaseDashboardController extends Controller
             ->findOrFail($manufacture_id)
             ->purchases()
             ->with('supplier.user', 'items.unit', 'payments.images', 'deliveryTracking')
+            ->withCount('attachments')
             ->get();
 
             return responseOk($purchases, "se han obtenido correctamente los purchases del manufacture");

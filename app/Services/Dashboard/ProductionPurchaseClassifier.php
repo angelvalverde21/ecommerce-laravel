@@ -65,13 +65,15 @@ class ProductionPurchaseClassifier
 
     private function classifyPending(Manufacture $production, bool $apply): array
     {
-        $stages = \App\Models\ProductionStage::pluck('id', 'code');
+        if ($apply) $production->newQuery()->whereKey($production->id)->lockForUpdate()->firstOrFail();
+        $stages = \App\Models\ProductionStage::whereIn('id', app(ProductionStageService::class)->enabledIds($production))->pluck('id', 'code');
         if ($apply) {
             app(ProductionStageStateService::class)->synchronize($production, $stages->values()->all());
         }
         $result = ['assigned' => 0, 'remaining' => 0, 'rows' => []];
         foreach ($production->purchases()->whereNull('production_stage_id')->with('items')->get() as $purchase) {
             $code = $this->suggest($purchase) ?? 'others';
+            if (!$stages->has($code)) $code = 'others';
             $stageId = $stages->get($code);
             $result['rows'][] = [$production->id, $purchase->id, $purchase->items->pluck('name')->implode(' / '), $code];
             if (!$stageId) { $result['remaining']++; continue; }

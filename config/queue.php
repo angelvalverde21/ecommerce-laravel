@@ -29,6 +29,14 @@ return [
     */
 
     'connections' => [
+        'import_shopify' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => 'jobs',
+            'queue' => 'import-shopify',
+            'retry_after' => 1200,
+            'after_commit' => true,
+        ],
 
         'sync' => [
             'driver' => 'sync',

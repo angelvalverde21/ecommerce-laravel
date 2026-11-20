@@ -16,6 +16,8 @@ class ManufactureKardexService
     private array $relations = [
         'variant.product.image',
         'variant.optionValues',
+        'receptionItem:id,inventory_reception_id',
+        'receptionItem.reception:id,number',
     ];
 
     public function index(Store $store, int $manufacture_id)

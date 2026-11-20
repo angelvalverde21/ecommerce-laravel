@@ -23,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Database\Eloquent\Relations\Relation::morphMap(['photo_session' => \App\Models\PhotoSession::class, 'production_stage_progress' => \App\Models\ProductionStageProgress::class]);
         //
         //  app()->usePublicPath('/home/tecnoplanet/3b.pe/laravel');
         Option::observe(OptionObserver::class);

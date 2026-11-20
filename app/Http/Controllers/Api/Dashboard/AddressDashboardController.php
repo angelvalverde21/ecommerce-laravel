@@ -21,6 +21,9 @@ class AddressDashboardController extends Controller
         if ($validated['addressable_type'] === 'store') {
             return $store;
         }
+        if ($validated['addressable_type'] === 'supplier') {
+            return $store->suppliers()->findOrFail($validated['addressable_id']);
+        }
 
         $map = [
             'customer' => \App\Models\Customer::class,
@@ -61,6 +64,7 @@ class AddressDashboardController extends Controller
      */
     public function store(Store $store, Request $request)
     {
+        if ($request->input('addressable_type') === 'photo_location') return app(PhotoLocationAddressDashboardController::class)->store($store, $request);
         //
         try {
 
@@ -98,6 +102,8 @@ class AddressDashboardController extends Controller
                 'references' => $validated['references'] ?? null,
                 'district_id' => $validated['district_id'],
             ]);
+            if ($parentModel instanceof \App\Models\Supplier) app(\App\Services\Dashboard\Supplier\SupplierAddressService::class)->ensureDefault($parentModel);
+            $address->refresh();
 
             DB::commit();
 
@@ -119,8 +125,10 @@ class AddressDashboardController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Store $store, int $address_id)
+    public function show(Store $store, int $address_id, ?Request $request = null)
     {
+        $request ??= request();
+        if ($request->input('addressable_type') === 'photo_location') return app(PhotoLocationAddressDashboardController::class)->show($store, $request, $address_id);
         return responseOk($store->addresses()->with('district.province.department')->findOrFail($address_id));
     }
 
@@ -137,6 +145,7 @@ class AddressDashboardController extends Controller
      */
     public function update(Request $request, store $store, $address_id)
     {
+        if ($request->input('addressable_type') === 'photo_location') return app(PhotoLocationAddressDashboardController::class)->update($store, $request, (int) $address_id);
         //
         //
         try {

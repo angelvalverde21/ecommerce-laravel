@@ -43,6 +43,7 @@ class PurchaseService
             ],
             'purchaseable_id' => 'required|integer',
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
+            'supplier_address_id' => 'nullable|integer',
             'observations' => 'nullable|string',
             'purchase_start' => 'nullable|date',
             'purchase_end' => 'nullable|date',
@@ -53,6 +54,10 @@ class PurchaseService
             'delivery.handed_over_on' => 'nullable|date_format:Y-m-d',
         ]);
 
+        if ($request->exists('supplier_id') || $request->exists('supplier_address_id')) {
+            $validated['supplier_address_id'] = app(\App\Services\Dashboard\Supplier\SupplierAddressService::class)
+                ->resolve($store, $validated['supplier_id'] ?? null, $validated['supplier_address_id'] ?? null);
+        }
         return array_merge($validated, [
             'user_id' => Auth::guard('api')->id(),
             'store_id' => $store->id,
@@ -89,6 +94,11 @@ class PurchaseService
 
             DB::beginTransaction();
 
+            if ($parentModel instanceof \App\Models\Manufacture && $parentModel->type === 'production') {
+                $parentModel->newQuery()->whereKey($parentModel->id)->lockForUpdate()->firstOrFail();
+                $this->validateStage($store, $parentModel, $purchaseValidated, true);
+            }
+
             if ($parentModel instanceof \App\Models\Manufacture) {
                 app(\App\Services\Dashboard\ProductionStageStateService::class)->synchronize($parentModel, [$purchaseValidated['production_stage_id'] ?? null]);
             }
@@ -111,7 +121,7 @@ class PurchaseService
 
             DB::commit();
 
-            return $purchase->load(['supplier.user', 'items.unit', 'deliveryTracking']);
+            return $purchase->load(['supplier.user', 'items.unit', 'deliveryTracking'])->loadCount('attachments');
             
         } catch (\Throwable $th) {
 
@@ -141,6 +151,10 @@ class PurchaseService
             DB::beginTransaction();
 
             //Obteniendo el modelo padre
+            if ($parentModel instanceof \App\Models\Manufacture && $parentModel->type === 'production') {
+                $parentModel->newQuery()->whereKey($parentModel->id)->lockForUpdate()->firstOrFail();
+                $this->validateStage($store, $parentModel, $validated, false);
+            }
             $purchase = $parentModel->purchases()->findOrFail($purchase_id);
             $stageIds = [$purchase->production_stage_id, $validated['production_stage_id'] ?? $purchase->production_stage_id];
             if ($parentModel instanceof \App\Models\Manufacture) {
@@ -178,13 +192,14 @@ class PurchaseService
                 'line' => $th->getLine()
             ]);
 
+            if ($th instanceof ValidationException) { throw $th; }
             return responseError("Ha sucedido un error interno al actualizar el purchase");
         }
     }
 
     public function show($store, $purchase_id)
     {
-        $purchase = $store->purchases()->with(['supplier.user', 'items.unit', 'payments.images', 'deliveryTracking'])->findOrFail($purchase_id);
+        $purchase = $store->purchases()->withCount('attachments')->with(['supplier.user', 'items.unit', 'payments.images', 'deliveryTracking'])->findOrFail($purchase_id);
         return $purchase;
     }
 
@@ -207,6 +222,10 @@ class PurchaseService
         }
         if (!empty($data['production_stage_id']) && (!$isProduction || !\App\Models\ProductionStage::whereKey($data['production_stage_id'])->exists())) {
             throw ValidationException::withMessages(['production_stage_id' => 'Selecciona una sección válida del catálogo de producción.']);
+        }
+        if ($isProduction && !empty($data['production_stage_id'])
+            && !app(\App\Services\Dashboard\ProductionStageService::class)->enabledIds($parent)->contains((int) $data['production_stage_id'])) {
+            throw ValidationException::withMessages(['production_stage_id' => 'Selecciona una sección incluida en esta producción.']);
         }
     }
 }

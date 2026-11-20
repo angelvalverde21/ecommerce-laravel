@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Purchase extends Model
 {
+    public function supplierAddress() { return $this->belongsTo(Address::class, 'supplier_address_id'); }
     /** @use HasFactory<\Database\Factories\PurchaseFactory> */
     use HasFactory;
     use \App\Traits\HasDeliveryTracking;
@@ -31,6 +32,11 @@ class Purchase extends Model
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function attachments(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 
     public function images()

@@ -11,16 +11,20 @@ class EmployeePayrollSummaryService
 {
     public function __construct(private AttendanceService $attendanceService) {}
 
-    public function forStore(Store $store): array
+    public function forStore(Store $store): ?array
     {
+        $today = CarbonImmutable::today('America/Lima');
+        $end = collect([$today->startOfMonth()->day(15), $today->endOfMonth()])
+            ->first(fn ($date) => ($date->isSunday() ? $date->subDay() : $date)->isSameDay($today));
+        if (!$end) {
+            return null;
+        }
         if (!Schema::hasTable('attendances') || !Schema::hasTable('employee_schedules')
             || !Schema::hasColumns('employees', ['user_id', 'store_id', 'status', 'payroll_uses_attendance'])) {
             return ['available' => false, 'items' => []];
         }
 
-        $today = CarbonImmutable::today('America/Lima');
-        $start = $today->startOfMonth()->day($today->day <= 15 ? 1 : 16);
-        $end = $start->day === 1 ? $start->day(15) : $start->endOfMonth();
+        $start = $end->startOfMonth()->day($end->day === 15 ? 1 : 16);
         $employees = $store->employees()->where('status', true)->with([
             'schedules',
             'attendances' => fn ($query) => $query->whereBetween('date', [$start->toDateString(), $today->toDateString()]),
@@ -69,7 +73,7 @@ class EmployeePayrollSummaryService
         return [
             'available' => true,
             'start_date' => $start->toDateString(), 'end_date' => $end->toDateString(),
-            'computed_through' => $today->toDateString(), 'is_provisional' => $today->lessThan($end),
+            'computed_through' => $today->toDateString(), 'pay_date' => $today->toDateString(), 'is_provisional' => false,
             'employee_count' => $employees->count(), 'pending_count' => $pending,
             'calculated_count' => $employees->count() - $pending,
             'totals' => array_map(fn ($value) => $value / 100, $totals),

@@ -54,14 +54,18 @@ class ProductionProgressService
         $rows = $productions->map(function ($production) use ($plans, $receipts, $definitions, $progress, $purchaseCounts, $purchaseCountsAvailable) {
             $saved = $progress->get($production->id, collect())->keyBy('stage_id');
             $counts = $purchaseCounts->get($production->id, collect())->keyBy('production_stage_id');
-            $stages = $definitions->map(function ($definition) use ($saved, $counts, $purchaseCountsAvailable) {
+            $selectedDefinitions = Schema::hasColumn('production_stage_progress', 'is_enabled')
+                ? $definitions->filter(fn ($definition) => (bool) ($saved->get($definition->id)?->is_enabled ?? false)) : $definitions;
+            $stages = $selectedDefinitions->map(function ($definition) use ($saved, $counts, $purchaseCountsAvailable) {
                 $stage = (object) array_merge([
                     'status' => 'pending', 'responsible' => null, 'expected_end' => null,
                     'sample_quantity' => null, 'sample_review' => 'pending',
                 ], (array) $saved->get($definition->id, (object) []), (array) $definition);
                 if ($purchaseCountsAvailable) {
                     $stage->purchases_count = (int) ($counts->get($definition->id)?->purchase_count ?? 0);
-                    $stage->status = ProductionStageStateService::resolve($stage->status, $stage->purchases_count);
+                    if (!in_array($definition->code, ['reception', 'others'], true)) {
+                        $stage->status = ProductionStageStateService::resolve($stage->status, $stage->purchases_count, $definition->code === 'molds' && ($stage->reuses_mold ?? false));
+                    }
                 }
                 return $stage;
             });
@@ -103,6 +107,9 @@ class ProductionProgressService
                     'show_in_stepper' => true,
                     'name' => $stage->name,
                     'status' => $stage->status,
+                    'reuses_mold' => (bool) ($stage->reuses_mold ?? false),
+                    'locked' => false,
+                    'lock_reason' => null,
                     'purchases_count' => $stage->purchases_count ?? null,
                     'responsible' => $stage->responsible,
                     'expected_end' => $stage->expected_end,

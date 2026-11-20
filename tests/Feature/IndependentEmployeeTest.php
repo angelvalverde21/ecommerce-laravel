@@ -77,6 +77,11 @@ class IndependentEmployeeTest extends TestCase
         Schema::create('images', function (Blueprint $table) {
             $table->id();
             $table->morphs('imageable');
+            $table->string('name')->nullable();
+            $table->string('large')->nullable();
+            $table->string('thumbnail')->nullable();
+            $table->string('medium')->nullable();
+            $table->timestamps();
         });
         DB::table('stores')->insert([
             ['id' => 1, 'name' => 'Sorelle', 'slug' => 'sorelle'],
@@ -106,6 +111,7 @@ class IndependentEmployeeTest extends TestCase
         (require database_path('migrations/2026_11_14_190000_add_work_type_to_attendances.php'))->up();
         (require database_path('migrations/2026_11_14_200000_add_break_skipped_to_attendances.php'))->up();
         (require database_path('migrations/2026_11_14_210000_add_payroll_uses_attendance_to_employees.php'))->up();
+        (require database_path('migrations/2026_11_15_100000_add_absence_justification_to_attendances.php'))->up();
         $this->actingAs($user->fresh(), 'api');
     }
 
@@ -560,6 +566,99 @@ class IndependentEmployeeTest extends TestCase
             ->assertOk()->assertJsonPath('data.payroll_uses_attendance', true);
         $this->postJson('/api/v1/sorelle/dashboard/employees/3/attendances/search', ['start_date' => '2026-11-03', 'end_date' => '2026-11-10'])
             ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.missing', true);
+    }
+
+    public function test_ceo_payroll_totals_only_active_store_employees_on_paydays_and_advances_sundays(): void
+    {
+        $service = app(\App\Services\Dashboard\Employee\EmployeePayrollSummaryService::class);
+        $store = Store::findOrFail(1);
+        Employee::findOrFail(3)->update(['salary' => 1650]);
+        Employee::findOrFail(3)->schedules()->create(['store_id' => 1, 'day_of_week' => 1, 'work_type' => 'onsite', 'start_time' => '09:00:00', 'end_time' => '18:00:00']);
+        $makeEmployee = function ($name, $salary, $status, $storeId = 1) {
+            $user = User::create(['name' => $name, 'email' => $name.'@example.test', 'password' => 'Employee-password1']);
+            return Employee::create(['store_id' => $storeId, 'user_id' => $user->id, 'status' => $status, 'salary' => $salary, 'payroll_uses_attendance' => false]);
+        };
+        $makeEmployee('Fixed', 1400, true);
+        $makeEmployee('Inactive', 9000, false);
+        $makeEmployee('OtherStore', 9000, true, 2);
+        try {
+            CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-11-14 12:00', 'America/Lima'));
+            $summary = $service->forStore($store);
+            $this->assertEquals(1476.88, $summary['total_net']);
+            $this->assertSame(2, $summary['employee_count']);
+            $this->assertSame('2026-11-15', $summary['end_date']);
+            $this->assertSame('2026-11-14', $summary['pay_date']);
+            $pending = $makeEmployee('Pending', null, true);
+            $summary = $service->forStore($store);
+            $this->assertNull($summary['total_net']);
+            $this->assertSame(1, $summary['pending_count']);
+            $this->assertEquals(1476.88, $summary['totals']['net']);
+            $pending->update(['salary' => 1000]);
+            $this->assertEquals(1976.88, $service->forStore($store)['total_net']);
+            foreach (['2026-11-13', '2026-11-15', '2026-11-16'] as $date) {
+                CarbonImmutable::setTestNow(CarbonImmutable::parse($date.' 12:00', 'America/Lima'));
+                $this->assertNull($service->forStore($store));
+            }
+            foreach (['2026-11-30', '2026-05-30', '2024-02-29'] as $date) {
+                CarbonImmutable::setTestNow(CarbonImmutable::parse($date.' 12:00', 'America/Lima'));
+                $this->assertSame($date, $service->forStore($store)['pay_date']);
+            }
+        } finally {
+            CarbonImmutable::setTestNow();
+        }
+    }
+
+    public function test_justified_absence_counts_the_scheduled_day_without_deduction_and_support_is_optional_and_private(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        Employee::findOrFail(3)->schedules()->create(['store_id' => 1, 'day_of_week' => 1, 'work_type' => 'onsite', 'start_time' => '09:00:00', 'end_time' => '18:00:00']);
+        $input = ['employee_id' => 3, 'date' => '2026-11-09', 'reason' => 'Descanso médico autorizado'];
+        $this->postJson('/api/v1/sorelle/dashboard/attendances/justify', [...$input, 'reason' => ''])->assertUnprocessable();
+        $response = $this->postJson('/api/v1/sorelle/dashboard/attendances/justify', $input)
+            ->assertOk()->assertJsonPath('data.absence_justified', true)->assertJsonPath('data.missing', false)
+            ->assertJsonPath('data.incomplete', false)->assertJsonPath('data.paid_minutes', 480)
+            ->assertJsonPath('data.justified_by', 1)->assertJsonCount(0, 'data.justification_documents');
+        $this->assertEquals(0, $response->json('data.salary_extra'));
+        $id = $response->json('data.id');
+        $this->postJson('/api/v1/sorelle/dashboard/attendances/justify', [...$input, 'reason' => 'Motivo corregido'])
+            ->assertOk()->assertJsonPath('data.id', $id);
+        $this->putJson('/api/v1/sorelle/dashboard/attendances/'.$id, ['check_in' => '09:00', 'check_out' => '18:00'])->assertUnprocessable();
+        $upload = $this->post('/api/v1/sorelle/dashboard/attendances/'.$id.'/justification-documents', ['file' => UploadedFile::fake()->create('sustento.pdf', 10, 'application/pdf')], ['Accept' => 'application/json'])
+            ->assertOk()->assertJsonPath('data.name', 'sustento.pdf');
+        $documentId = $upload->json('data.id');
+        $this->get('/api/v1/sorelle/dashboard/attendances/'.$id.'/justification-documents/'.$documentId)->assertOk()->assertDownload('sustento.pdf');
+        $this->getJson('/api/v1/sorelle/dashboard/attendances/'.$id)->assertOk()->assertJsonCount(1, 'data.justification_documents');
+        $this->post('/api/v1/sorelle/dashboard/attendances/'.$id.'/justification-documents', ['file' => UploadedFile::fake()->create('script.html', 1, 'text/html')], ['Accept' => 'application/json'])->assertUnprocessable();
+        $this->get('/api/v1/other/dashboard/attendances/'.$id.'/justification-documents/'.$documentId)->assertForbidden();
+        $this->postJson('/api/v1/sorelle/dashboard/attendances/justify', [...$input, 'date' => '2026-11-02'])->assertUnprocessable();
+        $user = User::findOrFail(1);
+        $user->syncRoles(['sales']);
+        $this->actingAs($user->fresh(), 'api')->postJson('/api/v1/sorelle/dashboard/attendances/justify', $input)->assertForbidden();
+    }
+
+    public function test_justification_images_store_three_private_sizes_and_repair_legacy_originals(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $attendance = \App\Models\Attendance::create(['store_id' => 1, 'employee_id' => 3, 'date' => '2026-11-09', 'absence_justified' => true]);
+        $image = UploadedFile::fake()->image('sustento.png', 1600, 900);
+        $response = $this->post('/api/v1/sorelle/dashboard/attendances/'.$attendance->id.'/justification-documents', ['file' => $image], ['Accept' => 'application/json'])
+            ->assertOk()->assertJsonPath('data.is_image', true)->assertJsonPath('data.name', 'sustento.png');
+        $document = \App\Models\Image::findOrFail($response->json('data.id'));
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        foreach (['thumbnail' => 360, 'medium' => 750, 'large' => 1600] as $variant => $width) {
+            $this->assertTrue($disk->exists($document->{$variant}));
+            $this->assertSame($width, \Intervention\Image\Laravel\Facades\Image::read($disk->get($document->{$variant}))->width());
+            $this->get('/api/v1/sorelle/dashboard/attendances/'.$attendance->id.'/justification-documents/'.$document->id.'?variant='.$variant)->assertOk();
+        }
+        $this->assertSame($image->get(), $disk->get($document->large));
+        $this->getJson('/api/v1/sorelle/dashboard/attendances/'.$attendance->id)->assertOk()->assertJsonPath('data.justification_documents.0.is_image', true);
+        $disk->delete([$document->thumbnail, $document->medium]);
+        $document->update(['thumbnail' => null, 'medium' => null]);
+        $this->get('/api/v1/sorelle/dashboard/attendances/'.$attendance->id.'/justification-documents/'.$document->id.'?variant=thumbnail')->assertOk();
+        $document->refresh();
+        $this->assertTrue($disk->exists($document->thumbnail));
+        $this->assertTrue($disk->exists($document->medium));
+        $this->getJson('/api/v1/sorelle/dashboard/attendances/'.$attendance->id.'/justification-documents/'.$document->id.'?variant=invalid')->assertUnprocessable();
     }
 
     public function test_work_status_is_stored_on_employee_and_can_differ_from_account_access(): void

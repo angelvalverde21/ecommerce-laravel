@@ -21,6 +21,11 @@ class Kardex extends Model
         return $this->morphTo();
     }
 
+    public function receptionItem()
+    {
+        return $this->belongsTo(InventoryReceptionItem::class, 'inventory_reception_item_id');
+    }
+
     public function variant()
     {
         return $this->belongsTo(Variant::class)->withoutGlobalScope(\App\Models\Scopes\ActiveVariantScope::class);

@@ -22,7 +22,7 @@ class ShopifyOrderBulkSource
 
     protected function request(string $query, array $variables = []): array
     {
-        $version = (string) config('shopify.version');
+        $version = $this->apiVersion();
         if (! preg_match('/^20[0-9]{2}-[0-9]{2}$/', $version)) {
             throw new RuntimeException('Versión de Shopify no válida.');
         }
@@ -61,10 +61,14 @@ class ShopifyOrderBulkSource
                 throw new RuntimeException('Shopify rechazó la consulta. Revisa permisos y versión de la API.');
             }
 
+            $this->observeCost($json['extensions']['cost'] ?? []);
             return $json['data'];
         }
         throw new RuntimeException('No se pudo completar la solicitud Shopify.');
     }
+
+    protected function observeCost(array $cost): void {}
+    protected function apiVersion(): string { return (string) config('shopify.version'); }
 
     private function onlyThrottleErrors(?array $json): bool
     {

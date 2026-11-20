@@ -63,6 +63,9 @@ class ImageDashboardController extends Controller
      */
     public function store(Store $store, Request $request)
     {
+        if ($request->input('imageable_type') === 'photo_model') {
+            return app(PhotoModelImageDashboardController::class)->store($store, $request, app(\App\Services\PhotoSessions\PhotoModelImages::class));
+        }
         //
         Log::info($request->all());
 
@@ -122,6 +125,9 @@ class ImageDashboardController extends Controller
      */
     public function destroy(Store $store, Request $request, $image_id)
     {
+        if ($request->input('imageable_type') === 'photo_model') {
+            return app(PhotoModelImageDashboardController::class)->destroy($store, $request, (int) $image_id, app(\App\Services\PhotoSessions\PhotoModelImages::class));
+        }
 
 
         Log::info($request->all());

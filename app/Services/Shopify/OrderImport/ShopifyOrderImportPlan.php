@@ -20,7 +20,8 @@ class ShopifyOrderImportPlan
         ];
         $missingColumns = array_values(array_diff($orderColumns, $columns));
         $addressReady = Schema::hasColumns('addresses', ['purpose', 'country_code', 'city', 'province', 'postal_code']);
-        $ready = ! $missing && ! $missingColumns && $addressReady;
+        $variantMappingReady = Schema::hasColumn('variants', 'shopify_variant_id');
+        $ready = ! $missing && ! $missingColumns && $addressReady && $variantMappingReady;
         $bound = config('shopify.order_import_store_slug') === $store->slug;
         $configured = filled(config('shopify.store')) && filled(config('shopify.version')) && filled(config('shopify.token'));
 
@@ -30,6 +31,7 @@ class ShopifyOrderImportPlan
             'schema_ready' => $ready,
             'checks' => [
                 ['label' => 'Estructura local de pedidos y datos relacionados', 'ready' => $ready],
+                ['label' => 'Referencia Shopify en las variantes locales', 'ready' => $variantMappingReady],
                 ['label' => 'Conexión Shopify configurada', 'ready' => $configured],
                 ['label' => 'Vinculación local de Shopify con esta tienda', 'ready' => $bound],
                 ['label' => 'Ejecución habilitada', 'ready' => (bool) config('shopify.order_import_enabled', false)],

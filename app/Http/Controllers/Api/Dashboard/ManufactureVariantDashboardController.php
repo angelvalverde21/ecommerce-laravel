@@ -27,7 +27,7 @@ class ManufactureVariantDashboardController extends Controller
     {
         //
 
-        $manufacture_variants = $this->service->variants($store, $manufacture_id);
+        $manufacture_variants = $this->service->variants($store, $manufacture_id, request()->boolean('include_kardex', true));
 
         return responseOk($manufacture_variants, "Listado de Manufacture_variants obtenido correctamente");
     }
