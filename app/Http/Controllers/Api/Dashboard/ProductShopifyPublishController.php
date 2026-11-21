@@ -20,9 +20,15 @@ class ProductShopifyPublishController extends Controller
     public function preview(Store $store, Request $request, CatalogPublisher $publisher)
     {
         $actor = $this->authorizeStore($store, $request);
-        $data = $request->validate(['product_ids' => 'required|array|min:1|max:25', 'product_ids.*' => 'required|integer|distinct|min:1', 'mode' => ['sometimes', Rule::in(['catalog'])],
+        $data = $request->validate(['product_ids' => 'required|array|min:1|max:25', 'product_ids.*' => 'required|integer|distinct|min:1', 'mode' => ['sometimes', Rule::in(['catalog', 'reset'])],
             'target_status' => ['required', Rule::in(['DRAFT'])]]);
-        return responseOk($publisher->preview($store, $actor, array_map('intval', $data['product_ids']), $data['target_status']));
+        return responseOk($publisher->preview($store, $actor, array_map('intval', $data['product_ids']), $data['target_status'], $data['mode'] ?? 'catalog'));
+    }
+    public function reset(Store $store, Request $request, int $product_id, CatalogPublisher $publisher)
+    {
+        $actor = $this->authorizeStore($store, $request);
+        $data = $request->validate(['token' => 'required|string|max:12000']);
+        return responseOk($publisher->reset($store, $actor, $product_id, $data['token']));
     }
     public function publish(Store $store, Request $request, int $product_id, CatalogPublisher $publisher)
     {

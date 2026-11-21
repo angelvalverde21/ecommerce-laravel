@@ -37,7 +37,9 @@ class CatalogClient
 
     public function find(string $handle): ?array
     {
-        return $this->request('query FindErpProduct($identifier: ProductIdentifierInput!) { productByIdentifier(identifier: $identifier) { '.self::PRODUCT.' } }', ['identifier' => ['handle' => $handle]])['productByIdentifier'] ?? null;
+        $data = $this->request('query FindErpProduct($identifier: ProductIdentifierInput!) { productByIdentifier(identifier: $identifier) { '.self::PRODUCT.' } }', ['identifier' => ['handle' => $handle]]);
+        if (!array_key_exists('productByIdentifier', $data)) throw new RuntimeException('Shopify no confirmó el estado del producto.');
+        return $data['productByIdentifier'];
     }
 
     public function create(array $input): array
@@ -46,6 +48,20 @@ class CatalogClient
         $result = $data['productSet'] ?? [];
         if (!empty($result['userErrors']) || empty($result['product']['id'])) throw new RuntimeException('Shopify no completó el producto: '.mb_substr(implode(' ', array_column($result['userErrors'] ?? [], 'message')), 0, 800));
         return $result['product'];
+    }
+
+    public function findById(string $id): ?array
+    {
+        $data = $this->request('query ResetErpProduct($id: ID!) { product(id: $id) { '.self::PRODUCT.' } }', ['id' => $id]);
+        if (!array_key_exists('product', $data)) throw new RuntimeException('Shopify no confirmó el estado del producto.');
+        return $data['product'];
+    }
+
+    public function delete(string $id): void
+    {
+        $data = $this->request('mutation DeleteErpProduct($input: ProductDeleteInput!) { productDelete(input: $input, synchronous: true) { deletedProductId userErrors { field message } } }', ['input' => ['id' => $id]]);
+        $result = $data['productDelete'] ?? [];
+        if (!empty($result['userErrors']) || ($result['deletedProductId'] ?? null) !== $id) throw new RuntimeException('Shopify no confirmó la eliminación. '.mb_substr(implode(' ', array_column($result['userErrors'] ?? [], 'message')), 0, 800));
     }
 
     public function assertSkusAvailable(array $skus): void

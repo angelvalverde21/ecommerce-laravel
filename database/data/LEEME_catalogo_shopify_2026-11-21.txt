@@ -22,6 +22,15 @@ estable del envio, producto Shopify, vinculos de las variantes y ultimo resultad
 La migracion ya se aplico en la base local. El SQL de respaldo preparado el
 20 de noviembre no incluye esta tabla nueva.
 
+ALTERNATIVA SIN ARTISAN (PHPMYADMIN)
+1. Exporta un respaldo reciente de la base del hosting.
+2. Selecciona esa misma base en phpMyAdmin; no borres sus tablas.
+3. En Importar, selecciona sorelle_catalogo_shopify_actualizacion_2026-11-21.sql.
+4. Ejecuta la importacion. El parche crea la tabla y registra su migracion.
+No incluye productos ni datos de prueba. Se verifico su importacion dos veces
+en una base temporal sin duplicar el registro de migracion.
+Esta alternativa reemplaza la ejecucion del comando de migracion anterior.
+
 CONEXION
 Se utiliza SHOPIFY_STORE y SHOPIFY_ACCESS_TOKEN existentes.
 SHOPIFY_CATALOG_STORE_SLUG identifica la tienda ERP autorizada para esta conexion;

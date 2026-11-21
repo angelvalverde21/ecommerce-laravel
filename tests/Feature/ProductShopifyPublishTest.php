@@ -24,6 +24,8 @@ class ProductShopifyPublishTest extends TestCase
     private int $creates = 0;
     private bool $timeout = false;
     private array $existingSkus = [];
+    private bool $deleteTimeout = false;
+    private bool $deleteFails = false;
 
     protected function setUp(): void
     {
@@ -55,8 +57,16 @@ class ProductShopifyPublishTest extends TestCase
         }
         Route::post('/catalog-test/preview', fn (Request $r) => app(ProductShopifyPublishController::class)->preview(Store::findOrFail(1), $r, app(CatalogPublisher::class)));
         Route::post('/catalog-test/{id}/publish', fn (Request $r, $id) => app(ProductShopifyPublishController::class)->publish(Store::findOrFail(1), $r, (int) $id, app(CatalogPublisher::class)));
+        Route::post('/catalog-test/{id}/reset', fn (Request $r, $id) => app(ProductShopifyPublishController::class)->reset(Store::findOrFail(1), $r, (int) $id, app(CatalogPublisher::class)));
         Http::fake(function ($request) {
             $query = $request['query'];
+            if (str_contains($query, 'ResetErpProduct')) return Http::response(['data' => ['product' => $this->remote]]);
+            if (str_contains($query, 'DeleteErpProduct')) {
+                if ($this->deleteFails) return Http::response(['data' => ['productDelete' => ['deletedProductId' => null, 'userErrors' => [['message' => 'Denied']]]]]);
+                $id = $this->remote['id']; $this->remote = null;
+                if ($this->deleteTimeout) throw new ConnectionException('simulated deletion timeout');
+                return Http::response(['data' => ['productDelete' => ['deletedProductId' => $id, 'userErrors' => []]]]);
+            }
             if (str_contains($query, 'CatalogAccess')) return Http::response(['data' => ['shop' => ['myshopifyDomain' => 'catalog-test.myshopify.com'], 'currentAppInstallation' => ['accessScopes' => [['handle' => 'write_products']]]]]);
             if (str_contains($query, 'FindErpProduct')) return Http::response(['data' => ['productByIdentifier' => $this->remote]]);
             if (str_contains($query, 'CatalogSkuCheck')) return Http::response(['data' => ['productVariants' => ['nodes' => array_map(fn ($sku) => ['sku' => $sku], $this->existingSkus), 'pageInfo' => ['hasNextPage' => false]]]]);
@@ -75,6 +85,56 @@ class ProductShopifyPublishTest extends TestCase
 
     protected function tearDown(): void { DB::purge('catalog_test'); parent::tearDown(); }
     private function token(): string { return $this->postJson('/catalog-test/preview', ['product_ids' => [1], 'target_status' => 'DRAFT'])->assertOk()->json('data.items.0.token'); }
+
+    private function resetToken(): string
+    {
+        return $this->postJson('/catalog-test/preview', ['product_ids' => [1], 'target_status' => 'DRAFT', 'mode' => 'reset'])->assertOk()->json('data.items.0.token');
+    }
+
+    public function test_reset_deletes_export_and_links_preserves_local_product_and_allows_reexport(): void
+    {
+        $this->postJson('/catalog-test/1/publish', ['token' => $this->token()])->assertOk();
+        $token = $this->resetToken();
+        $this->postJson('/catalog-test/1/reset', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'reset');
+        $this->assertNull($this->remote);
+        $this->assertDatabaseCount('shopify_product_exports', 0);
+        $this->assertDatabaseHas('products', ['id' => 1, 'name' => 'Blusa nueva']);
+        $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 12, 'shopify_variant_id' => null]);
+        $this->postJson('/catalog-test/1/reset', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'reset');
+        $this->postJson('/catalog-test/1/publish', ['token' => $this->token()])->assertOk()->assertJsonPath('data.status', 'synced');
+        $this->postJson('/catalog-test/1/reset', ['token' => $token])->assertConflict();
+    }
+
+    public function test_failed_or_ambiguous_deletion_keeps_links_until_retry_confirms_absence(): void
+    {
+        $this->postJson('/catalog-test/1/publish', ['token' => $this->token()])->assertOk();
+        $token = $this->resetToken(); $this->deleteFails = true;
+        $this->postJson('/catalog-test/1/reset', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'failed');
+        $this->assertDatabaseHas('variants', ['id' => 1, 'shopify_variant_id' => 'gid://shopify/ProductVariant/1000']);
+        $this->deleteFails = false; $this->deleteTimeout = true;
+        $this->postJson('/catalog-test/1/reset', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'failed');
+        $this->assertDatabaseCount('shopify_product_exports', 1);
+        $this->postJson('/catalog-test/preview', ['product_ids' => [1], 'target_status' => 'DRAFT'])->assertOk()->assertJsonPath('data.items.0.status', 'invalid');
+        $this->postJson('/catalog-test/1/reset', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'reset');
+        $this->assertDatabaseCount('shopify_product_exports', 0);
+    }
+
+    public function test_reset_rejects_publish_tokens_and_products_not_owned_by_export(): void
+    {
+        $publishToken = $this->token();
+        $this->postJson('/catalog-test/1/reset', ['token' => $publishToken])->assertUnprocessable();
+        $this->postJson('/catalog-test/preview', ['product_ids' => [1], 'target_status' => 'DRAFT', 'mode' => 'reset'])->assertOk()->assertJsonPath('data.items.0.status', 'invalid');
+        Http::assertNothingSent();
+        $this->postJson('/catalog-test/1/publish', ['token' => $publishToken])->assertOk();
+        $token = $this->resetToken();
+        $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertUnprocessable();
+        $this->remote['metafield']['value'] = 'other-export';
+        $this->postJson('/catalog-test/1/reset', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'failed');
+        $this->assertNotNull($this->remote);
+        $this->assertDatabaseCount('shopify_product_exports', 1);
+        $user = User::create(['name' => 'Sales']); $user->assignRole('sales'); $this->actingAs($user, 'api');
+        $this->postJson('/catalog-test/1/reset', ['token' => $token])->assertForbidden();
+    }
 
     public function test_preview_is_read_only_and_lists_title_and_sizes(): void
     {
