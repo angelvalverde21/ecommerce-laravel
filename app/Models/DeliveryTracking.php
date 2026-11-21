@@ -32,6 +32,12 @@ class DeliveryTracking extends Model
         return $this->events()->where('type', 'rescheduled');
     }
 
+    public function scheduleHistory()
+    {
+        return $this->hasMany(DeliveryTrackingEvent::class)
+            ->whereIn('type', ['created', 'rescheduled'])->orderByDesc('id');
+    }
+
     public function getStatusAttribute(): string
     {
         if ($this->received_on) {

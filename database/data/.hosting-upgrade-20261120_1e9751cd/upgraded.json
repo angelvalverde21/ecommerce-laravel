@@ -1,0 +1,2112 @@
+{
+    "addresses": {
+        "columns": [
+            "id",
+            "name",
+            "identity_id",
+            "document_number",
+            "phone",
+            "type",
+            "primary",
+            "secondary",
+            "references",
+            "latitud",
+            "longitud",
+            "url_maps",
+            "reception_hours",
+            "sunday_hours",
+            "status",
+            "is_default",
+            "district_id",
+            "sort_order",
+            "addressable_type",
+            "addressable_id",
+            "created_at",
+            "updated_at",
+            "city"
+        ],
+        "data": {
+            "count": 594,
+            "sha256": "95f58d4f2fd8055b9ddef7d810618054f13d81f39f2582a4588065ece6f22076"
+        },
+        "ddl": "CREATE TABLE `addresses` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `identity_id` bigint(20) unsigned DEFAULT NULL,\n  `document_number` varchar(255) DEFAULT NULL,\n  `phone` varchar(255) DEFAULT NULL,\n  `type` varchar(255) DEFAULT 'Casa',\n  `primary` varchar(500) DEFAULT NULL,\n  `secondary` varchar(255) DEFAULT NULL,\n  `references` varchar(255) DEFAULT NULL,\n  `latitud` varchar(255) DEFAULT NULL,\n  `longitud` varchar(255) DEFAULT NULL,\n  `url_maps` varchar(1000) DEFAULT NULL,\n  `reception_hours` varchar(255) DEFAULT NULL,\n  `sunday_hours` varchar(255) DEFAULT NULL,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Address::INACTIVE = 0, Address::ACTIVE = 1',\n  `is_default` tinyint(1) NOT NULL DEFAULT 0,\n  `district_id` bigint(20) unsigned DEFAULT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `addressable_type` varchar(255) NOT NULL,\n  `addressable_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `city` varchar(255) DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `addresses_identity_id_foreign` (`identity_id`),\n  KEY `addresses_district_id_foreign` (`district_id`),\n  KEY `addresses_addressable_type_addressable_id_index` (`addressable_type`,`addressable_id`),\n  CONSTRAINT `addresses_district_id_foreign` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`),\n  CONSTRAINT `addresses_identity_id_foreign` FOREIGN KEY (`identity_id`) REFERENCES `identities` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "attachments": {
+        "columns": [
+            "id",
+            "attachable_type",
+            "attachable_id",
+            "name",
+            "path",
+            "mime_type",
+            "size",
+            "uploaded_by",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `attachments` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `attachable_type` varchar(255) NOT NULL,\n  `attachable_id` bigint(20) unsigned NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `path` varchar(255) NOT NULL,\n  `mime_type` varchar(255) DEFAULT NULL,\n  `size` bigint(20) unsigned NOT NULL,\n  `uploaded_by` bigint(20) unsigned DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `attachments_attachable_type_attachable_id_index` (`attachable_type`,`attachable_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "attendances": {
+        "columns": [
+            "id",
+            "store_id",
+            "employee_id",
+            "date",
+            "check_in",
+            "check_out",
+            "comment",
+            "created_at",
+            "updated_at",
+            "work_type",
+            "break_skipped",
+            "absence_justified",
+            "justification_reason",
+            "justified_by",
+            "justified_at"
+        ],
+        "data": {
+            "count": 668,
+            "sha256": "d1012e5d732100456064a686cb6db89c69bcfe26960514917f45d85673842d41"
+        },
+        "ddl": "CREATE TABLE `attendances` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `employee_id` bigint(20) unsigned DEFAULT NULL,\n  `date` date NOT NULL,\n  `check_in` time DEFAULT NULL,\n  `check_out` time DEFAULT NULL,\n  `comment` varchar(250) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `work_type` varchar(20) DEFAULT NULL,\n  `break_skipped` tinyint(1) NOT NULL DEFAULT 0,\n  `absence_justified` tinyint(1) NOT NULL DEFAULT 0,\n  `justification_reason` varchar(1000) DEFAULT NULL,\n  `justified_by` bigint(20) unsigned DEFAULT NULL,\n  `justified_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `attendances_store_employee_date_unique` (`store_id`,`employee_id`,`date`),\n  KEY `attendances_store_id_foreign` (`store_id`),\n  KEY `attendances_employee_id_foreign` (`employee_id`),\n  CONSTRAINT `attendances_employee_id_foreign` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `attendances_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "attributes": {
+        "columns": [
+            "id",
+            "store_id",
+            "name",
+            "value",
+            "sort_order",
+            "attributeable_type",
+            "attributeable_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `attributes` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `value` varchar(255) NOT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `attributeable_type` varchar(255) NOT NULL,\n  `attributeable_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `attr_attr_store_name_value_unique` (`attributeable_type`,`attributeable_id`,`store_id`,`name`,`value`) USING HASH,\n  KEY `attributes_store_id_foreign` (`store_id`),\n  KEY `attributes_attributeable_type_attributeable_id_index` (`attributeable_type`,`attributeable_id`),\n  CONSTRAINT `attributes_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "attribute_values": {
+        "columns": [
+            "id",
+            "attribute_id",
+            "value",
+            "sort_order"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `attribute_values` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `attribute_id` bigint(20) unsigned NOT NULL,\n  `value` varchar(255) NOT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  PRIMARY KEY (`id`),\n  KEY `attribute_values_attribute_id_foreign` (`attribute_id`),\n  CONSTRAINT `attribute_values_attribute_id_foreign` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "batches": {
+        "columns": [
+            "id",
+            "batchable_type",
+            "batchable_id",
+            "name",
+            "user_id",
+            "store_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `batches` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `batchable_type` varchar(255) DEFAULT NULL,\n  `batchable_id` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `batches_batchable_type_batchable_id_index` (`batchable_type`,`batchable_id`),\n  KEY `batches_user_id_foreign` (`user_id`),\n  KEY `batches_store_id_foreign` (`store_id`),\n  CONSTRAINT `batches_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `batches_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "batch_items": {
+        "columns": [
+            "id",
+            "batch_id",
+            "variant_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `batch_items` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `batch_id` bigint(20) unsigned NOT NULL,\n  `variant_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `batch_items_variant_id_unique` (`variant_id`),\n  KEY `batch_items_batch_id_foreign` (`batch_id`),\n  CONSTRAINT `batch_items_batch_id_foreign` FOREIGN KEY (`batch_id`) REFERENCES `batches` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `batch_items_variant_id_foreign` FOREIGN KEY (`variant_id`) REFERENCES `variants` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "branches": {
+        "columns": [
+            "id",
+            "store_id",
+            "address_id",
+            "name",
+            "code",
+            "is_main",
+            "is_active",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 1,
+            "sha256": "1ffd3f47506b2615b9fec752493b1739d49d489de6856dc4abaef7fc13a2131b"
+        },
+        "ddl": "CREATE TABLE `branches` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `address_id` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `code` varchar(50) NOT NULL,\n  `is_main` tinyint(1) NOT NULL DEFAULT 0,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `branches_store_id_code_unique` (`store_id`,`code`),\n  KEY `branches_address_id_foreign` (`address_id`),\n  CONSTRAINT `branches_address_id_foreign` FOREIGN KEY (`address_id`) REFERENCES `addresses` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `branches_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "brands": {
+        "columns": [
+            "id",
+            "name",
+            "store_id",
+            "slug",
+            "status",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `brands` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `slug` varchar(255) NOT NULL,\n  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '1 activo 0 archivado',\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `brands_store_id_foreign` (`store_id`),\n  CONSTRAINT `brands_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "cache": {
+        "columns": [
+            "key",
+            "value",
+            "expiration"
+        ],
+        "data": {
+            "count": 5,
+            "sha256": "34201c87502dd23f816e4bfc6b18ddcb640ba952493a1a68e7395a32f0c5fa0d"
+        },
+        "ddl": "CREATE TABLE `cache` (\n  `key` varchar(255) NOT NULL,\n  `value` mediumtext NOT NULL,\n  `expiration` int(11) NOT NULL,\n  PRIMARY KEY (`key`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "cache_locks": {
+        "columns": [
+            "key",
+            "owner",
+            "expiration"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `cache_locks` (\n  `key` varchar(255) NOT NULL,\n  `owner` varchar(255) NOT NULL,\n  `expiration` int(11) NOT NULL,\n  PRIMARY KEY (`key`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "categories": {
+        "columns": [
+            "id",
+            "name",
+            "full_name",
+            "slug",
+            "parent_id",
+            "user_id",
+            "store_id",
+            "origin",
+            "status",
+            "sort_order",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 44,
+            "sha256": "80d69215378436fa68bc688bf35ba32f6b25435f0846b29a9a6e59b56953ba13"
+        },
+        "ddl": "CREATE TABLE `categories` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `full_name` varchar(255) DEFAULT NULL,\n  `slug` varchar(255) NOT NULL,\n  `parent_id` bigint(20) unsigned DEFAULT NULL,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `origin` varchar(255) DEFAULT NULL,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3',\n  `sort_order` tinyint(3) unsigned NOT NULL DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `categories_parent_id_foreign` (`parent_id`),\n  KEY `categories_user_id_foreign` (`user_id`),\n  KEY `categories_store_id_foreign` (`store_id`),\n  CONSTRAINT `categories_parent_id_foreign` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `categories_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `categories_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "collections": {
+        "columns": [
+            "id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `collections` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "colors": {
+        "columns": [
+            "id",
+            "name",
+            "product_id",
+            "price",
+            "compare_at_price",
+            "quantity",
+            "origin",
+            "status",
+            "sort_order",
+            "sku",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `colors` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `product_id` bigint(20) unsigned DEFAULT NULL,\n  `price` double DEFAULT 0,\n  `compare_at_price` double DEFAULT 0,\n  `quantity` int(10) unsigned NOT NULL DEFAULT 0,\n  `origin` varchar(255) DEFAULT NULL,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3',\n  `sort_order` tinyint(3) unsigned NOT NULL DEFAULT 0,\n  `sku` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `colors_name_product_id_unique` (`name`,`product_id`),\n  UNIQUE KEY `colors_sku_unique` (`sku`),\n  KEY `colors_product_id_foreign` (`product_id`),\n  CONSTRAINT `colors_product_id_foreign` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "color_size": {
+        "columns": [
+            "id",
+            "color_id",
+            "size_id",
+            "price",
+            "compare_at_price",
+            "quantity",
+            "origin",
+            "status",
+            "sort_order",
+            "sku",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `color_size` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `color_id` bigint(20) unsigned NOT NULL,\n  `size_id` bigint(20) unsigned NOT NULL,\n  `price` double DEFAULT 0,\n  `compare_at_price` double DEFAULT 0,\n  `quantity` int(10) unsigned NOT NULL DEFAULT 0,\n  `origin` varchar(255) DEFAULT NULL,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3',\n  `sort_order` tinyint(3) unsigned NOT NULL DEFAULT 0,\n  `sku` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `color_size_color_id_size_id_unique` (`color_id`,`size_id`),\n  UNIQUE KEY `color_size_sku_unique` (`sku`),\n  KEY `color_size_size_id_foreign` (`size_id`),\n  CONSTRAINT `color_size_color_id_foreign` FOREIGN KEY (`color_id`) REFERENCES `colors` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `color_size_size_id_foreign` FOREIGN KEY (`size_id`) REFERENCES `sizes` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "commits": {
+        "columns": [
+            "id",
+            "commitable_type",
+            "commitable_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `commits` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `commitable_type` varchar(255) NOT NULL,\n  `commitable_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `commits_commitable_type_commitable_id_index` (`commitable_type`,`commitable_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "couriers": {
+        "columns": [
+            "id",
+            "user_id",
+            "is_cash_on_delivery",
+            "is_freight_collect",
+            "is_express_shipping",
+            "name",
+            "phone",
+            "status",
+            "is_cod",
+            "freight_collect",
+            "delivery_type",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 5,
+            "sha256": "2d47904d7b561f03ebddeeff6d8c296739e071c6673d006404fd4a9e2672f9ce"
+        },
+        "ddl": "CREATE TABLE `couriers` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `is_cash_on_delivery` tinyint(1) NOT NULL DEFAULT 0,\n  `is_freight_collect` tinyint(1) NOT NULL DEFAULT 0,\n  `is_express_shipping` tinyint(1) NOT NULL DEFAULT 0,\n  `name` varchar(255) NOT NULL,\n  `phone` varchar(255) DEFAULT NULL,\n  `status` tinyint(4) NOT NULL DEFAULT 1,\n  `is_cod` tinyint(1) NOT NULL DEFAULT 0,\n  `freight_collect` tinyint(1) NOT NULL DEFAULT 0,\n  `delivery_type` enum('agency','express','store_pickup') NOT NULL DEFAULT 'agency',\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `couriers_user_id_unique` (`user_id`),\n  CONSTRAINT `couriers_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "customers": {
+        "columns": [
+            "id",
+            "user_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `customers` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `customers_user_id_unique` (`user_id`),\n  CONSTRAINT `customers_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "delivery_trackings": {
+        "columns": [
+            "id",
+            "store_id",
+            "trackable_type",
+            "trackable_id",
+            "handed_over_on",
+            "expected_on",
+            "received_on",
+            "revision",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `delivery_trackings` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `trackable_type` varchar(255) NOT NULL,\n  `trackable_id` bigint(20) unsigned NOT NULL,\n  `handed_over_on` date DEFAULT NULL,\n  `expected_on` date NOT NULL,\n  `received_on` date DEFAULT NULL,\n  `revision` int(10) unsigned NOT NULL DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `delivery_trackings_trackable_type_trackable_id_unique` (`trackable_type`,`trackable_id`),\n  KEY `delivery_trackings_store_id_received_on_expected_on_index` (`store_id`,`received_on`,`expected_on`),\n  CONSTRAINT `delivery_trackings_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "delivery_tracking_events": {
+        "columns": [
+            "id",
+            "delivery_tracking_id",
+            "user_id",
+            "actor_name",
+            "type",
+            "changes",
+            "reason",
+            "created_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `delivery_tracking_events` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `delivery_tracking_id` bigint(20) unsigned NOT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `actor_name` varchar(255) NOT NULL,\n  `type` varchar(25) NOT NULL,\n  `changes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`changes`)),\n  `reason` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `delivery_tracking_events_delivery_tracking_id_foreign` (`delivery_tracking_id`),\n  KEY `delivery_tracking_events_user_id_foreign` (`user_id`),\n  CONSTRAINT `delivery_tracking_events_delivery_tracking_id_foreign` FOREIGN KEY (`delivery_tracking_id`) REFERENCES `delivery_trackings` (`id`),\n  CONSTRAINT `delivery_tracking_events_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "departments": {
+        "columns": [
+            "id",
+            "name",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 26,
+            "sha256": "b331efb1298427ee12d866531427a5b8777f4b5af867fa9942ec4f87692b8ee0"
+        },
+        "ddl": "CREATE TABLE `departments` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "districts": {
+        "columns": [
+            "id",
+            "name",
+            "province_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 1833,
+            "sha256": "c175423108d7123a655e203686c60bd21502a0146b9258b1b0f9dfe1ff317949"
+        },
+        "ddl": "CREATE TABLE `districts` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `province_id` bigint(20) unsigned DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `districts_province_id_foreign` (`province_id`),\n  CONSTRAINT `districts_province_id_foreign` FOREIGN KEY (`province_id`) REFERENCES `provinces` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "employees": {
+        "columns": [
+            "id",
+            "user_id",
+            "salary",
+            "type",
+            "comission",
+            "work_time_start",
+            "work_time_end",
+            "tolerance_minutes",
+            "tag_sales",
+            "store_id",
+            "date_entry",
+            "biometric_code",
+            "allow_extra_hours",
+            "status",
+            "created_at",
+            "updated_at",
+            "payroll_uses_attendance"
+        ],
+        "data": {
+            "count": 8,
+            "sha256": "265947d2be0e65f02d553b0ec7d3630b8fe01f6cf0b1edd1f377a5597cf8ae17"
+        },
+        "ddl": "CREATE TABLE `employees` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `salary` decimal(10,2) DEFAULT NULL,\n  `type` enum('fulltime','partime') DEFAULT NULL,\n  `comission` tinyint(4) DEFAULT NULL,\n  `work_time_start` time DEFAULT '09:00:00',\n  `work_time_end` time DEFAULT '19:00:00',\n  `tolerance_minutes` int(11) NOT NULL DEFAULT 10,\n  `tag_sales` varchar(255) DEFAULT NULL,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `date_entry` date DEFAULT NULL,\n  `biometric_code` varchar(50) DEFAULT NULL,\n  `allow_extra_hours` tinyint(1) NOT NULL DEFAULT 1,\n  `status` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `payroll_uses_attendance` tinyint(1) NOT NULL DEFAULT 1,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `employees_user_id_unique` (`user_id`),\n  UNIQUE KEY `employees_store_id_biometric_code_unique` (`store_id`,`biometric_code`),\n  KEY `employees_store_lookup_index` (`store_id`),\n  KEY `employees_store_id_status_index` (`store_id`,`status`),\n  CONSTRAINT `employees_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`),\n  CONSTRAINT `employees_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "employee_schedules": {
+        "columns": [
+            "id",
+            "store_id",
+            "employee_id",
+            "work_type",
+            "day_of_week",
+            "start_time",
+            "end_time",
+            "comments",
+            "allow_extra_hours",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 24,
+            "sha256": "b3ba4aeb40ac3eb3c44ff723f47f0128dd14f5d821986f78ebbb0ccc9f4c92e9"
+        },
+        "ddl": "CREATE TABLE `employee_schedules` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `employee_id` bigint(20) unsigned NOT NULL,\n  `work_type` enum('home_office','onsite','rest') NOT NULL DEFAULT 'onsite',\n  `day_of_week` tinyint(3) unsigned DEFAULT NULL,\n  `start_time` time DEFAULT '09:00:00',\n  `end_time` time NOT NULL DEFAULT '19:00:00',\n  `comments` varchar(255) DEFAULT NULL,\n  `allow_extra_hours` tinyint(1) NOT NULL DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `employee_schedules_store_id_foreign` (`store_id`),\n  KEY `employee_schedules_employee_id_foreign` (`employee_id`),\n  CONSTRAINT `employee_schedules_employee_id_foreign` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `employee_schedules_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "failed_jobs": {
+        "columns": [
+            "id",
+            "uuid",
+            "connection",
+            "queue",
+            "payload",
+            "exception",
+            "failed_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `failed_jobs` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `uuid` varchar(255) NOT NULL,\n  `connection` text NOT NULL,\n  `queue` text NOT NULL,\n  `payload` longtext NOT NULL,\n  `exception` longtext NOT NULL,\n  `failed_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `failed_jobs_uuid_unique` (`uuid`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "gateways": {
+        "columns": [
+            "id",
+            "store_id",
+            "name",
+            "title",
+            "sort_order",
+            "status",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 6,
+            "sha256": "a164e52d9186804ab92ac2d12df9afa51ea955b68298c8dd89f76b15e5e1e123"
+        },
+        "ddl": "CREATE TABLE `gateways` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '1 = active, 0 = Archived',\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `gateways_store_id_foreign` (`store_id`),\n  CONSTRAINT `gateways_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "identities": {
+        "columns": [
+            "id",
+            "code",
+            "name",
+            "description",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 5,
+            "sha256": "088e1a7ea54f0c4711529c2b122e28a2ff2c144b14c8033303e6b02cb7926fb9"
+        },
+        "ddl": "CREATE TABLE `identities` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `code` varchar(255) NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `description` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `identities_code_unique` (`code`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "images": {
+        "columns": [
+            "id",
+            "name",
+            "title",
+            "thumbnail",
+            "medium",
+            "large",
+            "imageable_type",
+            "imageable_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 895,
+            "sha256": "d24cf2dc47d8ed46cc01d8cd6cd4729d53c8159921b0314aa13ff6b64644a231"
+        },
+        "ddl": "CREATE TABLE `images` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) DEFAULT NULL,\n  `title` varchar(255) DEFAULT NULL,\n  `thumbnail` varchar(255) DEFAULT NULL,\n  `medium` varchar(255) DEFAULT NULL,\n  `large` varchar(255) DEFAULT NULL,\n  `imageable_type` varchar(255) NOT NULL,\n  `imageable_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `images_imageable_type_imageable_id_index` (`imageable_type`,`imageable_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_addresses": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_addresses` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_addresses_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_addresses_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_addresses_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_customers": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_customers` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_customers_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_customers_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_customers_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_discounts": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_discounts` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_discounts_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_discounts_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_discounts_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_events": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_events` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_events_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_events_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_events_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_event_attachments": {
+        "columns": [
+            "id",
+            "run_id",
+            "task_key",
+            "shopify_id",
+            "parent_shopify_id",
+            "order_shopify_id",
+            "payload",
+            "status",
+            "disk",
+            "local_path",
+            "bytes",
+            "sha256",
+            "mime_type",
+            "error_message",
+            "downloaded_at",
+            "created_at",
+            "updated_at",
+            "download_metadata"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_event_attachments` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `task_key` varchar(64) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) NOT NULL,\n  `order_shopify_id` varchar(191) NOT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `status` varchar(20) NOT NULL DEFAULT 'pending',\n  `disk` varchar(255) NOT NULL DEFAULT 'local',\n  `local_path` varchar(255) DEFAULT NULL,\n  `bytes` bigint(20) unsigned DEFAULT NULL,\n  `sha256` varchar(64) DEFAULT NULL,\n  `mime_type` varchar(255) DEFAULT NULL,\n  `error_message` text DEFAULT NULL,\n  `downloaded_at` timestamp NULL DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `download_metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`download_metadata`)),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `is_event_attachment_identity` (`run_id`,`task_key`),\n  KEY `is_attachment_event` (`run_id`,`parent_shopify_id`),\n  KEY `is_attachment_order` (`run_id`,`order_shopify_id`),\n  KEY `is_attachment_status` (`run_id`,`status`),\n  CONSTRAINT `import_shopify_event_attachments_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_fulfillments": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_fulfillments` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_fulfillments_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_fulfillments_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_fulfillments_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_fulfillment_events": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_fulfillment_events` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_fulfillment_events_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_fulfillment_events_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_fulfillment_events_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_fulfillment_items": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_fulfillment_items` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_fulfillment_items_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_fulfillment_items_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_fulfillment_items_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_images": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_images` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_images_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_images_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_images_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_metafields": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_metafields` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_metafields_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_metafields_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_metafields_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_orders": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_orders` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_orders_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_orders_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_orders_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_order_items": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_order_items` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_order_items_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_order_items_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_order_items_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_order_updates": {
+        "columns": [
+            "id",
+            "run_id",
+            "requested_by",
+            "status",
+            "search_from",
+            "search_until",
+            "cursor",
+            "checked_orders",
+            "added_orders",
+            "task_baseline",
+            "scan_completed_at",
+            "completed_at",
+            "error_message",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_order_updates` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `requested_by` bigint(20) unsigned DEFAULT NULL,\n  `status` varchar(20) NOT NULL DEFAULT 'queued',\n  `search_from` datetime NOT NULL,\n  `search_until` datetime NOT NULL,\n  `cursor` text DEFAULT NULL,\n  `checked_orders` bigint(20) unsigned NOT NULL DEFAULT 0,\n  `added_orders` bigint(20) unsigned NOT NULL DEFAULT 0,\n  `task_baseline` bigint(20) unsigned NOT NULL DEFAULT 0,\n  `scan_completed_at` timestamp NULL DEFAULT NULL,\n  `completed_at` timestamp NULL DEFAULT NULL,\n  `error_message` text DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `import_shopify_order_updates_requested_by_foreign` (`requested_by`),\n  KEY `is_order_update_run_status` (`run_id`,`status`),\n  CONSTRAINT `import_shopify_order_updates_requested_by_foreign` FOREIGN KEY (`requested_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `import_shopify_order_updates_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_products": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_products` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_products_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_products_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_products_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_records": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_records` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_records_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_records_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_records_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_refunds": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_refunds` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_refunds_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_refunds_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_refunds_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_refund_adjustments": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_refund_adjustments` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_refund_adjustments_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_refund_adjustments_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_refund_adjustments_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_refund_items": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_refund_items` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_refund_items_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_refund_items_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_refund_items_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_refund_shipping_lines": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_refund_shipping_lines` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_refund_shipping_lines_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_refund_shipping_lines_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_refund_shipping_lines_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_runs": {
+        "columns": [
+            "id",
+            "store_id",
+            "requested_by",
+            "shop_domain",
+            "api_version",
+            "status",
+            "access_verified",
+            "current_task",
+            "error_code",
+            "error_message",
+            "throttle",
+            "heartbeat_at",
+            "completed_at",
+            "active_store_id",
+            "created_at",
+            "updated_at",
+            "timeline_version"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_runs` (\n  `id` char(36) NOT NULL,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `requested_by` bigint(20) unsigned DEFAULT NULL,\n  `shop_domain` varchar(255) NOT NULL,\n  `api_version` varchar(20) NOT NULL,\n  `status` varchar(20) NOT NULL DEFAULT 'queued',\n  `access_verified` tinyint(1) NOT NULL DEFAULT 0,\n  `current_task` varchar(255) DEFAULT NULL,\n  `error_code` varchar(255) DEFAULT NULL,\n  `error_message` text DEFAULT NULL,\n  `throttle` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`throttle`)),\n  `heartbeat_at` timestamp NULL DEFAULT NULL,\n  `completed_at` timestamp NULL DEFAULT NULL,\n  `active_store_id` bigint(20) unsigned GENERATED ALWAYS AS (case when `status` in ('completed','cancelled') then NULL else `store_id` end) STORED,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `timeline_version` tinyint(3) unsigned NOT NULL DEFAULT 1,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_runs_active_store_id_unique` (`active_store_id`),\n  KEY `import_shopify_runs_store_id_foreign` (`store_id`),\n  KEY `import_shopify_runs_requested_by_foreign` (`requested_by`),\n  CONSTRAINT `import_shopify_runs_requested_by_foreign` FOREIGN KEY (`requested_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `import_shopify_runs_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_shipping_lines": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_shipping_lines` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_shipping_lines_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_shipping_lines_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_shipping_lines_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_tasks": {
+        "columns": [
+            "id",
+            "run_id",
+            "kind",
+            "owner_id",
+            "status",
+            "cursor",
+            "operation_id",
+            "file_offset",
+            "processed_rows",
+            "expected_rows",
+            "expected_roots",
+            "processed_roots",
+            "created_at",
+            "updated_at",
+            "metadata"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_tasks` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `kind` varchar(50) NOT NULL,\n  `owner_id` varchar(191) NOT NULL,\n  `status` varchar(20) NOT NULL DEFAULT 'queued',\n  `cursor` text DEFAULT NULL,\n  `operation_id` varchar(191) DEFAULT NULL,\n  `file_offset` bigint(20) unsigned NOT NULL DEFAULT 0,\n  `processed_rows` bigint(20) unsigned NOT NULL DEFAULT 0,\n  `expected_rows` bigint(20) unsigned DEFAULT NULL,\n  `expected_roots` bigint(20) unsigned DEFAULT NULL,\n  `processed_roots` bigint(20) unsigned NOT NULL DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`metadata`)),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_task_identity` (`run_id`,`kind`,`owner_id`),\n  KEY `import_shopify_tasks_run_id_status_index` (`run_id`,`status`),\n  CONSTRAINT `import_shopify_tasks_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_transactions": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_transactions` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_transactions_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_transactions_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_transactions_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "import_shopify_variants": {
+        "columns": [
+            "id",
+            "run_id",
+            "shopify_id",
+            "parent_shopify_id",
+            "payload",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `import_shopify_variants` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `run_id` char(36) NOT NULL,\n  `shopify_id` varchar(191) NOT NULL,\n  `parent_shopify_id` varchar(191) DEFAULT NULL,\n  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`payload`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `import_shopify_variants_run_id_shopify_id_unique` (`run_id`,`shopify_id`),\n  KEY `is_variants_parent` (`run_id`,`parent_shopify_id`),\n  CONSTRAINT `import_shopify_variants_run_id_foreign` FOREIGN KEY (`run_id`) REFERENCES `import_shopify_runs` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "inventories": {
+        "columns": [
+            "id",
+            "inventoriable_type",
+            "inventoriable_id",
+            "name",
+            "created_user_id",
+            "store_id",
+            "status",
+            "comment",
+            "started_at",
+            "completed_at",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 1,
+            "sha256": "d355d984bc65dab713a5e983d6af29e9d3d74bcbc16e8fb6d5822cbd0654e798"
+        },
+        "ddl": "CREATE TABLE `inventories` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `inventoriable_type` varchar(255) DEFAULT NULL,\n  `inventoriable_id` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `created_user_id` bigint(20) unsigned NOT NULL,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `status` enum('draft','in_progress','completed','cancelled') NOT NULL DEFAULT 'draft',\n  `comment` text DEFAULT NULL,\n  `started_at` timestamp NULL DEFAULT NULL,\n  `completed_at` timestamp NULL DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `inventories_inventoriable_type_inventoriable_id_index` (`inventoriable_type`,`inventoriable_id`),\n  KEY `inventories_user_id_foreign` (`created_user_id`),\n  KEY `inventories_store_id_foreign` (`store_id`),\n  KEY `inventories_store_id_status_index` (`store_id`,`status`),\n  CONSTRAINT `inventories_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `inventories_user_id_foreign` FOREIGN KEY (`created_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "inventory_adjustments": {
+        "columns": [
+            "id",
+            "inventory_id",
+            "variant_id",
+            "system_quantity",
+            "counted_quantity",
+            "difference",
+            "status",
+            "approved_by",
+            "approved_at",
+            "applied_at",
+            "comment",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `inventory_adjustments` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `inventory_id` bigint(20) unsigned NOT NULL,\n  `variant_id` bigint(20) unsigned NOT NULL,\n  `system_quantity` int(11) NOT NULL,\n  `counted_quantity` int(11) NOT NULL,\n  `difference` int(11) NOT NULL COMMENT 'counted_quantity - system_quantity',\n  `status` enum('pending','approved','applied','rejected') NOT NULL DEFAULT 'pending',\n  `approved_by` bigint(20) unsigned DEFAULT NULL,\n  `approved_at` timestamp NULL DEFAULT NULL,\n  `applied_at` timestamp NULL DEFAULT NULL,\n  `comment` text DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `inventory_adjustments_inventory_id_variant_id_unique` (`inventory_id`,`variant_id`),\n  KEY `inventory_adjustments_variant_id_foreign` (`variant_id`),\n  KEY `inventory_adjustments_approved_by_foreign` (`approved_by`),\n  KEY `inventory_adjustments_inventory_id_status_index` (`inventory_id`,`status`),\n  CONSTRAINT `inventory_adjustments_approved_by_foreign` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `inventory_adjustments_inventory_id_foreign` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`),\n  CONSTRAINT `inventory_adjustments_variant_id_foreign` FOREIGN KEY (`variant_id`) REFERENCES `variants` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "inventory_counts": {
+        "columns": [
+            "id",
+            "inventory_session_id",
+            "location_id",
+            "variant_id",
+            "user_id",
+            "quantity",
+            "count_round",
+            "status",
+            "counted_at",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 247,
+            "sha256": "83fafabcd09d827a849854e36d030df62a5d42ded33488c1be223d5bac3b8a04"
+        },
+        "ddl": "CREATE TABLE `inventory_counts` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `inventory_session_id` bigint(20) unsigned NOT NULL,\n  `location_id` bigint(20) unsigned NOT NULL,\n  `variant_id` bigint(20) unsigned NOT NULL,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `quantity` int(10) unsigned NOT NULL,\n  `count_round` int(10) unsigned NOT NULL DEFAULT 1,\n  `status` enum('valid','replaced','cancelled') NOT NULL DEFAULT 'valid',\n  `counted_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `inventory_counts_location_id_foreign` (`location_id`),\n  KEY `inventory_counts_user_id_foreign` (`user_id`),\n  KEY `inventory_counts_variant_id_status_index` (`variant_id`,`status`),\n  KEY `inventory_counts_session_location_variant_index` (`inventory_session_id`,`location_id`,`variant_id`),\n  CONSTRAINT `inventory_counts_inventory_session_id_foreign` FOREIGN KEY (`inventory_session_id`) REFERENCES `inventory_sessions` (`id`),\n  CONSTRAINT `inventory_counts_location_id_foreign` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`),\n  CONSTRAINT `inventory_counts_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),\n  CONSTRAINT `inventory_counts_variant_id_foreign` FOREIGN KEY (`variant_id`) REFERENCES `variants` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "inventory_items": {
+        "columns": [
+            "id",
+            "inventory_id",
+            "variant_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `inventory_items` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `inventory_id` bigint(20) unsigned NOT NULL,\n  `variant_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `inventory_items_variant_id_unique` (`variant_id`),\n  KEY `inventory_items_inventory_id_foreign` (`inventory_id`),\n  CONSTRAINT `inventory_items_inventory_id_foreign` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `inventory_items_variant_id_foreign` FOREIGN KEY (`variant_id`) REFERENCES `variants` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "inventory_location_progress": {
+        "columns": [
+            "id",
+            "inventory_id",
+            "location_id",
+            "verified_by",
+            "status",
+            "started_at",
+            "counted_at",
+            "verified_at",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 29,
+            "sha256": "8f86a1d3d302e2189c034f3c24b3a3b9c758c410df66a72474f3c1ef92010df1"
+        },
+        "ddl": "CREATE TABLE `inventory_location_progress` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `inventory_id` bigint(20) unsigned NOT NULL,\n  `location_id` bigint(20) unsigned NOT NULL,\n  `verified_by` bigint(20) unsigned DEFAULT NULL,\n  `status` enum('pending','in_progress','counted','verified') NOT NULL DEFAULT 'pending',\n  `started_at` timestamp NULL DEFAULT NULL,\n  `counted_at` timestamp NULL DEFAULT NULL,\n  `verified_at` timestamp NULL DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `inventory_location_progress_inventory_id_location_id_unique` (`inventory_id`,`location_id`),\n  KEY `inventory_location_progress_location_id_foreign` (`location_id`),\n  KEY `inventory_location_progress_verified_by_foreign` (`verified_by`),\n  KEY `inventory_location_progress_inventory_id_status_index` (`inventory_id`,`status`),\n  CONSTRAINT `inventory_location_progress_inventory_id_foreign` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`),\n  CONSTRAINT `inventory_location_progress_location_id_foreign` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`),\n  CONSTRAINT `inventory_location_progress_verified_by_foreign` FOREIGN KEY (`verified_by`) REFERENCES `users` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "inventory_receptions": {
+        "columns": [
+            "id",
+            "store_id",
+            "source_type",
+            "source_id",
+            "request_id",
+            "payload_hash",
+            "received_on",
+            "notes",
+            "received_by",
+            "reversed_at",
+            "reversed_by",
+            "reversal_reason",
+            "created_at",
+            "updated_at",
+            "is_historical",
+            "stock_applied",
+            "status",
+            "revision",
+            "posted_at",
+            "posted_by",
+            "number"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `inventory_receptions` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `source_type` varchar(255) NOT NULL,\n  `source_id` bigint(20) unsigned NOT NULL,\n  `request_id` char(36) NOT NULL,\n  `payload_hash` char(64) NOT NULL,\n  `received_on` date NOT NULL,\n  `notes` text DEFAULT NULL,\n  `received_by` bigint(20) unsigned DEFAULT NULL,\n  `reversed_at` timestamp NULL DEFAULT NULL,\n  `reversed_by` bigint(20) unsigned DEFAULT NULL,\n  `reversal_reason` text DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `is_historical` tinyint(1) NOT NULL DEFAULT 0,\n  `stock_applied` tinyint(1) NOT NULL DEFAULT 1,\n  `status` varchar(20) NOT NULL DEFAULT 'posted',\n  `revision` int(10) unsigned NOT NULL DEFAULT 1,\n  `posted_at` timestamp NULL DEFAULT NULL,\n  `posted_by` bigint(20) unsigned DEFAULT NULL,\n  `number` int(10) unsigned NOT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `inventory_receptions_store_id_request_id_unique` (`store_id`,`request_id`),\n  UNIQUE KEY `reception_source_number_unique` (`store_id`,`source_type`,`source_id`,`number`),\n  KEY `inventory_receptions_source_type_source_id_index` (`source_type`,`source_id`),\n  KEY `inventory_receptions_received_by_foreign` (`received_by`),\n  KEY `inventory_receptions_reversed_by_foreign` (`reversed_by`),\n  KEY `inventory_receptions_posted_by_foreign` (`posted_by`),\n  KEY `inventory_receptions_status_index` (`status`),\n  CONSTRAINT `inventory_receptions_posted_by_foreign` FOREIGN KEY (`posted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `inventory_receptions_received_by_foreign` FOREIGN KEY (`received_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `inventory_receptions_reversed_by_foreign` FOREIGN KEY (`reversed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `inventory_receptions_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "inventory_reception_items": {
+        "columns": [
+            "id",
+            "inventory_reception_id",
+            "variant_id",
+            "product_id",
+            "product_name",
+            "sku",
+            "options",
+            "quantity",
+            "comment",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `inventory_reception_items` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `inventory_reception_id` bigint(20) unsigned NOT NULL,\n  `variant_id` bigint(20) unsigned NOT NULL,\n  `product_id` bigint(20) unsigned NOT NULL,\n  `product_name` varchar(255) NOT NULL,\n  `sku` varchar(255) DEFAULT NULL,\n  `options` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`options`)),\n  `quantity` int(10) unsigned NOT NULL,\n  `comment` varchar(100) NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `reception_variant_unique` (`inventory_reception_id`,`variant_id`),\n  CONSTRAINT `inventory_reception_items_inventory_reception_id_foreign` FOREIGN KEY (`inventory_reception_id`) REFERENCES `inventory_receptions` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "inventory_sessions": {
+        "columns": [
+            "id",
+            "inventory_id",
+            "user_id",
+            "status",
+            "started_at",
+            "ended_at",
+            "comment",
+            "warehouse_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 1,
+            "sha256": "c6e6c0649c24c2c61968ddbf71fb4bbea62a8fccc2e3dd291ac05c405183c912"
+        },
+        "ddl": "CREATE TABLE `inventory_sessions` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `inventory_id` bigint(20) unsigned NOT NULL,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `status` enum('open','closed','cancelled') NOT NULL DEFAULT 'open',\n  `started_at` timestamp NOT NULL DEFAULT current_timestamp(),\n  `ended_at` timestamp NULL DEFAULT NULL,\n  `comment` text DEFAULT NULL,\n  `warehouse_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `inventory_sessions_user_id_foreign` (`user_id`),\n  KEY `inventory_sessions_inventory_id_status_index` (`inventory_id`,`status`),\n  KEY `inventory_sessions_warehouse_id_foreign` (`warehouse_id`),\n  KEY `inventory_sessions_inventory_id_warehouse_id_index` (`inventory_id`,`warehouse_id`),\n  CONSTRAINT `inventory_sessions_inventory_id_foreign` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`),\n  CONSTRAINT `inventory_sessions_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),\n  CONSTRAINT `inventory_sessions_warehouse_id_foreign` FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "jobs": {
+        "columns": [
+            "id",
+            "queue",
+            "payload",
+            "attempts",
+            "reserved_at",
+            "available_at",
+            "created_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `jobs` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `queue` varchar(255) NOT NULL,\n  `payload` longtext NOT NULL,\n  `attempts` tinyint(3) unsigned NOT NULL,\n  `reserved_at` int(10) unsigned DEFAULT NULL,\n  `available_at` int(10) unsigned NOT NULL,\n  `created_at` int(10) unsigned NOT NULL,\n  PRIMARY KEY (`id`),\n  KEY `jobs_queue_index` (`queue`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "job_batches": {
+        "columns": [
+            "id",
+            "name",
+            "total_jobs",
+            "pending_jobs",
+            "failed_jobs",
+            "failed_job_ids",
+            "options",
+            "cancelled_at",
+            "finished_at",
+            "created_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `job_batches` (\n  `id` varchar(255) NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `total_jobs` int(11) NOT NULL,\n  `pending_jobs` int(11) NOT NULL,\n  `failed_jobs` int(11) NOT NULL,\n  `failed_job_ids` longtext NOT NULL,\n  `options` mediumtext DEFAULT NULL,\n  `cancelled_at` int(11) DEFAULT NULL,\n  `finished_at` int(11) DEFAULT NULL,\n  `created_at` int(11) NOT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "kardexes": {
+        "columns": [
+            "id",
+            "store_id",
+            "product_id",
+            "variant_id",
+            "kardexable_type",
+            "kardexable_id",
+            "quantity",
+            "direction",
+            "comment",
+            "created_at",
+            "updated_at",
+            "inventory_reception_item_id",
+            "reverses_kardex_id"
+        ],
+        "data": {
+            "count": 305,
+            "sha256": "baabb61c2507e4b783bdf64775e1d46a03f3a8e8664aa4f5ee0f91472360b81e"
+        },
+        "ddl": "CREATE TABLE `kardexes` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned DEFAULT NULL,\n  `product_id` bigint(20) unsigned DEFAULT NULL,\n  `variant_id` bigint(20) unsigned DEFAULT NULL,\n  `kardexable_type` varchar(255) NOT NULL,\n  `kardexable_id` bigint(20) unsigned NOT NULL,\n  `quantity` int(11) NOT NULL DEFAULT 0,\n  `direction` enum('in','out') NOT NULL DEFAULT 'in',\n  `comment` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `inventory_reception_item_id` bigint(20) unsigned DEFAULT NULL,\n  `reverses_kardex_id` bigint(20) unsigned DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `kardexes_reverses_kardex_id_unique` (`reverses_kardex_id`),\n  KEY `kardexes_product_id_foreign` (`product_id`),\n  KEY `kardexes_variant_id_foreign` (`variant_id`),\n  KEY `kardexes_kardexable_type_kardexable_id_index` (`kardexable_type`,`kardexable_id`),\n  KEY `fk_kardexes_store` (`store_id`),\n  KEY `kardexes_inventory_reception_item_id_foreign` (`inventory_reception_item_id`),\n  CONSTRAINT `kardexes_inventory_reception_item_id_foreign` FOREIGN KEY (`inventory_reception_item_id`) REFERENCES `inventory_reception_items` (`id`),\n  CONSTRAINT `kardexes_reverses_kardex_id_foreign` FOREIGN KEY (`reverses_kardex_id`) REFERENCES `kardexes` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "locations": {
+        "columns": [
+            "id",
+            "store_id",
+            "warehouse_id",
+            "parent_id",
+            "name",
+            "code",
+            "is_active",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 36,
+            "sha256": "e77266179219a56ba7be39f5581fe818e2897c1bcd8c3c72c595cdd79d165727"
+        },
+        "ddl": "CREATE TABLE `locations` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `warehouse_id` bigint(20) unsigned NOT NULL,\n  `parent_id` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `code` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `locations_warehouse_id_foreign` (`warehouse_id`),\n  KEY `locations_store_id_index` (`store_id`),\n  KEY `locations_parent_id_index` (`parent_id`),\n  CONSTRAINT `locations_parent_id_foreign` FOREIGN KEY (`parent_id`) REFERENCES `locations` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `locations_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`),\n  CONSTRAINT `locations_warehouse_id_foreign` FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "manufactures": {
+        "columns": [
+            "id",
+            "name",
+            "type",
+            "supplier_id",
+            "user_id",
+            "store_id",
+            "manufacture_end",
+            "manufacture_start",
+            "created_at",
+            "updated_at",
+            "supplier_address_id",
+            "stage_configuration_revision"
+        ],
+        "data": {
+            "count": 33,
+            "sha256": "ed67a3b614de86278a49a2ca27a25e5f64d1a173426f234c4802486c0bf59d28"
+        },
+        "ddl": "CREATE TABLE `manufactures` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `type` enum('order','production') NOT NULL DEFAULT 'order',\n  `supplier_id` bigint(20) unsigned DEFAULT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `store_id` bigint(20) unsigned DEFAULT NULL,\n  `manufacture_end` datetime DEFAULT NULL,\n  `manufacture_start` datetime DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `supplier_address_id` bigint(20) unsigned DEFAULT NULL,\n  `stage_configuration_revision` int(10) unsigned NOT NULL DEFAULT 0,\n  PRIMARY KEY (`id`),\n  KEY `manufactures_supplier_id_foreign` (`supplier_id`),\n  KEY `manufactures_user_id_foreign` (`user_id`),\n  KEY `manufactures_store_id_foreign` (`store_id`),\n  KEY `manufactures_supplier_address_id_foreign` (`supplier_address_id`),\n  CONSTRAINT `manufactures_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `manufactures_supplier_address_id_foreign` FOREIGN KEY (`supplier_address_id`) REFERENCES `addresses` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `manufactures_supplier_id_foreign` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `manufactures_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "manufacture_variant": {
+        "columns": [
+            "id",
+            "manufacture_id",
+            "variant_id",
+            "quantity",
+            "price",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 249,
+            "sha256": "55f2364cee2f6c364cf34b57cf2ef220a5d85a70cf99338838e36abc2f335022"
+        },
+        "ddl": "CREATE TABLE `manufacture_variant` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `manufacture_id` bigint(20) unsigned NOT NULL,\n  `variant_id` bigint(20) unsigned NOT NULL,\n  `quantity` int(11) NOT NULL DEFAULT 0,\n  `price` decimal(10,2) NOT NULL DEFAULT 0.00,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `manufacture_variant_manufacture_id_foreign` (`manufacture_id`),\n  KEY `manufacture_variant_variant_id_foreign` (`variant_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "migrations": {
+        "columns": [
+            "id",
+            "migration",
+            "batch"
+        ],
+        "data": {
+            "count": 113,
+            "sha256": "546d1576647f0c9a3ef7e161a2895ce869621255539095c82bbfb1909b30256f"
+        },
+        "ddl": "CREATE TABLE `migrations` (\n  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,\n  `migration` varchar(255) NOT NULL,\n  `batch` int(11) NOT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "model_has_permissions": {
+        "columns": [
+            "permission_id",
+            "model_type",
+            "model_id"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `model_has_permissions` (\n  `permission_id` bigint(20) unsigned NOT NULL,\n  `model_type` varchar(255) NOT NULL,\n  `model_id` bigint(20) unsigned NOT NULL,\n  PRIMARY KEY (`permission_id`,`model_id`,`model_type`),\n  KEY `model_has_permissions_model_id_model_type_index` (`model_id`,`model_type`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "model_has_roles": {
+        "columns": [
+            "role_id",
+            "model_type",
+            "model_id"
+        ],
+        "data": {
+            "count": 10,
+            "sha256": "034907f94e089cc940182bb427f5487889aa89baa4f5f8a15ef06fa48d7c6f81"
+        },
+        "ddl": "CREATE TABLE `model_has_roles` (\n  `role_id` bigint(20) unsigned NOT NULL,\n  `model_type` varchar(255) NOT NULL,\n  `model_id` bigint(20) unsigned NOT NULL,\n  PRIMARY KEY (`role_id`,`model_id`,`model_type`),\n  KEY `model_has_roles_model_id_model_type_index` (`model_id`,`model_type`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "oauth_access_tokens": {
+        "columns": [
+            "id",
+            "user_id",
+            "client_id",
+            "name",
+            "scopes",
+            "revoked",
+            "expires_at",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 74,
+            "sha256": "13c011c1b0ccfcdb227fb0df7bd10efdd7f9437a1f7bacf829b3565e42a6a52c"
+        },
+        "ddl": "CREATE TABLE `oauth_access_tokens` (\n  `id` char(80) NOT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `client_id` char(36) NOT NULL,\n  `name` varchar(255) DEFAULT NULL,\n  `scopes` text DEFAULT NULL,\n  `revoked` tinyint(1) NOT NULL,\n  `expires_at` datetime DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `oauth_access_tokens_user_id_index` (`user_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "oauth_auth_codes": {
+        "columns": [
+            "id",
+            "user_id",
+            "client_id",
+            "scopes",
+            "revoked",
+            "expires_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `oauth_auth_codes` (\n  `id` char(80) NOT NULL,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `client_id` char(36) NOT NULL,\n  `scopes` text DEFAULT NULL,\n  `revoked` tinyint(1) NOT NULL,\n  `expires_at` datetime DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `oauth_auth_codes_user_id_index` (`user_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "oauth_clients": {
+        "columns": [
+            "id",
+            "owner_type",
+            "owner_id",
+            "name",
+            "secret",
+            "provider",
+            "redirect_uris",
+            "grant_types",
+            "revoked",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 1,
+            "sha256": "03bb3bc65f6a253c4fb9c7398527757a2df5e8e24ebd0d8a2744e2717e42f9c2"
+        },
+        "ddl": "CREATE TABLE `oauth_clients` (\n  `id` char(36) NOT NULL,\n  `owner_type` varchar(255) DEFAULT NULL,\n  `owner_id` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `secret` varchar(255) DEFAULT NULL,\n  `provider` varchar(255) DEFAULT NULL,\n  `redirect_uris` text NOT NULL,\n  `grant_types` text NOT NULL,\n  `revoked` tinyint(1) NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `oauth_clients_owner_type_owner_id_index` (`owner_type`,`owner_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "oauth_device_codes": {
+        "columns": [
+            "id",
+            "user_id",
+            "client_id",
+            "user_code",
+            "scopes",
+            "revoked",
+            "user_approved_at",
+            "last_polled_at",
+            "expires_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `oauth_device_codes` (\n  `id` char(80) NOT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `client_id` char(36) NOT NULL,\n  `user_code` char(8) NOT NULL,\n  `scopes` text NOT NULL,\n  `revoked` tinyint(1) NOT NULL,\n  `user_approved_at` datetime DEFAULT NULL,\n  `last_polled_at` datetime DEFAULT NULL,\n  `expires_at` datetime DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `oauth_device_codes_user_code_unique` (`user_code`),\n  KEY `oauth_device_codes_user_id_index` (`user_id`),\n  KEY `oauth_device_codes_client_id_index` (`client_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "oauth_refresh_tokens": {
+        "columns": [
+            "id",
+            "access_token_id",
+            "revoked",
+            "expires_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `oauth_refresh_tokens` (\n  `id` char(80) NOT NULL,\n  `access_token_id` char(80) NOT NULL,\n  `revoked` tinyint(1) NOT NULL,\n  `expires_at` datetime DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `oauth_refresh_tokens_access_token_id_index` (`access_token_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "options": {
+        "columns": [
+            "id",
+            "store_id",
+            "product_id",
+            "parent_id",
+            "name",
+            "label",
+            "sort_order",
+            "archived_at",
+            "active_name",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 762,
+            "sha256": "ee9c9b05ce1c4983aa4571e8963e022661fdc441e7f44a69a14fc14a94b83023"
+        },
+        "ddl": "CREATE TABLE `options` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned DEFAULT NULL,\n  `product_id` bigint(20) unsigned NOT NULL,\n  `parent_id` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `label` varchar(255) NOT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `archived_at` timestamp NULL DEFAULT NULL,\n  `active_name` varchar(255) GENERATED ALWAYS AS (case when `archived_at` is null then `name` else NULL end) STORED,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `options_active_name_unique` (`store_id`,`product_id`,`active_name`),\n  KEY `options_product_id_foreign` (`product_id`),\n  KEY `options_parent_id_foreign` (`parent_id`),\n  KEY `options_archived_at_index` (`archived_at`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "option_values": {
+        "columns": [
+            "id",
+            "option_id",
+            "value",
+            "sort_order",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 1728,
+            "sha256": "ed28378aaf0b13b0638cf5474a7323d1425e8a834b928731341d0268b58d82d9"
+        },
+        "ddl": "CREATE TABLE `option_values` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `option_id` bigint(20) unsigned NOT NULL,\n  `value` varchar(255) NOT NULL,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `option_values_option_id_value_unique` (`option_id`,`value`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "orders": {
+        "columns": [
+            "id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `orders` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "password_reset_tokens": {
+        "columns": [
+            "email",
+            "token",
+            "created_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `password_reset_tokens` (\n  `email` varchar(255) NOT NULL,\n  `token` varchar(255) NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`email`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "payments": {
+        "columns": [
+            "id",
+            "store_id",
+            "user_id",
+            "amount",
+            "comment",
+            "hash",
+            "reference_code",
+            "gateway_id",
+            "method",
+            "status",
+            "date",
+            "paymentable_type",
+            "paymentable_id",
+            "direction",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 557,
+            "sha256": "29fb5a451e4286e0925dccbf53f35e1fe5c39eab679005885cc5c2106c786c40"
+        },
+        "ddl": "CREATE TABLE `payments` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned DEFAULT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `amount` decimal(10,2) NOT NULL,\n  `comment` varchar(255) DEFAULT NULL,\n  `hash` char(64) DEFAULT NULL,\n  `reference_code` varchar(10) DEFAULT NULL,\n  `gateway_id` bigint(20) unsigned DEFAULT NULL,\n  `method` enum('cash','yape','plin','credit_card','bank_transfer','paypal') NOT NULL DEFAULT 'cash',\n  `status` enum('unpaid','pending','failed','expired','paid','refunding','refunded') NOT NULL DEFAULT 'unpaid',\n  `date` timestamp NULL DEFAULT NULL,\n  `paymentable_type` varchar(255) DEFAULT NULL,\n  `paymentable_id` bigint(20) unsigned DEFAULT NULL,\n  `direction` enum('in','out') NOT NULL DEFAULT 'out',\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `yapes_hash_unique` (`hash`),\n  KEY `payments_store_id_foreign` (`store_id`),\n  KEY `payments_user_id_foreign` (`user_id`),\n  KEY `payments_gateway_id_foreign` (`gateway_id`),\n  KEY `payments_paymentable_type_paymentable_id_index` (`paymentable_type`,`paymentable_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "permissions": {
+        "columns": [
+            "id",
+            "name",
+            "guard_name",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 42,
+            "sha256": "d0c1d3a805a2ebb4b3b922547289ee04f129af6ce764c962f6884703d489eb31"
+        },
+        "ddl": "CREATE TABLE `permissions` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `guard_name` varchar(255) NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `permissions_name_guard_name_unique` (`name`,`guard_name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "personal_access_tokens": {
+        "columns": [
+            "id",
+            "tokenable_type",
+            "tokenable_id",
+            "name",
+            "token",
+            "abilities",
+            "last_used_at",
+            "expires_at",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `personal_access_tokens` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `tokenable_type` varchar(255) NOT NULL,\n  `tokenable_id` bigint(20) unsigned NOT NULL,\n  `name` text NOT NULL,\n  `token` varchar(64) NOT NULL,\n  `abilities` text DEFAULT NULL,\n  `last_used_at` timestamp NULL DEFAULT NULL,\n  `expires_at` timestamp NULL DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `personal_access_tokens_token_unique` (`token`),\n  KEY `personal_access_tokens_tokenable_type_tokenable_id_index` (`tokenable_type`,`tokenable_id`),\n  KEY `personal_access_tokens_expires_at_index` (`expires_at`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "petty_cashes": {
+        "columns": [
+            "id",
+            "store_id",
+            "employee_id",
+            "gateway_id",
+            "amount_assigned",
+            "balance",
+            "status",
+            "opened_at",
+            "closed_at",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 1,
+            "sha256": "5978e5f12c907f87df1c12857cdf2dbcc3b6cced48eb59170f09124a8c1b0c30"
+        },
+        "ddl": "CREATE TABLE `petty_cashes` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned DEFAULT NULL,\n  `employee_id` bigint(20) unsigned DEFAULT NULL,\n  `gateway_id` bigint(20) unsigned DEFAULT NULL,\n  `amount_assigned` decimal(12,2) NOT NULL,\n  `balance` decimal(12,2) NOT NULL,\n  `status` enum('open','closed') NOT NULL DEFAULT 'open',\n  `opened_at` timestamp NULL DEFAULT NULL,\n  `closed_at` timestamp NULL DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `unique_open_petty_cash_per_employee` (`store_id`,`employee_id`),\n  KEY `petty_cashes_employee_id_foreign` (`employee_id`),\n  KEY `petty_cashes_gateway_id_foreign` (`gateway_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "photo_contacts": {
+        "columns": [
+            "id",
+            "store_id",
+            "kind",
+            "name",
+            "phone",
+            "email",
+            "instagram",
+            "portfolio_url",
+            "company",
+            "notes",
+            "active",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `photo_contacts` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `kind` varchar(20) NOT NULL,\n  `name` varchar(180) NOT NULL,\n  `phone` varchar(40) DEFAULT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `instagram` varchar(120) DEFAULT NULL,\n  `portfolio_url` varchar(500) DEFAULT NULL,\n  `company` varchar(255) DEFAULT NULL,\n  `notes` text DEFAULT NULL,\n  `active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `photo_contacts_store_id_kind_active_index` (`store_id`,`kind`,`active`),\n  CONSTRAINT `photo_contacts_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "photo_locations": {
+        "columns": [
+            "id",
+            "store_id",
+            "name",
+            "type",
+            "contact_name",
+            "phone",
+            "email",
+            "reference_url",
+            "rate",
+            "rate_unit",
+            "notes",
+            "active",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `photo_locations` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `name` varchar(180) NOT NULL,\n  `type` varchar(25) NOT NULL,\n  `contact_name` varchar(180) DEFAULT NULL,\n  `phone` varchar(40) DEFAULT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `reference_url` varchar(1000) DEFAULT NULL,\n  `rate` decimal(12,2) DEFAULT NULL,\n  `rate_unit` varchar(15) NOT NULL DEFAULT 'hour',\n  `notes` text DEFAULT NULL,\n  `active` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `photo_locations_store_id_type_active_index` (`store_id`,`type`,`active`),\n  CONSTRAINT `photo_locations_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "photo_sessions": {
+        "columns": [
+            "id",
+            "store_id",
+            "created_by",
+            "responsible_id",
+            "name",
+            "status",
+            "shoot_date",
+            "starts_at",
+            "ends_at",
+            "delivery_date",
+            "location",
+            "collection",
+            "photographer",
+            "team",
+            "brief",
+            "notes",
+            "budget",
+            "created_at",
+            "updated_at",
+            "photographer_contact_id",
+            "photo_location_id"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `photo_sessions` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `created_by` bigint(20) unsigned DEFAULT NULL,\n  `responsible_id` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(180) NOT NULL,\n  `status` varchar(25) NOT NULL DEFAULT 'planned',\n  `shoot_date` date DEFAULT NULL,\n  `starts_at` time DEFAULT NULL,\n  `ends_at` time DEFAULT NULL,\n  `delivery_date` date DEFAULT NULL,\n  `location` varchar(255) DEFAULT NULL,\n  `collection` varchar(255) DEFAULT NULL,\n  `photographer` varchar(255) DEFAULT NULL,\n  `team` text DEFAULT NULL,\n  `brief` text DEFAULT NULL,\n  `notes` text DEFAULT NULL,\n  `budget` decimal(12,2) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `photographer_contact_id` bigint(20) unsigned DEFAULT NULL,\n  `photo_location_id` bigint(20) unsigned DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `photo_sessions_created_by_foreign` (`created_by`),\n  KEY `photo_sessions_responsible_id_foreign` (`responsible_id`),\n  KEY `photo_sessions_store_id_status_shoot_date_index` (`store_id`,`status`,`shoot_date`),\n  KEY `photo_sessions_photographer_contact_id_foreign` (`photographer_contact_id`),\n  KEY `photo_sessions_photo_location_id_foreign` (`photo_location_id`),\n  CONSTRAINT `photo_sessions_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `photo_sessions_photo_location_id_foreign` FOREIGN KEY (`photo_location_id`) REFERENCES `photo_locations` (`id`),\n  CONSTRAINT `photo_sessions_photographer_contact_id_foreign` FOREIGN KEY (`photographer_contact_id`) REFERENCES `photo_contacts` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `photo_sessions_responsible_id_foreign` FOREIGN KEY (`responsible_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `photo_sessions_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "photo_session_assets": {
+        "columns": [
+            "id",
+            "photo_session_id",
+            "uploaded_by",
+            "name",
+            "kind",
+            "category",
+            "selected",
+            "status",
+            "mime_type",
+            "bytes",
+            "bucket",
+            "object_key",
+            "upload_id",
+            "etag",
+            "previews",
+            "caption",
+            "completed_at",
+            "created_at",
+            "updated_at",
+            "preview_bucket"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `photo_session_assets` (\n  `id` char(36) NOT NULL,\n  `photo_session_id` bigint(20) unsigned NOT NULL,\n  `uploaded_by` bigint(20) unsigned DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `kind` varchar(15) NOT NULL,\n  `category` varchar(15) NOT NULL DEFAULT 'original',\n  `selected` tinyint(1) NOT NULL DEFAULT 0,\n  `status` varchar(20) NOT NULL DEFAULT 'uploading',\n  `mime_type` varchar(120) NOT NULL,\n  `bytes` bigint(20) unsigned NOT NULL,\n  `bucket` varchar(255) NOT NULL,\n  `object_key` varchar(255) NOT NULL,\n  `upload_id` text DEFAULT NULL,\n  `etag` varchar(255) DEFAULT NULL,\n  `previews` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`previews`)),\n  `caption` text DEFAULT NULL,\n  `completed_at` timestamp NULL DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `preview_bucket` varchar(255) DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `photo_session_assets_object_key_unique` (`object_key`),\n  KEY `photo_session_assets_uploaded_by_foreign` (`uploaded_by`),\n  KEY `photo_session_assets_photo_session_id_status_created_at_index` (`photo_session_id`,`status`,`created_at`),\n  CONSTRAINT `photo_session_assets_photo_session_id_foreign` FOREIGN KEY (`photo_session_id`) REFERENCES `photo_sessions` (`id`),\n  CONSTRAINT `photo_session_assets_uploaded_by_foreign` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "photo_session_locations": {
+        "columns": [
+            "id",
+            "photo_session_id",
+            "photo_location_id"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `photo_session_locations` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `photo_session_id` bigint(20) unsigned NOT NULL,\n  `photo_location_id` bigint(20) unsigned NOT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `session_locations_unique` (`photo_session_id`,`photo_location_id`),\n  KEY `photo_session_locations_photo_location_id_foreign` (`photo_location_id`),\n  CONSTRAINT `photo_session_locations_photo_location_id_foreign` FOREIGN KEY (`photo_location_id`) REFERENCES `photo_locations` (`id`),\n  CONSTRAINT `photo_session_locations_photo_session_id_foreign` FOREIGN KEY (`photo_session_id`) REFERENCES `photo_sessions` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "photo_session_models": {
+        "columns": [
+            "id",
+            "photo_session_id",
+            "photo_contact_id"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `photo_session_models` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `photo_session_id` bigint(20) unsigned NOT NULL,\n  `photo_contact_id` bigint(20) unsigned NOT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `photo_session_models_photo_session_id_photo_contact_id_unique` (`photo_session_id`,`photo_contact_id`),\n  KEY `photo_session_models_photo_contact_id_foreign` (`photo_contact_id`),\n  CONSTRAINT `photo_session_models_photo_contact_id_foreign` FOREIGN KEY (`photo_contact_id`) REFERENCES `photo_contacts` (`id`),\n  CONSTRAINT `photo_session_models_photo_session_id_foreign` FOREIGN KEY (`photo_session_id`) REFERENCES `photo_sessions` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "photo_session_photographers": {
+        "columns": [
+            "id",
+            "photo_session_id",
+            "photo_contact_id"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `photo_session_photographers` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `photo_session_id` bigint(20) unsigned NOT NULL,\n  `photo_contact_id` bigint(20) unsigned NOT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `session_photographers_unique` (`photo_session_id`,`photo_contact_id`),\n  KEY `photo_session_photographers_photo_contact_id_foreign` (`photo_contact_id`),\n  CONSTRAINT `photo_session_photographers_photo_contact_id_foreign` FOREIGN KEY (`photo_contact_id`) REFERENCES `photo_contacts` (`id`),\n  CONSTRAINT `photo_session_photographers_photo_session_id_foreign` FOREIGN KEY (`photo_session_id`) REFERENCES `photo_sessions` (`id`) ON DELETE CASCADE\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "prices": {
+        "columns": [
+            "id",
+            "status",
+            "name",
+            "value",
+            "currency",
+            "priceable_type",
+            "priceable_id",
+            "quantity",
+            "price",
+            "total",
+            "price_label_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `prices` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3',\n  `name` varchar(255) NOT NULL,\n  `value` varchar(255) NOT NULL,\n  `currency` varchar(3) NOT NULL DEFAULT 'PEN',\n  `priceable_type` varchar(255) NOT NULL,\n  `priceable_id` bigint(20) unsigned NOT NULL,\n  `quantity` decimal(12,3) NOT NULL DEFAULT 1.000,\n  `price` decimal(14,2) NOT NULL DEFAULT 0.00,\n  `total` decimal(18,2) NOT NULL DEFAULT 0.00,\n  `price_label_id` bigint(20) unsigned DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `prices_priceable_type_priceable_id_name_unique` (`priceable_type`,`priceable_id`,`name`),\n  KEY `prices_priceable_type_priceable_id_index` (`priceable_type`,`priceable_id`),\n  KEY `prices_price_label_id_foreign` (`price_label_id`),\n  CONSTRAINT `prices_price_label_id_foreign` FOREIGN KEY (`price_label_id`) REFERENCES `price_labels` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "price_labels": {
+        "columns": [
+            "id",
+            "name",
+            "code",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `price_labels` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `code` varchar(255) NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `price_labels_name_unique` (`name`),\n  UNIQUE KEY `price_labels_code_unique` (`code`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "production_stages": {
+        "columns": [
+            "id",
+            "code",
+            "name",
+            "slug",
+            "position",
+            "show_in_stepper",
+            "delivery_tracking_default",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 8,
+            "sha256": "e44e260961f7e699ea5375a65262ae2c4b2857412b232c17b998cf3dc8d8e682"
+        },
+        "ddl": "CREATE TABLE `production_stages` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `code` varchar(40) NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `slug` varchar(80) NOT NULL,\n  `position` tinyint(3) unsigned NOT NULL,\n  `show_in_stepper` tinyint(1) NOT NULL DEFAULT 1,\n  `delivery_tracking_default` tinyint(1) NOT NULL DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `production_stages_code_unique` (`code`),\n  UNIQUE KEY `production_stages_slug_unique` (`slug`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "production_stage_events": {
+        "columns": [
+            "id",
+            "production_stage_id",
+            "user_id",
+            "changes",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `production_stage_events` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `production_stage_id` bigint(20) unsigned NOT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `changes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`changes`)),\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `production_stage_events_production_stage_id_foreign` (`production_stage_id`),\n  KEY `production_stage_events_user_id_foreign` (`user_id`),\n  CONSTRAINT `production_stage_events_production_stage_id_foreign` FOREIGN KEY (`production_stage_id`) REFERENCES `production_stage_progress` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `production_stage_events_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "production_stage_progress": {
+        "columns": [
+            "id",
+            "manufacture_id",
+            "status",
+            "responsible",
+            "expected_end",
+            "completed_at",
+            "notes",
+            "sample_quantity",
+            "sample_details",
+            "sample_photos",
+            "sample_review",
+            "review_notes",
+            "reviewed_by",
+            "reviewed_at",
+            "revision",
+            "created_at",
+            "updated_at",
+            "stage_id",
+            "reuses_mold",
+            "is_enabled"
+        ],
+        "data": {
+            "count": 96,
+            "sha256": "4cb88917033ff60dcab027feda2d750c9bfc583054a04f9431406c48eb00b38f"
+        },
+        "ddl": "CREATE TABLE `production_stage_progress` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `manufacture_id` bigint(20) unsigned NOT NULL,\n  `status` varchar(25) NOT NULL DEFAULT 'pending',\n  `responsible` varchar(255) DEFAULT NULL,\n  `expected_end` date DEFAULT NULL,\n  `completed_at` timestamp NULL DEFAULT NULL,\n  `notes` text DEFAULT NULL,\n  `sample_quantity` int(10) unsigned DEFAULT NULL,\n  `sample_details` text DEFAULT NULL,\n  `sample_photos` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`sample_photos`)),\n  `sample_review` varchar(25) NOT NULL DEFAULT 'pending',\n  `review_notes` text DEFAULT NULL,\n  `reviewed_by` bigint(20) unsigned DEFAULT NULL,\n  `reviewed_at` timestamp NULL DEFAULT NULL,\n  `revision` int(10) unsigned NOT NULL DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `stage_id` bigint(20) unsigned DEFAULT NULL,\n  `reuses_mold` tinyint(1) NOT NULL DEFAULT 0,\n  `is_enabled` tinyint(1) NOT NULL DEFAULT 1,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `production_stage_progress_owner_unique` (`manufacture_id`,`stage_id`),\n  KEY `production_stages_reviewed_by_foreign` (`reviewed_by`),\n  KEY `production_stage_progress_stage_id_foreign` (`stage_id`),\n  CONSTRAINT `production_stage_progress_stage_id_foreign` FOREIGN KEY (`stage_id`) REFERENCES `production_stages` (`id`),\n  CONSTRAINT `production_stages_manufacture_id_foreign` FOREIGN KEY (`manufacture_id`) REFERENCES `manufactures` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `production_stages_reviewed_by_foreign` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "products": {
+        "columns": [
+            "id",
+            "name",
+            "slug",
+            "tags",
+            "body",
+            "online_store_url",
+            "category_id",
+            "barcode",
+            "user_id",
+            "store_id",
+            "price",
+            "compare_at_price",
+            "quantity",
+            "origin",
+            "status",
+            "sort_order",
+            "sku",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 760,
+            "sha256": "61b37a9dccaee8024d226fefcfcac033f0c6d6c6baae4f2a2842e7c68e81b8e0"
+        },
+        "ddl": "CREATE TABLE `products` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) DEFAULT NULL,\n  `slug` varchar(255) DEFAULT NULL,\n  `tags` varchar(255) DEFAULT NULL,\n  `body` text DEFAULT NULL,\n  `online_store_url` varchar(255) DEFAULT NULL,\n  `category_id` bigint(20) unsigned DEFAULT NULL,\n  `barcode` varchar(255) DEFAULT NULL,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `price` double DEFAULT 0,\n  `compare_at_price` double DEFAULT 0,\n  `quantity` int(10) unsigned NOT NULL DEFAULT 0,\n  `origin` varchar(255) DEFAULT NULL,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3',\n  `sort_order` tinyint(3) unsigned NOT NULL DEFAULT 0,\n  `sku` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `products_slug_store_id_status_unique` (`slug`,`store_id`,`status`),\n  UNIQUE KEY `products_sku_unique` (`sku`),\n  KEY `products_category_id_foreign` (`category_id`),\n  KEY `products_user_id_foreign` (`user_id`),\n  KEY `products_store_id_foreign` (`store_id`),\n  KEY `products_name_index` (`name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "provinces": {
+        "columns": [
+            "id",
+            "name",
+            "department_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 197,
+            "sha256": "2516c7ff7c983f476f235488ff36a5a0abd95ad348f92e2c04e69b01f46a1c91"
+        },
+        "ddl": "CREATE TABLE `provinces` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `department_id` bigint(20) unsigned DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `provinces_department_id_foreign` (`department_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "purchases": {
+        "columns": [
+            "id",
+            "production_stage_id",
+            "observations",
+            "supplier_id",
+            "user_id",
+            "petty_cash_id",
+            "store_id",
+            "purchase_end",
+            "purchase_start",
+            "purchaseable_type",
+            "purchaseable_id",
+            "created_at",
+            "updated_at",
+            "supplier_address_id"
+        ],
+        "data": {
+            "count": 114,
+            "sha256": "2fbc71605895d94458fb6995aa8686372ffe59da41bac75ec6467c126a2edf65"
+        },
+        "ddl": "CREATE TABLE `purchases` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `production_stage_id` bigint(20) unsigned DEFAULT NULL,\n  `observations` text DEFAULT NULL,\n  `supplier_id` bigint(20) unsigned DEFAULT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `petty_cash_id` bigint(20) unsigned DEFAULT NULL,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `purchase_end` datetime DEFAULT NULL,\n  `purchase_start` datetime DEFAULT NULL,\n  `purchaseable_type` varchar(255) NOT NULL,\n  `purchaseable_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `supplier_address_id` bigint(20) unsigned DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `purchases_supplier_id_foreign` (`supplier_id`),\n  KEY `purchases_user_id_foreign` (`user_id`),\n  KEY `purchases_petty_cash_id_foreign` (`petty_cash_id`),\n  KEY `purchases_store_id_foreign` (`store_id`),\n  KEY `purchases_purchaseable_type_purchaseable_id_index` (`purchaseable_type`,`purchaseable_id`),\n  KEY `purchases_production_stage_id_foreign` (`production_stage_id`),\n  KEY `purchases_supplier_address_id_foreign` (`supplier_address_id`),\n  CONSTRAINT `purchases_production_stage_id_foreign` FOREIGN KEY (`production_stage_id`) REFERENCES `production_stages` (`id`),\n  CONSTRAINT `purchases_supplier_address_id_foreign` FOREIGN KEY (`supplier_address_id`) REFERENCES `addresses` (`id`) ON DELETE SET NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "purchase_items": {
+        "columns": [
+            "id",
+            "purchase_id",
+            "product_id",
+            "unit_id",
+            "sku",
+            "name",
+            "quantity",
+            "price",
+            "subtotal",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 174,
+            "sha256": "ce7e017af94cc5539159a8b18b5fb3e0d2f94f0092136b1f63668e2653c3b433"
+        },
+        "ddl": "CREATE TABLE `purchase_items` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `purchase_id` bigint(20) unsigned NOT NULL,\n  `product_id` bigint(20) unsigned DEFAULT NULL,\n  `unit_id` bigint(20) unsigned DEFAULT NULL,\n  `sku` varchar(255) DEFAULT NULL,\n  `name` varchar(255) NOT NULL,\n  `quantity` decimal(10,2) NOT NULL DEFAULT 1.00,\n  `price` decimal(12,2) NOT NULL DEFAULT 0.00,\n  `subtotal` decimal(14,2) NOT NULL DEFAULT 0.00,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `purchase_items_unit_id_foreign` (`unit_id`),\n  KEY `purchase_items_purchase_id_index` (`purchase_id`),\n  KEY `purchase_items_product_id_index` (`product_id`),\n  KEY `purchase_items_sku_index` (`sku`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "purchase_orders": {
+        "columns": [
+            "id",
+            "name",
+            "observations",
+            "supplier_id",
+            "user_id",
+            "store_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `purchase_orders` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `observations` text DEFAULT NULL,\n  `supplier_id` bigint(20) unsigned DEFAULT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `store_id` bigint(20) unsigned DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `purchase_orders_supplier_id_foreign` (`supplier_id`),\n  KEY `purchase_orders_user_id_foreign` (`user_id`),\n  KEY `purchase_orders_store_id_foreign` (`store_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "roles": {
+        "columns": [
+            "id",
+            "name",
+            "title",
+            "guard_name",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 13,
+            "sha256": "61a304e8f4f04df07f30a6adcfcb94100ee0661b8c56133cd99437e1fc4bc18a"
+        },
+        "ddl": "CREATE TABLE `roles` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `title` varchar(255) DEFAULT NULL,\n  `guard_name` varchar(255) NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `roles_name_guard_name_unique` (`name`,`guard_name`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "role_has_permissions": {
+        "columns": [
+            "permission_id",
+            "role_id"
+        ],
+        "data": {
+            "count": 154,
+            "sha256": "ce94e609213dc491af9e9f1f10bc68720a1d077b20332d2f5e19931b21ebc111"
+        },
+        "ddl": "CREATE TABLE `role_has_permissions` (\n  `permission_id` bigint(20) unsigned NOT NULL,\n  `role_id` bigint(20) unsigned NOT NULL,\n  PRIMARY KEY (`permission_id`,`role_id`),\n  KEY `role_has_permissions_role_id_foreign` (`role_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "sessions": {
+        "columns": [
+            "id",
+            "user_id",
+            "ip_address",
+            "user_agent",
+            "payload",
+            "last_activity"
+        ],
+        "data": {
+            "count": 1,
+            "sha256": "f1bf255b71c7ef012ed2f6f974ee2ffe9b4be7e9e25a60461b1a761ae0c5beab"
+        },
+        "ddl": "CREATE TABLE `sessions` (\n  `id` varchar(255) NOT NULL,\n  `user_id` bigint(20) unsigned DEFAULT NULL,\n  `ip_address` varchar(45) DEFAULT NULL,\n  `user_agent` text DEFAULT NULL,\n  `payload` longtext NOT NULL,\n  `last_activity` int(11) NOT NULL,\n  PRIMARY KEY (`id`),\n  KEY `sessions_user_id_index` (`user_id`),\n  KEY `sessions_last_activity_index` (`last_activity`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "shopify_orders": {
+        "columns": [
+            "id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `shopify_orders` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "shopify_products": {
+        "columns": [
+            "id",
+            "shopify_product_id",
+            "title",
+            "image",
+            "status",
+            "online_store_url",
+            "sync_status",
+            "created_at_shopify",
+            "updated_at_shopify",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 713,
+            "sha256": "e7cbaaf230d38c3fd1b09cc5f764270b1935dee907c58d363d05f9fc3f4642ac"
+        },
+        "ddl": "CREATE TABLE `shopify_products` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `shopify_product_id` varchar(255) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `image` varchar(255) DEFAULT NULL,\n  `status` varchar(255) DEFAULT NULL,\n  `online_store_url` varchar(255) DEFAULT NULL,\n  `sync_status` tinyint(1) NOT NULL DEFAULT 1,\n  `created_at_shopify` timestamp NULL DEFAULT NULL,\n  `updated_at_shopify` timestamp NULL DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "shopify_variants": {
+        "columns": [
+            "id",
+            "shopify_product_id",
+            "shopify_variant_id",
+            "title",
+            "sku",
+            "price_etiqueta",
+            "price_oferta",
+            "price_sale",
+            "price_wholesaler",
+            "price_live",
+            "price_blackfriday",
+            "price_feria",
+            "quantity",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 1574,
+            "sha256": "cb64f3c30099948eac4f2e3118a60ac665d3fc5e89adec58d817dc45555af9d9"
+        },
+        "ddl": "CREATE TABLE `shopify_variants` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `shopify_product_id` bigint(20) unsigned NOT NULL,\n  `shopify_variant_id` varchar(255) NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `sku` varchar(255) DEFAULT NULL,\n  `price_etiqueta` decimal(10,2) DEFAULT NULL,\n  `price_oferta` decimal(10,2) DEFAULT NULL,\n  `price_sale` decimal(10,2) DEFAULT NULL,\n  `price_wholesaler` decimal(10,2) DEFAULT NULL,\n  `price_live` decimal(10,2) DEFAULT NULL,\n  `price_blackfriday` decimal(10,2) DEFAULT NULL,\n  `price_feria` decimal(10,2) DEFAULT NULL,\n  `quantity` int(11) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `shopify_variants_shopify_product_id_foreign` (`shopify_product_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "sizes": {
+        "columns": [
+            "id",
+            "name",
+            "product_id",
+            "price",
+            "compare_at_price",
+            "quantity",
+            "origin",
+            "status",
+            "sort_order",
+            "sku",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `sizes` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `product_id` bigint(20) unsigned DEFAULT NULL,\n  `price` double DEFAULT 0,\n  `compare_at_price` double DEFAULT 0,\n  `quantity` int(10) unsigned NOT NULL DEFAULT 0,\n  `origin` varchar(255) DEFAULT NULL,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3',\n  `sort_order` tinyint(3) unsigned NOT NULL DEFAULT 0,\n  `sku` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `sizes_name_product_id_unique` (`name`,`product_id`),\n  UNIQUE KEY `sizes_sku_unique` (`sku`),\n  KEY `sizes_product_id_foreign` (`product_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "stores": {
+        "columns": [
+            "id",
+            "name",
+            "phone",
+            "email",
+            "slug",
+            "identity_id",
+            "document_number",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 2,
+            "sha256": "9384244738b98c6d4570d8c5fda0a34c47856aee416f4826869c1754453665fc"
+        },
+        "ddl": "CREATE TABLE `stores` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `phone` bigint(20) unsigned DEFAULT NULL,\n  `email` varchar(255) NOT NULL,\n  `slug` varchar(255) NOT NULL,\n  `identity_id` bigint(20) unsigned DEFAULT NULL,\n  `document_number` varchar(20) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `stores_email_unique` (`email`),\n  UNIQUE KEY `stores_slug_unique` (`slug`),\n  UNIQUE KEY `stores_phone_unique` (`phone`),\n  UNIQUE KEY `stores_document_number_unique` (`document_number`),\n  KEY `stores_identity_id_foreign` (`identity_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "store_user": {
+        "columns": [
+            "id",
+            "store_id",
+            "user_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 68,
+            "sha256": "1295a8e58748cc7ccd9681c17e8b8cf4f4444969cb245b4cb79a119987d5dbe0"
+        },
+        "ddl": "CREATE TABLE `store_user` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `store_user_store_id_user_id_unique` (`store_id`,`user_id`),\n  KEY `store_user_user_id_foreign` (`user_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "suppliers": {
+        "columns": [
+            "id",
+            "user_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 54,
+            "sha256": "cbf934d11766ec229aacb1ebbcd26005c6653cae18eeb5af495c445564e82963"
+        },
+        "ddl": "CREATE TABLE `suppliers` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `user_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `suppliers_user_id_unique` (`user_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "syncs": {
+        "columns": [
+            "id",
+            "syncable_type",
+            "syncable_id",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `syncs` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `syncable_type` varchar(255) NOT NULL,\n  `syncable_id` bigint(20) unsigned NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `syncs_syncable_type_syncable_id_index` (`syncable_type`,`syncable_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "tags": {
+        "columns": [
+            "id",
+            "name",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `tags` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "tasks": {
+        "columns": [
+            "id",
+            "store_id",
+            "taskable_type",
+            "taskable_id",
+            "assigned_to",
+            "created_by",
+            "completed_by",
+            "title",
+            "description",
+            "due_date",
+            "status",
+            "last_note",
+            "completed_at",
+            "version",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `tasks` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `taskable_type` varchar(255) NOT NULL,\n  `taskable_id` bigint(20) unsigned NOT NULL,\n  `assigned_to` bigint(20) unsigned DEFAULT NULL,\n  `created_by` bigint(20) unsigned DEFAULT NULL,\n  `completed_by` bigint(20) unsigned DEFAULT NULL,\n  `title` varchar(180) NOT NULL,\n  `description` text DEFAULT NULL,\n  `due_date` date DEFAULT NULL,\n  `status` varchar(20) NOT NULL DEFAULT 'pending',\n  `last_note` text DEFAULT NULL,\n  `completed_at` timestamp NULL DEFAULT NULL,\n  `version` int(10) unsigned NOT NULL DEFAULT 1,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `tasks_taskable_type_taskable_id_index` (`taskable_type`,`taskable_id`),\n  KEY `tasks_assigned_to_foreign` (`assigned_to`),\n  KEY `tasks_created_by_foreign` (`created_by`),\n  KEY `tasks_completed_by_foreign` (`completed_by`),\n  KEY `tasks_store_id_assigned_to_status_index` (`store_id`,`assigned_to`,`status`),\n  CONSTRAINT `tasks_assigned_to_foreign` FOREIGN KEY (`assigned_to`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `tasks_completed_by_foreign` FOREIGN KEY (`completed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `tasks_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `tasks_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "task_events": {
+        "columns": [
+            "id",
+            "task_id",
+            "actor_id",
+            "type",
+            "changes",
+            "note",
+            "created_at"
+        ],
+        "data": {
+            "count": 0,
+            "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ddl": "CREATE TABLE `task_events` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `task_id` bigint(20) unsigned NOT NULL,\n  `actor_id` bigint(20) unsigned DEFAULT NULL,\n  `type` varchar(25) NOT NULL,\n  `changes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`changes`)),\n  `note` text DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `task_events_task_id_foreign` (`task_id`),\n  KEY `task_events_actor_id_foreign` (`actor_id`),\n  CONSTRAINT `task_events_actor_id_foreign` FOREIGN KEY (`actor_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,\n  CONSTRAINT `task_events_task_id_foreign` FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "units": {
+        "columns": [
+            "id",
+            "name",
+            "label",
+            "singular",
+            "plural",
+            "abbreviation",
+            "type",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 8,
+            "sha256": "281dc3d5d946ad05771d22a82c6ce28921b9af1a43b2c4614064bd0df517ebd9"
+        },
+        "ddl": "CREATE TABLE `units` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `label` varchar(255) NOT NULL,\n  `singular` varchar(255) NOT NULL,\n  `plural` varchar(255) NOT NULL,\n  `abbreviation` varchar(255) DEFAULT NULL,\n  `type` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "users": {
+        "columns": [
+            "id",
+            "name",
+            "email",
+            "email_verified_at",
+            "password",
+            "status",
+            "phone",
+            "identity_id",
+            "document_number",
+            "remember_token",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 68,
+            "sha256": "335d11bd286f70849e3d8311e4deaf219e8b6f6fa30c9f512f9cb9cda52ed30b"
+        },
+        "ddl": "CREATE TABLE `users` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `name` varchar(255) NOT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `email_verified_at` timestamp NULL DEFAULT NULL,\n  `password` varchar(255) NOT NULL,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '1 = active, 0 = blocked',\n  `phone` varchar(255) DEFAULT NULL,\n  `identity_id` bigint(20) unsigned DEFAULT NULL,\n  `document_number` varchar(20) DEFAULT NULL,\n  `remember_token` varchar(100) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `users_email_unique` (`email`),\n  UNIQUE KEY `users_document_number_unique` (`document_number`),\n  KEY `users_identity_id_foreign` (`identity_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "variants": {
+        "columns": [
+            "id",
+            "product_id",
+            "sku",
+            "price",
+            "stock",
+            "status",
+            "created_at",
+            "updated_at",
+            "shopify_variant_id"
+        ],
+        "data": {
+            "count": 1773,
+            "sha256": "a6fe01b49f569b736ebe52a721374de933e9bf85154e4d3bf1177faba13d2d02"
+        },
+        "ddl": "CREATE TABLE `variants` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `product_id` bigint(20) unsigned NOT NULL,\n  `sku` varchar(255) NOT NULL,\n  `price` decimal(10,2) NOT NULL,\n  `stock` int(11) NOT NULL DEFAULT 0,\n  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Product::TRASH = 0, Product::ACTIVE = 1, Product::DRAFT = 2, Product::ARCHIVED = 3',\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `shopify_variant_id` varchar(191) DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `variants_sku_unique` (`sku`),\n  KEY `variants_product_id_foreign` (`product_id`),\n  KEY `variants_shopify_variant_id_index` (`shopify_variant_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "variant_option_values": {
+        "columns": [
+            "id",
+            "variant_id",
+            "option_id",
+            "option_value_id"
+        ],
+        "data": {
+            "count": 1769,
+            "sha256": "17186d465c372530d2f8eec608246ac4d6c27a7f5cc9155a9e0625159cde9b25"
+        },
+        "ddl": "CREATE TABLE `variant_option_values` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `variant_id` bigint(20) unsigned NOT NULL,\n  `option_id` bigint(20) unsigned NOT NULL,\n  `option_value_id` bigint(20) unsigned NOT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `u_variant_option` (`variant_id`,`option_id`),\n  KEY `variant_option_values_option_id_foreign` (`option_id`),\n  KEY `variant_option_values_option_value_id_foreign` (`option_value_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    },
+    "warehouses": {
+        "columns": [
+            "id",
+            "store_id",
+            "name",
+            "code",
+            "branch_id",
+            "address",
+            "is_active",
+            "subtitle",
+            "created_at",
+            "updated_at"
+        ],
+        "data": {
+            "count": 4,
+            "sha256": "08b3e14639040704ad27da9e10c4572c7416446aa1d257d83874eca66c0a0497"
+        },
+        "ddl": "CREATE TABLE `warehouses` (\n  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,\n  `store_id` bigint(20) unsigned NOT NULL,\n  `name` varchar(255) NOT NULL,\n  `code` varchar(50) NOT NULL,\n  `branch_id` bigint(20) unsigned NOT NULL,\n  `address` varchar(255) DEFAULT NULL,\n  `is_active` tinyint(1) NOT NULL DEFAULT 1,\n  `subtitle` varchar(255) DEFAULT NULL,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `warehouses_store_id_code_unique` (`store_id`,`code`),\n  KEY `warehouses_branch_id_is_active_index` (`branch_id`,`is_active`),\n  CONSTRAINT `warehouses_branch_id_foreign` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`),\n  CONSTRAINT `warehouses_store_id_foreign` FOREIGN KEY (`store_id`) REFERENCES `stores` (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+    }
+}

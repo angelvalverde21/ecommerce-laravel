@@ -181,7 +181,8 @@ class Manufacture extends Model
     public function scopeWithDeliveryTrackingCount(Builder $query): Builder
     {
         return $query->withCount(['purchases as tracked_purchases_count' => fn (Builder $purchases) =>
-            $purchases->whereColumn('purchases.store_id', 'manufactures.store_id')->whereHas('deliveryTracking')]);
+            $purchases->whereColumn('purchases.store_id', 'manufactures.store_id')
+                ->whereHas('deliveryTracking', fn (Builder $tracking) => $tracking->whereNotNull('expected_on')->whereNull('received_on'))]);
     }
 
     public function purchases()

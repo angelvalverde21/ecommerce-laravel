@@ -43,6 +43,7 @@ class ProductDuplicationTest extends TestCase
             '2025_12_26_171717_create_options_table.php', '2026_11_06_100000_add_archive_to_product_options.php',
             '2025_12_26_171730_create_option_values_table.php',
             '2025_12_26_171743_create_variants_table.php',
+            '2026_11_16_100000_add_shopify_variant_id_to_variants.php',
             '2025_12_26_180043_create_variant_option_values_table.php',
             '2025_12_29_164504_create_attributes_table.php',
             '2025_12_29_164557_create_attribute_values_table.php',
@@ -84,7 +85,7 @@ class ProductDuplicationTest extends TestCase
         ));
     }
 
-    public function test_duplicate_has_new_ids_and_independent_properties_options_prices_and_images(): void
+    public function test_duplicate_has_independent_properties_options_prices_and_no_images(): void
     {
         $response = $this->postJson('/test-duplicate/'.$this->source->id, ['name' => '  Short verano azul  '])->assertOk();
         $copy = Product::findOrFail($response->json('data.id'));
@@ -121,13 +122,12 @@ class ProductDuplicationTest extends TestCase
         $this->assertEquals('6.00', $copy->sizes->first()->prices->first()->total);
         $this->assertEquals($copy->sizes->first()->id, $copy->colors->first()->sizes->first()->id);
         $this->assertEquals(0, DB::table('color_size')->where('color_id', $copy->colors->first()->id)->value('quantity'));
-        $image = $copy->images->first();
-        $this->assertNotEquals($this->source->images->first()->id, $image->id);
+        $this->assertCount(0, $copy->images);
+        $response->assertJsonPath('data.image', null);
+        $response->assertJsonPath('data.stock_total', 0);
+        $this->assertCount(1, $this->source->images);
         foreach (['thumbnail', 'medium', 'large'] as $field) {
-            $this->assertNotSame($this->source->images->first()->$field, $image->$field);
-            $this->assertSame('original-'.$field, Storage::disk('public')->get('images/'.$image->$field));
-            Storage::disk('public')->delete('images/'.$image->$field);
-            Storage::disk('public')->assertExists('images/'.$this->source->images->first()->$field);
+            $this->assertSame('original-'.$field, Storage::disk('public')->get('images/products/'.$field.'.png'));
         }
         $copy->options->firstWhere('name', 'size')->option_values->firstWhere('value', 'S')->update(['value' => 'XS']);
         $this->assertSame('S', $this->source->options->firstWhere('name', 'size')->option_values->firstWhere('value', 'S')->fresh()->value);
@@ -142,6 +142,14 @@ class ProductDuplicationTest extends TestCase
         $second = $this->postJson('/test-duplicate/1', ['name' => 'Short azul'])->assertOk()->json('data.id');
         $this->assertNotEquals(Product::find($first)->slug, Product::find($second)->slug);
         $this->assertNotEquals(Product::find($first)->sku, Product::find($second)->sku);
+    }
+
+    public function test_duplicate_does_not_reuse_the_original_shopify_variant_links(): void
+    {
+        $this->source->variants()->update(['shopify_variant_id' => 'gid://shopify/ProductVariant/123']);
+        $id = $this->postJson('/test-duplicate/1', ['name' => 'Nueva copia'])->assertOk()->json('data.id');
+        $this->assertFalse(Product::findOrFail($id)->variants()->withoutGlobalScopes()->whereNotNull('shopify_variant_id')->exists());
+        $this->assertSame('gid://shopify/ProductVariant/123', $this->source->variants()->first()->shopify_variant_id);
     }
 
     public function test_invalid_names_and_other_stores_are_rejected(): void
@@ -184,35 +192,29 @@ class ProductDuplicationTest extends TestCase
         $this->assertDatabaseHas('variant_option_values', ['option_id' => $archivedColor->id, 'option_value_id' => $archivedColor->option_values->first()->id]);
     }
 
-    public function test_missing_image_rolls_back_rows_and_cleans_copied_files(): void
+    public function test_missing_source_images_do_not_block_duplication_or_create_files(): void
     {
         $before = Storage::disk('public')->allFiles();
         $this->source->images()->create(['large' => 'products/missing.png']);
-        $this->postJson('/test-duplicate/1', ['name' => 'Copia'])->assertUnprocessable()->assertJsonValidationErrors('images');
-        $this->assertDatabaseCount('products', 1);
-        $this->assertDatabaseCount('variants', 4);
-        $this->assertDatabaseCount('prices', 2);
-        $this->assertEquals($before, Storage::disk('public')->allFiles());
-    }
-
-    public function test_remote_images_are_downloaded_to_independent_local_files(): void
-    {
-        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=');
-        Http::fake(['https://8.8.8.8/short.png' => Http::response($png, 200, ['Content-Type' => 'image/png'])]);
-        $this->source->images()->delete();
-        $this->source->images()->create(['thumbnail' => 'https://8.8.8.8/short.png', 'medium' => 'https://8.8.8.8/short.png', 'large' => 'https://8.8.8.8/short.png']);
         $id = $this->postJson('/test-duplicate/1', ['name' => 'Copia'])->assertOk()->json('data.id');
-        $image = Product::find($id)->images->first();
-        $this->assertStringStartsWith('products/'.$id.'/', $image->large);
-        $this->assertSame($png, Storage::disk('public')->get('images/'.$image->large));
-        Http::assertSentCount(1);
+        $this->assertDatabaseCount('products', 2);
+        $this->assertCount(0, Product::findOrFail($id)->images);
+        $this->assertCount(2, $this->source->images);
+        $this->assertEquals($before, Storage::disk('public')->allFiles());
+        Http::assertNothingSent();
     }
 
-    public function test_remote_private_addresses_are_rejected_without_network_access(): void
+    public function test_remote_images_are_not_downloaded_or_linked_to_the_copy(): void
     {
-        $this->source->images()->update(['large' => 'http://127.0.0.1/private']);
-        $this->postJson('/test-duplicate/1', ['name' => 'Copia'])->assertUnprocessable()->assertJsonValidationErrors('images');
-        $this->assertDatabaseCount('products', 1);
+        $before = Storage::disk('public')->allFiles();
+        foreach (['https://8.8.8.8/short.png', 'http://127.0.0.1/private'] as $url) {
+            $this->source->images()->update(['thumbnail' => $url, 'medium' => $url, 'large' => $url]);
+            $id = $this->postJson('/test-duplicate/1', ['name' => 'Copia'])->assertOk()->json('data.id');
+            $this->assertCount(0, Product::findOrFail($id)->images);
+            $this->assertSame($url, $this->source->images()->first()->large);
+        }
+        $this->assertDatabaseCount('images', 1);
+        $this->assertEquals($before, Storage::disk('public')->allFiles());
         Http::assertNothingSent();
     }
 }

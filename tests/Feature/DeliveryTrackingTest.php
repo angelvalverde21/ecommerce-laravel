@@ -96,7 +96,7 @@ class DeliveryTrackingTest extends TestCase
         ])->assertOk()->json('data.id');
     }
 
-    public function test_production_count_includes_received_purchases_without_counting_events_or_other_owners(): void
+    public function test_production_count_only_includes_unreceived_purchases_without_counting_events_or_other_owners(): void
     {
         $count = fn () => (int) Manufacture::withDeliveryTrackingCount()->findOrFail(1)->tracked_purchases_count;
         $this->assertSame(0, $count());
@@ -111,12 +111,28 @@ class DeliveryTrackingTest extends TestCase
         $other = Manufacture::create(['store_id' => 1, 'type' => 'production', 'name' => 'Otra']);
         $otherPurchase = $other->purchases()->create(['store_id' => 1]);
         $this->postJson('/delivery-test/1', ['trackable_type' => 'purchase', 'trackable_id' => $otherPurchase->id, 'expected_on' => '2026-12-01'])->assertOk();
-        $this->assertSame(2, $count());
+        $this->assertSame(1, $count());
         $received->delete();
         $this->assertSame(1, $count());
         $foreign = $production->purchases()->create(['store_id' => 2]);
         $foreign->deliveryTracking()->create(['store_id' => 2, 'expected_on' => '2026-12-01']);
         $this->assertSame(1, $count());
+        $this->putJson('/delivery-test/1/'.$id, ['revision' => 1, 'received_on' => '2026-11-30'])->assertOk();
+        $this->assertSame(0, $count());
+    }
+
+    public function test_schedule_history_includes_every_promised_date_newest_first(): void
+    {
+        $id = $this->createTracking();
+        $this->putJson('/delivery-test/1/'.$id, ['revision' => 0, 'expected_on' => '2026-12-01', 'reason' => 'Primer acuerdo'])->assertOk();
+        $this->putJson('/delivery-test/1/'.$id, ['revision' => 1, 'expected_on' => '2026-12-05', 'reason' => 'Segundo acuerdo'])
+            ->assertOk()->assertJsonCount(3, 'data.schedule_history')
+            ->assertJsonPath('data.schedule_history.0.changes.expected_on.after', '2026-12-05')
+            ->assertJsonPath('data.schedule_history.1.changes.expected_on.after', '2026-12-01')
+            ->assertJsonPath('data.schedule_history.2.changes.expected_on.after', '2026-11-25');
+        $tracking = $this->purchase->fresh()->deliveryTracking;
+        $this->assertTrue($tracking->relationLoaded('scheduleHistory'));
+        $this->assertSame(['2026-12-05', '2026-12-01', '2026-11-25'], $tracking->scheduleHistory->map(fn ($event) => $event->changes['expected_on']['after'])->all());
     }
 
     public function test_tracking_is_optional_and_duplicate_or_unsupported_owners_are_rejected(): void

@@ -616,6 +616,8 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('products')->group(function () {
+        Route::post('/shopify/preview', [\App\Http\Controllers\Api\Dashboard\ProductShopifyPublishController::class, 'preview']);
+        Route::post('/{product_id}/shopify-publish', [\App\Http\Controllers\Api\Dashboard\ProductShopifyPublishController::class, 'publish'])->whereNumber('product_id');
 
         Route::get('/setup', [ProductDashboardController::class, 'setup']); //Listar
         Route::get('/price-labels', [PriceDashboardController::class, 'labels']);

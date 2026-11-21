@@ -1,0 +1,52 @@
+ACTUALIZACION DEL RESPALDO DE SORELLE - 20/11/2026
+
+El archivo original tecnoplanet_sorelle.sql se conserva intacto.
+Los archivos generados parten exclusivamente de sus datos reales. No incluyen
+registros de prueba ni datos comerciales de la base local.
+
+ELIGE SOLO UNA ALTERNATIVA
+
+1. BASE NUEVA O VACIA
+Importa tecnoplanet_sorelle_actualizada_2026-11-20.sql desde phpMyAdmin en una
+base vacia. Incluye la estructura actualizada y los datos del respaldo original.
+No lo importes encima de una base que ya tenga tablas. Esta copia representa
+el momento del respaldo: no contiene operaciones posteriores del hosting.
+
+2. ACTUALIZAR LA BASE EXISTENTE
+Usa tecnoplanet_sorelle_actualizacion_2026-11-20.sql una sola vez sobre la base
+que corresponde al respaldo original, sin modificaciones de estructura previas.
+El parche agrega las migraciones faltantes y conserva los registros existentes.
+Se preparo y verifico contra este respaldo especifico. Si el hosting recibio
+nuevas operaciones desde la exportacion, conviene generar un respaldo nuevo
+y repetir la preparacion para incluir tambien esos registros en los backfills.
+
+No importes ambos archivos. Antes de actualizar el hosting, genera una copia de
+seguridad reciente y pausa las escrituras de la aplicacion durante la importacion.
+Selecciona expresamente la base destino: los SQL no contienen CREATE DATABASE
+ni USE. No ejecutes el parche de nuevo si ya se aplico completa o parcialmente;
+restaura el respaldo y revisa el error antes de volver a intentarlo.
+
+ALCANCE
+
+Se incorporan 31 migraciones aplicadas localmente: el esquema pasa de 77 a 118
+tablas. Incluye etapas configurables por produccion, seguimiento, recepciones,
+adjuntos polimorficos y los cambios pendientes de los demas modulos.
+Las 12 producciones del respaldo reciben sus 8 etapas iniciales: 96 registros.
+No se inventan clasificaciones ni estados de finalizacion para compras antiguas.
+La migracion de direcciones de proveedores normaliza addresses.is_default;
+este campo es una transformacion prevista, no una copia de los datos locales.
+
+Tambien debes publicar el codigo del backend y frontend correspondiente a estos
+cambios. El SQL no incluye archivos fisicos, fotos ni documentos almacenados:
+conserva el almacenamiento del hosting y su configuracion de acceso.
+
+VALIDACION
+
+Se importo el respaldo en una base temporal y se ejecutaron las migraciones.
+Se comprobaron conteos y huellas de los campos originales de las 77 tablas,
+exceptuando la normalizacion de addresses.is_default. Se verificaron por separado
+el parche y el SQL completo mediante nuevas importaciones y comparacion de
+estructura y datos. Consulta tecnoplanet_sorelle_validacion_2026-11-20.json.
+
+La preparacion se realizo localmente. No se modifico el hosting ni la base local
+de trabajo de la aplicacion.

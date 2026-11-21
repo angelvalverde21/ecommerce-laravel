@@ -9,6 +9,6 @@ trait HasDeliveryTracking
 {
     public function deliveryTracking(): MorphOne
     {
-        return $this->morphOne(DeliveryTracking::class, 'trackable')->withCount('reschedules');
+        return $this->morphOne(DeliveryTracking::class, 'trackable')->withCount('reschedules')->with('scheduleHistory');
     }
 }

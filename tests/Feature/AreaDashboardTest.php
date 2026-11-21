@@ -239,6 +239,65 @@ class AreaDashboardTest extends TestCase
             ->assertJsonPath('data.production_progress.progress_percent', null);
     }
 
+    public function test_ceo_recent_report_has_six_latest_productions_store_scoped_costs_and_all_sizes(): void
+    {
+        $this->login('ceo');
+        $this->productionTables();
+        Schema::create('purchases', function (Blueprint $table) {
+            $table->id(); $table->integer('store_id'); $table->string('purchaseable_type'); $table->integer('purchaseable_id');
+        });
+        Schema::create('purchase_items', function (Blueprint $table) {
+            $table->id(); $table->integer('purchase_id'); $table->decimal('subtotal', 14, 2);
+        });
+        Schema::create('variants', function (Blueprint $table) {
+            $table->id(); $table->integer('product_id'); $table->string('title'); $table->string('sku'); $table->integer('status');
+        });
+        Schema::create('options', function (Blueprint $table) {
+            $table->id(); $table->string('name'); $table->string('label');
+        });
+        Schema::create('option_values', function (Blueprint $table) {
+            $table->id(); $table->integer('option_id'); $table->string('value');
+        });
+        Schema::create('variant_option_values', function (Blueprint $table) {
+            $table->integer('variant_id'); $table->integer('option_value_id');
+        });
+        foreach (range(1, 10) as $id) {
+            DB::table('manufactures')->insert(['id' => $id, 'store_id' => $id === 9 ? 2 : 1, 'type' => $id === 10 ? 'order' : 'production', 'name' => 'Producción '.$id, 'created_at' => '2026-11-05 10:00:00']);
+        }
+        DB::table('products')->insert(['id' => 1, 'store_id' => 1, 'name' => 'Blusa', 'status' => 1]);
+        DB::table('options')->insert(['id' => 1, 'name' => 'size', 'label' => 'Talla']);
+        foreach (['S', 'M'] as $index => $size) {
+            $id = $index + 1;
+            DB::table('variants')->insert(['id' => $id, 'product_id' => 1, 'title' => $size, 'sku' => 'BL-'.$size, 'status' => 0]);
+            DB::table('option_values')->insert(['id' => $id, 'option_id' => 1, 'value' => $size]);
+            DB::table('variant_option_values')->insert(['variant_id' => $id, 'option_value_id' => $id]);
+            DB::table('manufacture_variant')->insert(['manufacture_id' => 7, 'variant_id' => $id, 'quantity' => $id === 1 ? 1 : 3]);
+        }
+        foreach ([[1, 1, \App\Models\Manufacture::class], [2, 2, \App\Models\Manufacture::class], [3, 1, 'OtherOwner']] as [$id, $store, $type]) {
+            DB::table('purchases')->insert(['id' => $id, 'store_id' => $store, 'purchaseable_type' => $type, 'purchaseable_id' => 7]);
+        }
+        DB::table('purchase_items')->insert([['purchase_id' => 1, 'subtotal' => 20], ['purchase_id' => 1, 'subtotal' => 40], ['purchase_id' => 2, 'subtotal' => 9999], ['purchase_id' => 3, 'subtotal' => 9999]]);
+        $response = $this->getJson('/area-test/ceo?days=7')->assertOk()->assertJsonCount(6, 'data.production_progress.recent_items');
+        $rows = $response->json('data.production_progress.recent_items');
+        $this->assertSame([8, 7, 6, 5, 4, 3], array_column($rows, 'id'));
+        $this->assertNull($rows[0]['unit_cost']);
+        $this->assertEquals(60, $rows[1]['total_expense']);
+        $this->assertSame(4, $rows[1]['planned_units']);
+        $this->assertEquals(15, $rows[1]['unit_cost']);
+        $this->assertCount(2, $rows[1]['variants']);
+        $this->assertSame('S', $rows[1]['variants'][0]['options'][0]['value']);
+        $this->assertSame('M', $rows[1]['variants'][1]['options'][0]['value']);
+        $this->assertSame(3, $rows[1]['variants'][1]['quantity']);
+        foreach (range(2, 10) as $limit) {
+            $this->getJson('/area-test/ceo?production_limit='.$limit)->assertOk()
+                ->assertJsonPath('data.production_progress.report_limit', $limit)
+                ->assertJsonCount(min(8, $limit), 'data.production_progress.recent_items');
+        }
+        foreach ([0, 1, 11, 1000, 'invalid'] as $limit) {
+            $this->getJson('/area-test/ceo?production_limit='.$limit)->assertUnprocessable();
+        }
+    }
+
     public function test_old_production_stays_visible_when_its_reception_completes_in_the_period(): void
     {
         $this->login('ceo');

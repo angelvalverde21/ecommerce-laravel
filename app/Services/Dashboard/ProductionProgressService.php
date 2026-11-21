@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 
 class ProductionProgressService
 {
-    public function forStore(Store $store, CarbonImmutable $from, CarbonImmutable $now): array
+    public function forStore(Store $store, CarbonImmutable $from, CarbonImmutable $now, int $productionLimit = 6): array
     {
         $required = [
             'manufactures' => ['id', 'store_id', 'type', 'name', 'created_at'],
@@ -139,6 +139,8 @@ class ProductionProgressService
             'progress_percent' => $this->percentage($completed, $planned),
             'visible_count' => $visible->count(),
             'items' => $visible->take(6)->all(),
+            'report_limit' => $productionLimit,
+            'recent_items' => app(RecentProductionReportService::class)->enrich($store, $rows->take($productionLimit)),
             'note' => 'Avance por unidades recibidas frente al plan de cada variante. Incluye todas las producciones pendientes, aunque sean anteriores al período, y las completadas con movimientos en el período seleccionado.',
         ];
     }

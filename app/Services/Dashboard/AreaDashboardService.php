@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 
 class AreaDashboardService
 {
-    public function report(Store $store, string $area, int $days): array
+    public function report(Store $store, string $area, int $days, int $productionLimit = 6): array
     {
         $now = CarbonImmutable::now('America/Lima');
         $from = $now->startOfDay()->subDays($days - 1);
@@ -42,7 +42,7 @@ class AreaDashboardService
             if ($payroll !== null) {
                 $report['employee_payroll'] = $payroll;
             }
-            $report['production_progress'] = app(ProductionProgressService::class)->forStore($store, $from, $now);
+            $report['production_progress'] = app(ProductionProgressService::class)->forStore($store, $from, $now, $productionLimit);
             $report['delivery_overview'] = app(\App\Services\Delivery\DeliveryOverviewService::class)->forStore($store);
         }
 

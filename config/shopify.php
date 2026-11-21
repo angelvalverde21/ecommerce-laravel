@@ -8,4 +8,6 @@ return [
     'order_import_store_slug' => env('SHOPIFY_ORDER_IMPORT_STORE_SLUG', ''),
     'initial_import_store_slug' => env('SHOPIFY_INITIAL_IMPORT_STORE_SLUG', env('SHOPIFY_ORDER_IMPORT_STORE_SLUG', '')),
     'initial_import_version' => env('SHOPIFY_INITIAL_IMPORT_API_VERSION', '2026-10'),
+    'catalog_store_slug' => env('SHOPIFY_CATALOG_STORE_SLUG', env('SHOPIFY_INITIAL_IMPORT_STORE_SLUG', env('SHOPIFY_ORDER_IMPORT_STORE_SLUG', ''))),
+    'catalog_version' => env('SHOPIFY_CATALOG_API_VERSION', '2026-10'),
 ];

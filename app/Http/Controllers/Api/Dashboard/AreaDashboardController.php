@@ -24,8 +24,11 @@ class AreaDashboardController extends Controller
             403,
             'No tienes acceso a esta tienda.'
         );
-        $validated = $request->validate(['days' => ['sometimes', 'integer', Rule::in([7, 30, 90])]]);
+        $validated = $request->validate([
+            'days' => ['sometimes', 'integer', Rule::in([7, 30, 90])],
+            'production_limit' => ['sometimes', 'integer', 'min:2', 'max:10'],
+        ]);
 
-        return responseOk($service->report($store, $area, (int) ($validated['days'] ?? 30)));
+        return responseOk($service->report($store, $area, (int) ($validated['days'] ?? 30), (int) ($validated['production_limit'] ?? 6)));
     }
 }

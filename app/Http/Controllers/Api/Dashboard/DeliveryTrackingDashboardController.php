@@ -45,7 +45,7 @@ class DeliveryTrackingDashboardController extends Controller
     {
         $this->authorizeStore($store, $request);
 
-        return responseOk(DeliveryTracking::where('store_id', $store->id)->findOrFail($tracking_id)->loadCount('reschedules'));
+        return responseOk(DeliveryTracking::where('store_id', $store->id)->findOrFail($tracking_id)->loadCount('reschedules')->load('scheduleHistory'));
     }
 
     public function events(Store $store, Request $request, int $tracking_id)

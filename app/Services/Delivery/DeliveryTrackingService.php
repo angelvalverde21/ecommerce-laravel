@@ -25,7 +25,7 @@ class DeliveryTrackingService
             $changes = collect($dates)->mapWithKeys(fn ($value, $key) => [$key => ['before' => null, 'after' => $value]])->all();
             $this->record($tracking, 'created', $changes, null, $actor);
 
-            return $tracking->loadCount('reschedules');
+            return $tracking->loadCount('reschedules')->load('scheduleHistory');
         });
     }
 
@@ -46,7 +46,7 @@ class DeliveryTrackingService
                 }
             }
             if (! $changes) {
-                return $tracking->loadCount('reschedules');
+                return $tracking->loadCount('reschedules')->load('scheduleHistory');
             }
             $reason = trim($data['reason'] ?? '');
             $rescheduled = isset($changes['expected_on']);
@@ -64,7 +64,7 @@ class DeliveryTrackingService
             $type = $rescheduled ? 'rescheduled' : (isset($changes['received_on']) && ! $before['received_on'] ? 'received' : 'corrected');
             $this->record($tracking, $type, $changes, $reason ?: null, $actor);
 
-            return $tracking->loadCount('reschedules');
+            return $tracking->loadCount('reschedules')->load('scheduleHistory');
         });
     }
 
