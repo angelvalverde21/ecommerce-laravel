@@ -25,7 +25,7 @@ class CollectionsWorkspaceTest extends TestCase
         Schema::create('inventory_receptions', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->morphs('source'); $t->timestamps(); });
         Schema::create('photo_sessions', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('created_by')->nullable(); $t->string('name'); $t->string('status'); $t->date('delivery_date')->nullable(); $t->timestamps(); });
         Schema::create('products', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('name'); $t->timestamps(); });
-        Schema::create('variants', function (Blueprint $t) { $t->id(); $t->integer('product_id'); $t->string('title')->nullable(); $t->string('sku')->nullable(); $t->integer('stock')->default(0); $t->integer('status')->default(1); });
+        Schema::create('variants', function (Blueprint $t) { $t->id(); $t->integer('product_id'); $t->string('title')->nullable(); $t->string('sku')->nullable(); $t->string('shopify_variant_id')->nullable(); $t->integer('stock')->default(0); $t->integer('status')->default(1); });
         Schema::create('options', function (Blueprint $t) { $t->id(); $t->string('name'); });
         Schema::create('option_values', function (Blueprint $t) { $t->id(); $t->integer('option_id'); $t->string('value'); });
         Schema::create('variant_option_values', function (Blueprint $t) { $t->id(); $t->integer('variant_id'); $t->integer('option_value_id'); });
@@ -105,6 +105,84 @@ class CollectionsWorkspaceTest extends TestCase
         $this->getJson('/collections-test/1/'.$foreign->id)->assertNotFound();
         $sales = User::create(['name' => 'Ventas']); $sales->assignRole('sales'); $sales->stores()->attach(1); $this->actingAs($sales, 'api');
         $this->getJson('/collections-test/1')->assertForbidden();
+    }
+    private function inventoryExportSetup(): array
+    {
+        config(['shopify.store' => 'test-shop.myshopify.com', 'shopify.token' => 'fake-token', 'shopify.catalog_store_slug' => 'sorelle', 'shopify.catalog_version' => '2026-10', 'cache.default' => 'array', 'tests.inventory_conflict' => false]);
+        \Illuminate\Support\Facades\Cache::flush();
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        \Illuminate\Support\Facades\Http::fake(fn ($request) => $this->inventoryShopifyResponse($request));
+        [$collection] = $this->project();
+        $first = $this->source('production'); $second = $this->source('order');
+        $this->attach($collection, $collection, $first); $this->attach($collection, $collection, $second);
+        DB::table('manufacture_variant')->where('manufacture_id', $first->id)->update(['quantity' => 9]);
+        DB::table('manufacture_variant')->where('manufacture_id', $second->id)->update(['quantity' => 11]);
+        $this->source('order'); // Units outside this collection must not be exported.
+        DB::table('variants')->where('id', 1)->update(['sku' => 'B-S', 'shopify_variant_id' => 'gid://shopify/ProductVariant/101']);
+        return [$collection, '/api/v1/sorelle/dashboard/collections/'.$collection.'/inventory'];
+    }
+    private function inventoryShopifyResponse($request)
+    {
+        $http = \Illuminate\Support\Facades\Http::class;
+        if (str_contains($request['query'], 'CollectionInventoryAccess')) return $http::response(['data' => [
+            'shop' => ['myshopifyDomain' => 'test-shop.myshopify.com'], 'currentAppInstallation' => ['accessScopes' => [['handle' => 'write_inventory']]],
+            'location' => ['id' => 'gid://shopify/Location/1', 'name' => 'Principal', 'isActive' => true, 'fulfillsOnlineOrders' => true],
+        ]]);
+        if (str_contains($request['query'], 'CollectionInventoryLevels')) return $http::response(['data' => ['nodes' => [[
+            'id' => 'gid://shopify/ProductVariant/101', 'sku' => 'B-S', 'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/201', 'tracked' => true, 'inventoryLevel' => ['quantities' => [['name' => 'available', 'quantity' => 5]]]],
+        ]]]]);
+        if (str_contains($request['query'], 'SendCollectionInventory')) {
+            if (config('tests.inventory_conflict')) return $http::response(['data' => ['inventorySetQuantities' => ['inventoryAdjustmentGroup' => null, 'userErrors' => [['message' => 'Stock changed since review.']]]]]);
+            return $http::response(['data' => ['inventorySetQuantities' => ['inventoryAdjustmentGroup' => ['createdAt' => '2026-11-23T20:00:00Z'], 'userErrors' => []]]]);
+        }
+        throw new \RuntimeException('Unexpected Shopify request in test.');
+    }
+    public function test_inventory_export_requires_review_then_sends_planned_percentage_once_without_changing_erp_stock(): void
+    {
+        [$collection, $endpoint] = $this->inventoryExportSetup();
+        $preview = $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 40])->assertOk()
+            ->assertJsonPath('data.items.0.planned_units', 20)->assertJsonPath('data.items.0.export_units', 8)->assertJsonPath('data.items.0.current_units', 5);
+        \Illuminate\Support\Facades\Http::assertSentCount(2);
+        $token = $preview->json('data.token');
+        $this->postJson($endpoint.'/send', ['token' => $token, 'quantity' => 999])->assertOk()->assertJsonPath('data.sent_units', 8);
+        $this->postJson($endpoint.'/send', ['token' => $token])->assertOk()->assertJsonPath('data.sent_units', 8);
+        \Illuminate\Support\Facades\Http::assertSentCount(3);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r['query'], '@idempotent')
+            && data_get($r['variables'], 'input.quantities.0.quantity') === 8 && data_get($r['variables'], 'input.quantities.0.changeFromQuantity') === 5);
+        $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 4]);
+        $this->assertDatabaseHas('manufacture_variant', ['variant_id' => 1, 'quantity' => 11]);
+    }
+    public function test_inventory_export_rejects_changed_plans_tampered_tokens_and_cross_collection_replays(): void
+    {
+        [$collection, $endpoint] = $this->inventoryExportSetup();
+        $token = $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 20])->assertOk()->json('data.token');
+        DB::table('manufacture_variant')->where('quantity', 9)->update(['quantity' => 10]);
+        $this->postJson($endpoint.'/send', ['token' => $token])->assertConflict();
+        $this->postJson($endpoint.'/send', ['token' => $token.'tampered'])->assertUnprocessable();
+        [$other] = $this->project();
+        $this->postJson('/api/v1/sorelle/dashboard/collections/'.$other.'/inventory/send', ['token' => $token])->assertUnprocessable();
+        \Illuminate\Support\Facades\Http::assertSentCount(2);
+    }
+    public function test_inventory_export_rejects_unlinked_outside_variants_and_invalid_percentages_without_sending(): void
+    {
+        [$collection, $endpoint] = $this->inventoryExportSetup();
+        DB::table('variants')->where('id', 1)->update(['shopify_variant_id' => null]);
+        $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 40])->assertUnprocessable();
+        $this->postJson($endpoint.'/preview', ['variant_ids' => [999], 'percentage' => 40])->assertUnprocessable();
+        $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 10])->assertUnprocessable();
+        $this->postJson($endpoint.'/preview', ['variant_ids' => [1, 1], 'percentage' => 100])->assertUnprocessable();
+        $this->postJson($endpoint.'/send', [])->assertUnprocessable();
+        \Illuminate\Support\Facades\Http::assertNothingSent();
+    }
+    public function test_inventory_export_reports_shopify_conflicts_and_allows_retrying_the_same_confirmation(): void
+    {
+        [$collection, $endpoint] = $this->inventoryExportSetup();
+        $token = $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 100])->assertOk()->json('data.token');
+        config(['tests.inventory_conflict' => true]);
+        $this->postJson($endpoint.'/send', ['token' => $token])->assertUnprocessable()->assertJsonPath('message', 'Shopify no confirmó el cambio de stock. Stock changed since review.');
+        $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 4]);
+        config(['tests.inventory_conflict' => false]);
+        $this->postJson($endpoint.'/send', ['token' => $token])->assertOk();
     }
     public function test_archive_preserves_inventory_and_history_and_can_be_restored(): void
     {

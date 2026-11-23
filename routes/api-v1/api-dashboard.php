@@ -78,6 +78,8 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::put('{collection_id}', [$collections, 'update'])->whereNumber('collection_id');
         Route::post('{collection_id}/processes', [$collections, 'process'])->whereNumber('collection_id');
         Route::post('{collection_id}/processes/bulk', [$collections, 'attachProcesses'])->whereNumber('collection_id');
+        Route::post('{collection_id}/inventory/preview', [\App\Http\Controllers\Api\Dashboard\CollectionShopifyInventoryController::class, 'preview'])->whereNumber('collection_id');
+        Route::post('{collection_id}/inventory/send', [\App\Http\Controllers\Api\Dashboard\CollectionShopifyInventoryController::class, 'send'])->whereNumber('collection_id');
         Route::put('{collection_id}/processes/{process_id}', [$collections, 'updateProcess'])->whereNumber(['collection_id', 'process_id']);
         Route::delete('{collection_id}/processes/{process_id}', [$collections, 'detach'])->whereNumber(['collection_id', 'process_id']);
         Route::post('{collection_id}/sales', [$collections, 'sale'])->whereNumber('collection_id');
