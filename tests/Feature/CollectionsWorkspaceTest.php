@@ -55,6 +55,7 @@ class CollectionsWorkspaceTest extends TestCase
         Route::get('/collections-test/{s}/{p}', fn (Request $r, $s, $p) => $controller()->show($store($s), $r, $p, app(CollectionWorkspace::class)));
         Route::post('/collections-test/{s}/{p}/collections', fn (Request $r, $s, $p) => $controller()->collection($store($s), $r, $p));
         Route::post('/collections-test/{s}/{p}/processes', fn (Request $r, $s, $p) => $controller()->process($store($s), $r, $p));
+        Route::post('/collections-test/{s}/{p}/processes/bulk', fn (Request $r, $s, $p) => $controller()->attachProcesses($store($s), $r, $p));
         Route::put('/collections-test/{s}/{p}/processes/{id}', fn (Request $r, $s, $p, $id) => $controller()->updateProcess($store($s), $r, $p, $id));
         Route::delete('/collections-test/{s}/{p}/processes/{id}', fn (Request $r, $s, $p, $id) => $controller()->detach($store($s), $r, $p, $id, app(CollectionWorkspace::class)));
         Route::post('/collections-test/{s}/{p}/sales', fn (Request $r, $s, $p) => $controller()->sale($store($s), $r, $p, app(CollectionWorkspace::class)));
@@ -110,6 +111,40 @@ class CollectionsWorkspaceTest extends TestCase
         $this->attach($otherProject, $otherCollection, $source);
         $foreign = $this->source('order', 2);
         $this->postJson("/collections-test/1/$project/processes", ['collection_id' => $collection, 'kind' => 'order', 'source_id' => $foreign->id])->assertNotFound();
+    }
+    public function test_bulk_attaches_productions_and_orders_with_shared_details_without_duplicating_sources(): void
+    {
+        [$collection] = $this->project();
+        $production = $this->source('production'); $order = $this->source('order');
+        $this->getJson('/collections-test/1/options?kind=manufacture')->assertOk()->assertJsonCount(2, 'data');
+        $this->postJson("/collections-test/1/$collection/processes/bulk", [
+            'sources' => [['kind' => 'production', 'source_id' => $production->id], ['kind' => 'order', 'source_id' => $order->id]],
+            'responsible_id' => 1, 'starts_on' => '2026-11-23', 'due_on' => '2026-11-25', 'notes' => 'Grupo de noviembre',
+        ])->assertOk()->assertJsonCount(2, 'data');
+        $this->assertDatabaseCount('manufactures', 2);
+        $this->assertDatabaseCount('collections_processes', 2);
+        $this->assertDatabaseHas('collections_processes', ['source_id' => $order->id, 'responsible_id' => 1, 'notes' => 'Grupo de noviembre']);
+        $this->getJson('/collections-test/1/options?kind=manufacture')->assertOk()->assertJsonCount(0, 'data');
+    }
+    public function test_bulk_attachment_rolls_back_all_links_if_one_source_is_already_linked_or_outside_the_store(): void
+    {
+        [$collection] = $this->project();
+        $first = $this->source('production'); $linked = $this->source('order');
+        $this->attach($collection, $collection, $linked);
+        $this->postJson("/collections-test/1/$collection/processes/bulk", ['sources' => [
+            ['kind' => 'production', 'source_id' => $first->id], ['kind' => 'order', 'source_id' => $linked->id],
+        ]])->assertUnprocessable();
+        $this->assertDatabaseCount('collections_processes', 1);
+        $foreign = $this->source('order', 2);
+        $this->postJson("/collections-test/1/$collection/processes/bulk", ['sources' => [
+            ['kind' => 'production', 'source_id' => $first->id], ['kind' => 'order', 'source_id' => $foreign->id],
+        ]])->assertNotFound();
+        $this->assertDatabaseCount('collections_processes', 1);
+        $this->postJson("/collections-test/1/$collection/processes/bulk", ['sources' => [
+            ['kind' => 'production', 'source_id' => $first->id], ['kind' => 'production', 'source_id' => $first->id],
+        ]])->assertUnprocessable();
+        $this->postJson("/collections-test/1/$collection/processes/bulk", ['sources' => []])->assertUnprocessable();
+        $this->assertDatabaseCount('collections_processes', 1);
     }
     public function test_existing_process_options_include_creation_dates_and_do_not_hide_older_records(): void
     {

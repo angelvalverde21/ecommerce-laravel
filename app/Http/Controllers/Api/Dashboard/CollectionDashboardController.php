@@ -58,7 +58,7 @@ class CollectionDashboardController extends Controller
     public function options(Store $store, Request $request)
     {
         $this->authorizeCollection($store, $request);
-        $data = $request->validate(['kind' => 'required|in:production,order,photo_session,order_sale,responsible', 'q' => 'nullable|string|max:180']);
+        $data = $request->validate(['kind' => 'required|in:manufacture,production,order,photo_session,order_sale,responsible', 'q' => 'nullable|string|max:180']);
         $q = trim($data['q'] ?? '');
         if ($data['kind'] === 'responsible') return responseOk(DB::table('users')->join('store_user', 'users.id', '=', 'store_user.user_id')
             ->where('store_user.store_id', $store->id)->orderBy('users.name')->distinct()->get(['users.id', 'users.name']));
@@ -73,10 +73,43 @@ class CollectionDashboardController extends Controller
                 }, $workspace->lines($o))]));
         }
         $photos = $data['kind'] === 'photo_session';
-        $query = $photos ? PhotoSession::where('store_id', $store->id) : Manufacture::where('store_id', $store->id)->where('type', $data['kind']);
+        $query = $photos ? PhotoSession::where('store_id', $store->id) : Manufacture::where('store_id', $store->id)
+            ->whereIn('type', $data['kind'] === 'manufacture' ? ['production', 'order'] : [$data['kind']]);
         return responseOk($query->when($q, fn ($b) => $b->where('name', 'like', '%'.$q.'%'))
             ->whereNotIn('id', ProjectProcess::where('source_type', $photos ? 'photo_session' : 'manufacture')->whereNotNull('source_id')->select('source_id'))
-            ->latest('id')->get(['id', 'name', 'created_at']));
+            ->latest('id')->get($photos ? ['id', 'name', 'created_at'] : ['id', 'name', 'type', 'created_at']));
+    }
+    public function attachProcesses(Store $store, Request $request, int $collection_id)
+    {
+        $collection = $this->collection($store, $request, $collection_id);
+        $data = $request->validate([
+            'sources' => 'required|array|min:1|max:200',
+            'sources.*.kind' => 'required|in:production,order,photo_session',
+            'sources.*.source_id' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:5000', 'starts_on' => 'nullable|date_format:Y-m-d',
+            'due_on' => 'nullable|date_format:Y-m-d'.($request->filled('starts_on') ? '|after_or_equal:starts_on' : ''),
+            'responsible_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('store_user', 'user_id')->where('store_id', $store->id)],
+        ]);
+        $sources = collect($data['sources'])->sortBy(fn ($s) => ($s['kind'] === 'photo_session' ? 'photo_session' : 'manufacture').sprintf('%020d', $s['source_id']))->values();
+        $keys = $sources->map(fn ($s) => ($s['kind'] === 'photo_session' ? 'photo_session' : 'manufacture').':'.$s['source_id']);
+        if ($keys->unique()->count() !== $keys->count()) $this->fail('sources', 'Selecciona cada proceso una sola vez.');
+        $processes = DB::transaction(function () use ($store, $collection, $data, $sources) {
+            return $sources->map(function ($item) use ($store, $collection, $data) {
+                $photos = $item['kind'] === 'photo_session';
+                $query = $photos ? PhotoSession::where('store_id', $store->id) : Manufacture::where('store_id', $store->id)->where('type', $item['kind']);
+                $source = $query->lockForUpdate()->findOrFail($item['source_id']);
+                $sourceType = $photos ? 'photo_session' : 'manufacture';
+                if (ProjectProcess::where('source_type', $sourceType)->where('source_id', $source->id)->exists()) {
+                    $this->fail('sources', 'El proceso «'.$source->name.'» ya pertenece a una colección. Actualiza la lista y vuelve a seleccionar.');
+                }
+                return $collection->processes()->create([
+                    'store_id' => $store->id, 'kind' => $item['kind'], 'source_type' => $sourceType, 'source_id' => $source->id,
+                    'name' => $source->name, 'status' => 'pending', 'responsible_id' => $data['responsible_id'] ?? null,
+                    'starts_on' => $data['starts_on'] ?? null, 'due_on' => $data['due_on'] ?? null, 'notes' => $data['notes'] ?? null,
+                ]);
+            });
+        });
+        return responseOk($processes);
     }
     public function process(Store $store, Request $request, int $collection_id)
     {
