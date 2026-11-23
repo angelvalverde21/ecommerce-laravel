@@ -77,9 +77,27 @@ class ManufactureProductionDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Store $store)
+    public function destroy(Store $store, Request $request, int $production_id)
     {
-        //
+        $user = $request->user();
+        abort_unless($user && $user->hasAnyRole(['master', 'ceo', 'admin']), 403);
+        abort_unless($user->hasRole('master') || $user->stores()->whereKey($store->id)->exists(), 403);
+        app(\App\Services\Dashboard\ProductionDeletionService::class)->delete($store, $production_id);
+        return responseOk(['deleted' => true], 'Producción eliminada correctamente.');
+    }
+
+    public function archive(Store $store, Request $request, int $production_id)
+    {
+        $user = $request->user();
+        abort_unless($user && $user->hasAnyRole(['master', 'ceo', 'admin']), 403);
+        abort_unless($user->hasRole('master') || $user->stores()->whereKey($store->id)->exists(), 403);
+        $data = $request->validate(['archived' => 'required|boolean']);
+        $production = \Illuminate\Support\Facades\DB::transaction(function () use ($store, $production_id, $data) {
+            $production = $store->manufactures()->where('type', 'production')->lockForUpdate()->findOrFail($production_id);
+            $production->update(['archived_at' => $data['archived'] ? ($production->archived_at ?? now()) : null]);
+            return $production;
+        });
+        return responseOk($production, $data['archived'] ? 'Producción archivada.' : 'Producción restaurada.');
     }
 
 
@@ -89,13 +107,6 @@ class ManufactureProductionDashboardController extends Controller
             return $this->index($store);
         }
 
-        $employees = Manufacture::searchProduction($request->search) //Recuernda agrear el trait en el modelo correspondiente, en este caso Manufacture
-            ->betweenDates($request->start_date, $request->end_date) //Sino hay fechas simplemente pasa de largo, no se considera
-            ->limit(10)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->get();
-
-        return responseOk($employees);
+        return responseOk($this->service->index($store, $request));
     }
 }

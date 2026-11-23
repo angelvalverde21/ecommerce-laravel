@@ -261,6 +261,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
             Route::post('/search/{search?}', [ManufactureProductionDashboardController::class, 'search']); //buscar
 
             Route::prefix('{production_id}')->group(function () {
+                Route::put('/archive', [ManufactureProductionDashboardController::class, 'archive'])->whereNumber('production_id');
                 Route::get('/stages', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'index']);
                 Route::get('/stage-configuration', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'configuration']);
                 Route::put('/stage-configuration', [\App\Http\Controllers\Api\Dashboard\ProductionStageDashboardController::class, 'configure']);
@@ -273,7 +274,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 // Route::get('/', [ManufactureProductionDashboardController::class, 'show']); //show o mostrar por id
                 Route::put('/', [ManufactureProductionDashboardController::class, 'update']); //actualizar
-                // Route::delete('/', [ManufactureProductionDashboardController::class, 'destroy']); //borrar
+                Route::delete('/', [ManufactureProductionDashboardController::class, 'destroy'])->whereNumber('production_id');
 
             });
         });

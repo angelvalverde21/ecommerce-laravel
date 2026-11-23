@@ -18,9 +18,11 @@ class CollectionsWorkspaceTest extends TestCase
         parent::setUp();
         config(['database.default' => 'projects_test', 'database.connections.projects_test' => ['driver' => 'sqlite', 'database' => ':memory:', 'foreign_key_constraints' => true]]);
         Schema::create('stores', function (Blueprint $t) { $t->id(); $t->string('slug'); });
-        Schema::create('users', function (Blueprint $t) { $t->id(); $t->string('name'); $t->timestamps(); });
+        Schema::create('users', function (Blueprint $t) { $t->id(); $t->string('name'); $t->integer('status')->default(1); $t->timestamps(); });
         Schema::create('store_user', function (Blueprint $t) { $t->integer('store_id'); $t->integer('user_id'); });
         Schema::create('manufactures', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('user_id')->nullable(); $t->string('type'); $t->string('name'); $t->dateTime('manufacture_end')->nullable(); $t->timestamps(); });
+        (require database_path('migrations/2026_11_23_170000_add_archived_at_to_manufactures.php'))->up();
+        Schema::create('inventory_receptions', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->morphs('source'); $t->timestamps(); });
         Schema::create('photo_sessions', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('created_by')->nullable(); $t->string('name'); $t->string('status'); $t->date('delivery_date')->nullable(); $t->timestamps(); });
         Schema::create('products', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('name'); $t->timestamps(); });
         Schema::create('variants', function (Blueprint $t) { $t->id(); $t->integer('product_id'); $t->string('title')->nullable(); $t->string('sku')->nullable(); $t->integer('stock')->default(0); $t->integer('status')->default(1); });
@@ -32,6 +34,7 @@ class CollectionsWorkspaceTest extends TestCase
         Schema::create('orders', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('shopify_order_name')->nullable(); $t->string('currency_code')->default('PEN'); $t->string('status')->default('registrado'); $t->json('variants'); $t->timestamps(); });
         Schema::create('production_stages', function (Blueprint $t) { $t->id(); $t->string('code'); $t->string('name'); $t->integer('position'); });
         Schema::create('production_stage_progress', function (Blueprint $t) { $t->id(); $t->integer('manufacture_id'); $t->integer('stage_id'); $t->string('status')->default('pending'); $t->integer('revision')->default(0); $t->string('sample_review')->default('pending'); $t->timestamps(); });
+        Schema::create('production_stage_events', function (Blueprint $t) { $t->id(); $t->integer('production_stage_id'); $t->text('changes')->nullable(); $t->timestamps(); });
         Schema::create('purchases', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('user_id')->nullable(); $t->integer('supplier_id')->nullable(); $t->morphs('purchaseable'); $t->date('purchase_start')->nullable(); $t->date('purchase_end')->nullable(); $t->integer('production_stage_id')->nullable(); $t->text('observations')->nullable(); $t->timestamps(); });
         Schema::create('purchase_items', function (Blueprint $t) { $t->id(); $t->integer('purchase_id'); $t->integer('unit_id')->nullable(); $t->string('name'); $t->decimal('quantity'); $t->decimal('price'); $t->decimal('subtotal'); $t->timestamps(); });
         Schema::create('suppliers', function (Blueprint $t) { $t->id(); $t->integer('user_id'); });
@@ -46,7 +49,7 @@ class CollectionsWorkspaceTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         foreach (['ceo', 'sales'] as $role) Role::create(['name' => $role, 'guard_name' => 'api']);
         DB::table('stores')->insert([['id' => 1, 'slug' => 'sorelle'], ['id' => 2, 'slug' => 'other']]);
-        $user = User::create(['name' => 'CEO']); $user->assignRole('ceo'); $user->stores()->attach(1); $this->actingAs($user, 'api');
+        $user = User::create(['name' => 'CEO']); $user->assignRole('ceo'); $user->stores()->attach(1); $this->actingAs($user->refresh(), 'api');
         DB::table('products')->insert(['id' => 1, 'store_id' => 1, 'name' => 'Blusa']);
         DB::table('variants')->insert(['id' => 1, 'product_id' => 1, 'stock' => 4]);
         DB::table('production_stages')->insert(['id' => 1, 'code' => 'sewing', 'name' => 'Costura', 'position' => 1]);
@@ -102,6 +105,111 @@ class CollectionsWorkspaceTest extends TestCase
         $this->getJson('/collections-test/1/'.$foreign->id)->assertNotFound();
         $sales = User::create(['name' => 'Ventas']); $sales->assignRole('sales'); $sales->stores()->attach(1); $this->actingAs($sales, 'api');
         $this->getJson('/collections-test/1')->assertForbidden();
+    }
+    public function test_archive_preserves_inventory_and_history_and_can_be_restored(): void
+    {
+        $production = $this->source('production');
+        $endpoint = '/api/v1/sorelle/dashboard/manufactures/productions';
+        $this->getJson($endpoint)->assertOk()->assertJsonPath('data.0.can_delete', false);
+        $this->putJson($endpoint.'/'.$production->id.'/archive', ['archived' => true])->assertOk();
+        $this->assertNotNull($production->fresh()->archived_at);
+        $this->assertDatabaseCount('manufacture_variant', 1); $this->assertDatabaseCount('kardexes', 1);
+        $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 4]);
+        $this->getJson($endpoint)->assertOk()->assertJsonCount(0, 'data');
+        $this->postJson($endpoint.'/search', ['archived' => true])->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson($endpoint.'/search', ['search' => 'Lote'])->assertOk()->assertJsonCount(0, 'data');
+        $this->deleteJson($endpoint.'/'.$production->id)->assertUnprocessable();
+        $this->putJson($endpoint.'/'.$production->id.'/archive', ['archived' => false])->assertOk();
+        $this->assertNull($production->fresh()->archived_at);
+        $this->getJson($endpoint)->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.can_delete', false);
+    }
+    public function test_receptions_prevent_deletion_even_when_net_inventory_is_zero(): void
+    {
+        $production = Manufacture::create(['store_id' => 1, 'type' => 'production', 'name' => 'Recibida']);
+        DB::table('inventory_receptions')->insert(['store_id' => 1, 'source_type' => $production->getMorphClass(), 'source_id' => $production->id]);
+        $endpoint = '/api/v1/sorelle/dashboard/manufactures/productions';
+        $this->getJson($endpoint)->assertOk()->assertJsonPath('data.0.can_delete', false);
+        $this->deleteJson($endpoint.'/'.$production->id)->assertUnprocessable();
+        $this->putJson($endpoint.'/'.$production->id.'/archive', ['archived' => true])->assertOk();
+        $this->assertDatabaseCount('inventory_receptions', 1);
+    }
+    public function test_deletes_a_production_and_its_planned_variants_without_deleting_the_catalog(): void
+    {
+        $production = Manufacture::create(['store_id' => 1, 'type' => 'production', 'name' => 'Borrador']);
+        DB::table('manufacture_variant')->insert(['manufacture_id' => $production->id, 'variant_id' => 1, 'quantity' => 10]);
+        DB::table('production_stage_progress')->insert(['manufacture_id' => $production->id, 'stage_id' => 1]);
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$production->id)->assertOk()->assertJsonPath('data.deleted', true);
+        $this->assertDatabaseMissing('manufactures', ['id' => $production->id]);
+        $this->assertDatabaseCount('manufacture_variant', 0);
+        $this->assertDatabaseCount('production_stage_progress', 0);
+        $this->assertDatabaseCount('variants', 1);
+    }
+    public function test_production_deletion_cleans_collection_purchases_after_stock_is_resolved(): void
+    {
+        $production = $this->source('production');
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$production->id)->assertUnprocessable();
+        DB::table('kardexes')->delete();
+        [$collection] = $this->project();
+        $process = $this->attach($collection, $collection, $production);
+        DB::table('purchases')->insert(['store_id' => 1, 'purchaseable_type' => (new ProjectProcess)->getMorphClass(), 'purchaseable_id' => $process]);
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$production->id)->assertOk();
+        $this->assertDatabaseMissing('manufactures', ['id' => $production->id]);
+        $this->assertDatabaseCount('collections_processes', 0);
+        $this->assertDatabaseCount('purchases', 0);
+    }
+    public function test_production_deletion_removes_purchases_payments_and_active_stages_but_preserves_shared_catalog_and_other_productions(): void
+    {
+        $production = $this->source('production'); $other = $this->source('production');
+        DB::table('kardexes')->where('kardexable_id', $production->id)->delete();
+        DB::table('production_stage_progress')->insert(['id' => 1, 'manufacture_id' => $production->id, 'stage_id' => 1, 'status' => 'in_progress']);
+        DB::table('production_stage_events')->insert(['production_stage_id' => 1, 'changes' => '{}']);
+        DB::table('purchases')->insert([
+            ['id' => 1, 'store_id' => 1, 'purchaseable_type' => $production->getMorphClass(), 'purchaseable_id' => $production->id],
+            ['id' => 2, 'store_id' => 1, 'purchaseable_type' => $other->getMorphClass(), 'purchaseable_id' => $other->id],
+        ]);
+        DB::table('purchase_items')->insert(['purchase_id' => 1, 'name' => 'Tela', 'quantity' => 2, 'price' => 10, 'subtotal' => 20]);
+        $tracking = DB::table('delivery_trackings')->insertGetId(['store_id' => 1, 'trackable_type' => (new \App\Models\Purchase)->getMorphClass(), 'trackable_id' => 1, 'expected_on' => '2026-11-25']);
+        DB::table('delivery_tracking_events')->insert(['delivery_tracking_id' => $tracking, 'user_id' => 1, 'actor_name' => 'CEO', 'type' => 'created', 'changes' => '{}', 'created_at' => now()]);
+        DB::table('payments')->insert(['store_id' => 1, 'paymentable_type' => (new \App\Models\Purchase)->getMorphClass(), 'paymentable_id' => 1, 'amount' => 20, 'direction' => 'out', 'status' => 'paid', 'date' => '2026-11-23']);
+        DB::table('attachments')->insert(['attachable_type' => (new \App\Models\ProductionStageProgress)->getMorphClass(), 'attachable_id' => 1]);
+        DB::table('images')->insert([
+            ['imageable_type' => (new \App\Models\Purchase)->getMorphClass(), 'imageable_id' => 1],
+            ['imageable_type' => (new \App\Models\Product)->getMorphClass(), 'imageable_id' => 1],
+        ]);
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$production->id)->assertOk();
+        $this->assertDatabaseMissing('purchases', ['id' => 1]); $this->assertDatabaseHas('purchases', ['id' => 2]);
+        $this->assertDatabaseCount('purchase_items', 0); $this->assertDatabaseCount('payments', 0);
+        $this->assertDatabaseCount('delivery_trackings', 0); $this->assertDatabaseCount('delivery_tracking_events', 0);
+        $this->assertDatabaseCount('production_stage_progress', 0); $this->assertDatabaseCount('production_stage_events', 0);
+        $this->assertDatabaseCount('attachments', 0); $this->assertDatabaseCount('images', 1);
+        $this->assertDatabaseHas('products', ['id' => 1]); $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 4]);
+        $this->assertDatabaseHas('manufacture_variant', ['manufacture_id' => $other->id, 'variant_id' => 1]);
+        $this->assertDatabaseHas('manufactures', ['id' => $other->id]);
+    }
+    public function test_real_production_delete_api_removes_an_unused_collection_process_and_keeps_the_collection(): void
+    {
+        [$collection] = $this->project();
+        $production = Manufacture::create(['store_id' => 1, 'type' => 'production', 'name' => 'Produccion de polos']);
+        $process = $this->attach($collection, $collection, $production);
+        $order = $this->order();
+        $sale = ProjectSale::create(['process_id' => $process, 'order_id' => $order->id, 'variant_id' => 1, 'line_key' => 'variant:1', 'quantity' => 1, 'unit_price' => 25, 'created_by' => 1]);
+        $sale->receipts()->create(['direction' => 'in', 'amount' => 25, 'date' => '2026-11-23', 'reference' => 'TEST-DELETE', 'created_by' => 1]);
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$production->id)
+            ->assertOk()->assertJsonPath('data.deleted', true);
+        $this->assertDatabaseMissing('manufactures', ['id' => $production->id]);
+        $this->assertDatabaseMissing('collections_processes', ['id' => $process]);
+        $this->assertDatabaseHas('collections', ['id' => $collection]);
+        $this->assertDatabaseCount('collections_sales', 0); $this->assertDatabaseCount('collections_receipts', 0);
+        $this->assertDatabaseHas('orders', ['id' => $order->id]);
+    }
+    public function test_production_deletion_rejects_other_stores_orders_and_users_without_permission(): void
+    {
+        $foreign = $this->source('production', 2); $order = $this->source('order');
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$foreign->id)->assertNotFound();
+        $this->deleteJson('/api/v1/other/dashboard/manufactures/productions/'.$foreign->id)->assertForbidden();
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$order->id)->assertNotFound();
+        $sales = User::create(['name' => 'Ventas']); $sales->assignRole('sales'); $sales->stores()->attach(1); $this->actingAs($sales, 'api');
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$foreign->id)->assertForbidden();
     }
     public function test_sources_can_be_independent_then_linked_once_without_duplication(): void
     {

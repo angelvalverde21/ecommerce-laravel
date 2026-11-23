@@ -73,7 +73,7 @@ class CollectionDashboardController extends Controller
                 }, $workspace->lines($o))]));
         }
         $photos = $data['kind'] === 'photo_session';
-        $query = $photos ? PhotoSession::where('store_id', $store->id) : Manufacture::where('store_id', $store->id)
+        $query = $photos ? PhotoSession::where('store_id', $store->id) : Manufacture::where('store_id', $store->id)->whereNull('archived_at')
             ->whereIn('type', $data['kind'] === 'manufacture' ? ['production', 'order'] : [$data['kind']]);
         return responseOk($query->when($q, fn ($b) => $b->where('name', 'like', '%'.$q.'%'))
             ->whereNotIn('id', ProjectProcess::where('source_type', $photos ? 'photo_session' : 'manufacture')->whereNotNull('source_id')->select('source_id'))

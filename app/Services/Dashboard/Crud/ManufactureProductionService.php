@@ -12,16 +12,21 @@ use Illuminate\Support\Facades\Log;
 class ManufactureProductionService
 {
 
-    public function index(Store $store)
+    public function index(Store $store, ?Request $request = null)
     {
 
+        $request ??= request();
         $manufactureOrders = $store->manufactures()->where('type', 'production')
+            ->when($request->boolean('archived'), fn ($q) => $q->whereNotNull('archived_at'), fn ($q) => $q->whereNull('archived_at'))
+            ->when($request->filled('search'), fn ($q) => $q->searchProduction($request->input('search')))
+            ->betweenDates($request->input('start_date'), $request->input('end_date'))
             ->withFinancialSummary()
+            ->withExists(['kardexes as has_inventory_movements', 'inventoryReceptions as has_inventory_receptions'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
 
-        return $manufactureOrders;
+        return $manufactureOrders->each(fn ($production) => $production->setAttribute('can_delete', !$production->has_inventory_movements && !$production->has_inventory_receptions && !$production->archived_at));
     }
 
     public function store(Store $store, Request $request)

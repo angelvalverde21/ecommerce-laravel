@@ -147,6 +147,7 @@ class CollectionWorkspace
                         $progress = $enabled->count() ? round(100 * $done / $enabled->count()) : 0;
                         $status = $progress >= 100 ? 'completed' : ($states->contains('in_progress') || $done ? 'in_progress' : 'pending');
                     }
+                    if ($owner->archived_at) $status = 'archived';
                 } elseif ($owner instanceof PhotoSession) $status = $owner->status;
                 $due = $process->due_on ?: ($owner instanceof PhotoSession ? $owner->getRawOriginal('delivery_date') : $owner->manufacture_end);
                 if ($due && substr($due, 0, 10) < $today && !in_array($status, ['completed', 'archived', 'cancelled'])) $overdue++;

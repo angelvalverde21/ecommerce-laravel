@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Manufacture extends Model
 {
+    protected $casts = ['archived_at' => 'datetime'];
+    public function inventoryReceptions() { return $this->morphMany(InventoryReception::class, 'source'); }
     public function supplierAddress() { return $this->belongsTo(Address::class, 'supplier_address_id'); }
     //
 
