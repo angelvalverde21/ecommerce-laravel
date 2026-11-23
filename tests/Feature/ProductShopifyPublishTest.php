@@ -26,6 +26,12 @@ class ProductShopifyPublishTest extends TestCase
     private array $existingSkus = [];
     private bool $deleteTimeout = false;
     private bool $deleteFails = false;
+    private bool $publicationPermission = true;
+    private bool $inventoryPermission = true;
+    private bool $inventoryLocationActive = true;
+    private bool $publicationFails = false;
+    private array $publications = ['gid://shopify/Publication/1', 'gid://shopify/Publication/2', 'gid://shopify/Publication/3', 'gid://shopify/Publication/4'];
+    private array $enabledPublications = [];
 
     protected function setUp(): void
     {
@@ -60,6 +66,18 @@ class ProductShopifyPublishTest extends TestCase
         Route::post('/catalog-test/{id}/reset', fn (Request $r, $id) => app(ProductShopifyPublishController::class)->reset(Store::findOrFail(1), $r, (int) $id, app(CatalogPublisher::class)));
         Http::fake(function ($request) {
             $query = $request['query'];
+            if (str_contains($query, 'CatalogInventoryLocation')) return Http::response(['data' => ['location' => ['id' => 'gid://shopify/Location/50', 'isActive' => $this->inventoryLocationActive, 'fulfillsOnlineOrders' => true]]]);
+            if (str_contains($query, 'CatalogSalesChannels')) {
+                $offset = (int) data_get($request->data(), 'variables.after', 0);
+                $ids = array_slice($this->publications, $offset, 100);
+                return Http::response(['data' => ['publications' => ['nodes' => array_map(fn ($id) => ['id' => $id], $ids),
+                    'pageInfo' => ['hasNextPage' => count($this->publications) > $offset + 100, 'endCursor' => (string) ($offset + count($ids))]]]]);
+            }
+            if (str_contains($query, 'CatalogEnableSalesChannels')) {
+                if ($this->publicationFails) return Http::response(['data' => ['publishablePublish' => ['publishable' => null, 'userErrors' => [['message' => 'Canal no disponible']]]]]);
+                $this->enabledPublications = array_values(array_unique(array_merge($this->enabledPublications, array_column(data_get($request->data(), 'variables.input'), 'publicationId'))));
+                return Http::response(['data' => ['publishablePublish' => ['publishable' => ['id' => $this->remote['id']], 'userErrors' => []]]]);
+            }
             if (str_contains($query, 'ResetErpProduct')) return Http::response(['data' => ['product' => $this->remote]]);
             if (str_contains($query, 'DeleteErpProduct')) {
                 if ($this->deleteFails) return Http::response(['data' => ['productDelete' => ['deletedProductId' => null, 'userErrors' => [['message' => 'Denied']]]]]);
@@ -67,7 +85,7 @@ class ProductShopifyPublishTest extends TestCase
                 if ($this->deleteTimeout) throw new ConnectionException('simulated deletion timeout');
                 return Http::response(['data' => ['productDelete' => ['deletedProductId' => $id, 'userErrors' => []]]]);
             }
-            if (str_contains($query, 'CatalogAccess')) return Http::response(['data' => ['shop' => ['myshopifyDomain' => 'catalog-test.myshopify.com'], 'currentAppInstallation' => ['accessScopes' => [['handle' => 'write_products']]]]]);
+            if (str_contains($query, 'CatalogAccess')) return Http::response(['data' => ['shop' => ['myshopifyDomain' => 'catalog-test.myshopify.com'], 'currentAppInstallation' => ['accessScopes' => array_map(fn ($handle) => ['handle' => $handle], array_merge(['write_products'], $this->publicationPermission ? ['write_publications', 'read_publications'] : [], $this->inventoryPermission ? ['write_inventory', 'read_inventory'] : []))]]]);
             if (str_contains($query, 'FindErpProduct')) return Http::response(['data' => ['productByIdentifier' => $this->remote]]);
             if (str_contains($query, 'CatalogSkuCheck')) return Http::response(['data' => ['productVariants' => ['nodes' => array_map(fn ($sku) => ['sku' => $sku], $this->existingSkus), 'pageInfo' => ['hasNextPage' => false]]]]);
             if (str_contains($query, 'PublishErpProduct')) {
@@ -75,6 +93,7 @@ class ProductShopifyPublishTest extends TestCase
                 $input = data_get($request->data(), 'variables.input');
                 $this->remote = ['id' => 'gid://shopify/Product/900', 'handle' => $input['handle'], 'status' => $input['status'], 'metafield' => ['value' => $input['metafields'][0]['value']],
                     'variants' => ['nodes' => array_map(fn ($variant, $index) => ['id' => 'gid://shopify/ProductVariant/'.(1000 + $index), 'sku' => $variant['sku'],
+                        'openingInventory' => ['tracked' => $variant['inventoryItem']['tracked'], 'available' => $variant['inventoryQuantities'][0]['quantity']],
                         'selectedOptions' => array_map(fn ($value) => ['name' => $value['optionName'], 'value' => $value['name']], $variant['optionValues'])], $input['variants'], array_keys($input['variants'])), 'pageInfo' => ['hasNextPage' => false]]];
                 if ($this->timeout) throw new ConnectionException('simulated timeout');
                 return Http::response(['data' => ['productSet' => ['product' => $this->remote, 'userErrors' => []]]]);
@@ -144,7 +163,7 @@ class ProductShopifyPublishTest extends TestCase
         Http::assertNothingSent(); $this->assertDatabaseCount('shopify_product_exports', 0);
     }
 
-    public function test_publishes_only_catalog_fields_and_persists_variant_links_without_changing_stock(): void
+    public function test_export_creates_four_tracked_units_per_variant_and_preserves_erp_stock(): void
     {
         $token = $this->token();
         $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'synced')->assertJsonPath('data.remote_status', 'DRAFT');
@@ -152,13 +171,68 @@ class ProductShopifyPublishTest extends TestCase
             if (!str_contains($request['query'], 'PublishErpProduct')) return false;
             $input = data_get($request->data(), 'variables.input');
             $this->assertEqualsCanonicalizing(['title', 'status', 'productOptions', 'variants', 'handle', 'metafields'], array_keys($input));
-            foreach ($input['variants'] as $variant) $this->assertEqualsCanonicalizing(['sku', 'optionValues'], array_keys($variant));
+            foreach ($input['variants'] as $variant) {
+                $this->assertEqualsCanonicalizing(['sku', 'optionValues', 'inventoryItem', 'inventoryQuantities'], array_keys($variant));
+                $this->assertSame(['tracked' => true], $variant['inventoryItem']);
+                $this->assertSame([['locationId' => 'gid://shopify/Location/50', 'name' => 'available', 'quantity' => 4]], $variant['inventoryQuantities']);
+            }
             return $input['title'] === 'Blusa nueva' && $input['status'] === 'DRAFT';
         });
         $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 12, 'shopify_variant_id' => 'gid://shopify/ProductVariant/1000']);
         $this->assertCount(2, ShopifyProductExport::first()->variant_links);
         $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'synced');
-        $this->assertSame(1, $this->creates); Http::assertSentCount(4);
+        $this->assertSame(1, $this->creates); Http::assertSentCount(7);
+        $this->assertSame($this->publications, $this->enabledPublications);
+    }
+
+    public function test_missing_publication_permission_prevents_creating_an_incomplete_export(): void
+    {
+        $this->publicationPermission = false;
+        $result = $this->postJson('/catalog-test/1/publish', ['token' => $this->token()])->assertOk()->assertJsonPath('data.status', 'failed');
+        $this->assertStringContainsString('write_publications', $result->json('data.message'));
+        $this->assertSame(0, $this->creates);
+    }
+
+    public function test_failed_channels_retry_the_same_remote_product_without_duplicating_or_activating_it(): void
+    {
+        $token = $this->token(); $this->publicationFails = true;
+        $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'failed');
+        $this->assertDatabaseHas('shopify_product_exports', ['status' => 'failed']);
+        $this->assertSame(1, $this->creates);
+        // A sale or manual correction after creation must survive a publication retry.
+        $this->remote['variants']['nodes'][0]['openingInventory']['available'] = 3;
+        $this->publicationFails = false;
+        $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'synced');
+        $this->assertSame($this->publications, $this->enabledPublications);
+        $this->assertSame('DRAFT', $this->remote['status']);
+        $this->assertSame(1, $this->creates);
+        $this->assertSame(3, $this->remote['variants']['nodes'][0]['openingInventory']['available']);
+    }
+
+    public function test_inventory_permission_and_a_valid_online_location_are_required_before_creation(): void
+    {
+        $token = $this->token();
+        $this->inventoryPermission = false;
+        $result = $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'failed');
+        $this->assertStringContainsString('write_inventory', $result->json('data.message'));
+        $this->assertSame(0, $this->creates);
+        $this->inventoryPermission = true;
+        $this->inventoryLocationActive = false;
+        $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'failed');
+        $this->assertSame(0, $this->creates);
+        $this->inventoryLocationActive = true;
+        $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'synced');
+        $this->assertSame(1, $this->creates);
+    }
+
+    public function test_all_channel_pages_are_selected_and_an_empty_list_does_not_create_a_product(): void
+    {
+        $token = $this->token(); $this->publications = [];
+        $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'failed');
+        $this->assertSame(0, $this->creates);
+        $this->publications = array_map(fn ($id) => 'gid://shopify/Publication/'.$id, range(1, 101));
+        $this->postJson('/catalog-test/1/publish', ['token' => $token])->assertOk()->assertJsonPath('data.status', 'synced');
+        $this->assertSame($this->publications, $this->enabledPublications);
     }
 
     public function test_retry_reconciles_a_timed_out_creation_instead_of_creating_a_duplicate(): void
@@ -196,7 +270,7 @@ class ProductShopifyPublishTest extends TestCase
     public function test_active_status_too_many_products_and_duplicate_ids_are_rejected(): void
     {
         $this->postJson('/catalog-test/preview', ['product_ids' => [1], 'target_status' => 'ACTIVE'])->assertUnprocessable();
-        $this->postJson('/catalog-test/preview', ['product_ids' => range(1, 26), 'target_status' => 'DRAFT'])->assertUnprocessable();
+        $this->postJson('/catalog-test/preview', ['product_ids' => range(1, 36), 'target_status' => 'DRAFT'])->assertUnprocessable();
         $this->postJson('/catalog-test/preview', ['product_ids' => [1, 1], 'target_status' => 'DRAFT'])->assertUnprocessable();
         $this->postJson('/catalog-test/preview', ['product_ids' => [1], 'target_status' => 'DRAFT', 'mode' => 'inventory'])->assertUnprocessable();
         Http::assertNothingSent();

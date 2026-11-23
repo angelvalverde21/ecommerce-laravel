@@ -7,6 +7,7 @@ use RuntimeException;
 
 class CatalogClient
 {
+    public const INITIAL_VARIANT_QUANTITY = 4;
     public function domain(): string
     {
         $domain = strtolower(trim((string) config('shopify.store')));
@@ -26,11 +27,49 @@ class CatalogClient
         return $response->json('data');
     }
 
-    public function verify(): void
+    public function verify(bool $withPublications = false): void
     {
         $data = $this->request('query CatalogAccess { shop { myshopifyDomain } currentAppInstallation { accessScopes { handle } } }');
         if (strtolower($data['shop']['myshopifyDomain'] ?? '') !== $this->domain()
             || !in_array('write_products', array_column($data['currentAppInstallation']['accessScopes'] ?? [], 'handle'), true)) throw new RuntimeException('La aplicación necesita write_products y debe pertenecer a la tienda configurada.');
+        if ($withPublications) {
+            $scopes = array_column($data['currentAppInstallation']['accessScopes'] ?? [], 'handle');
+            if (!in_array('write_publications', $scopes, true)) {
+                throw new RuntimeException('Para seleccionar todos los canales de venta, habilita read_publications y write_publications en la aplicación Shopify y actualiza su autorización.');
+            }
+            if (!in_array('write_inventory', $scopes, true)) {
+                throw new RuntimeException('Para crear las variantes con 4 unidades y seguimiento de inventario, habilita write_inventory en la aplicación Shopify y actualiza su autorización.');
+            }
+        }
+    }
+
+    public function salesPublications(): array
+    {
+        $ids = []; $after = null;
+        do {
+            $data = $this->request('query CatalogSalesChannels($after: String) { publications(first: 100, after: $after, catalogType: APP) { nodes { id } pageInfo { hasNextPage endCursor } } }', ['after' => $after]);
+            $page = $data['publications'] ?? null;
+            if (!is_array($page) || !isset($page['nodes'], $page['pageInfo']['hasNextPage'])) throw new RuntimeException('No se pudieron consultar todos los canales de venta de Shopify.');
+            foreach ($page['nodes'] as $node) {
+                if (!preg_match('~^gid://shopify/Publication/\d+$~D', $node['id'] ?? '')) throw new RuntimeException('Shopify devolvió un canal de venta inválido.');
+                $ids[] = $node['id'];
+            }
+            $next = $page['pageInfo']['endCursor'] ?? null;
+            if ($page['pageInfo']['hasNextPage'] && (!$next || $next === $after)) throw new RuntimeException('No se pudieron consultar todos los canales de venta de Shopify.');
+            $after = $next;
+        } while ($page['pageInfo']['hasNextPage']);
+        if (!$ids) throw new RuntimeException('No hay canales de venta disponibles para esta aplicación Shopify. Revisa sus permisos.');
+        return array_values(array_unique($ids));
+    }
+
+    public function enableSalesChannels(string $productId, array $publicationIds): void
+    {
+        foreach (array_chunk($publicationIds, 100) as $ids) {
+            $data = $this->request('mutation CatalogEnableSalesChannels($id: ID!, $input: [PublicationInput!]!) { publishablePublish(id: $id, input: $input) { publishable { ... on Product { id } } userErrors { field message } } }',
+                ['id' => $productId, 'input' => array_map(fn ($id) => ['publicationId' => $id], $ids)]);
+            $result = $data['publishablePublish'] ?? [];
+            if (!empty($result['userErrors']) || ($result['publishable']['id'] ?? null) !== $productId) throw new RuntimeException('El producto se creó, pero Shopify no confirmó todos los canales de venta. Reintenta para completar el envío sin duplicarlo. '.mb_substr(implode(' ', array_column($result['userErrors'] ?? [], 'message')), 0, 800));
+        }
     }
 
     public const PRODUCT = 'id handle status metafield(namespace: "erp", key: "catalog_export") { value } variants(first: 100) { nodes { id sku selectedOptions { name value } } pageInfo { hasNextPage } }';
@@ -44,6 +83,18 @@ class CatalogClient
 
     public function create(array $input): array
     {
+        $data = $this->request('query CatalogInventoryLocation { location { id isActive fulfillsOnlineOrders } }');
+        $location = $data['location'] ?? null;
+        if (!is_array($location) || !preg_match('~^gid://shopify/Location/\d+$~D', $location['id'] ?? '')
+            || !($location['isActive'] ?? false) || !($location['fulfillsOnlineOrders'] ?? false)) {
+            throw new RuntimeException('La sucursal principal de Shopify debe estar activa y habilitada para preparar pedidos online antes de exportar.');
+        }
+        // Set opening stock only during creation. Retries reconcile the existing product
+        // through find() and never overwrite quantities changed by sales or manual edits.
+        $input['variants'] = array_map(fn ($variant) => $variant + [
+            'inventoryItem' => ['tracked' => true],
+            'inventoryQuantities' => [['locationId' => $location['id'], 'name' => 'available', 'quantity' => self::INITIAL_VARIANT_QUANTITY]],
+        ], $input['variants']);
         $data = $this->request('mutation PublishErpProduct($input: ProductSetInput!) { productSet(input: $input, synchronous: true) { product { '.self::PRODUCT.' } userErrors { field message } } }', ['input' => $input]);
         $result = $data['productSet'] ?? [];
         if (!empty($result['userErrors']) || empty($result['product']['id'])) throw new RuntimeException('Shopify no completó el producto: '.mb_substr(implode(' ', array_column($result['userErrors'] ?? [], 'message')), 0, 800));

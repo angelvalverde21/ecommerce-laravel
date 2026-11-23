@@ -307,12 +307,16 @@ class ProductionStagesTest extends TestCase
             'purchase_items' => [['name' => 'Confección de muestra', 'quantity' => 1, 'unit_id' => 1, 'price' => 90, 'subtotal' => 90]],
             'delivery' => ['enabled' => true, 'handed_over_on' => '2026-11-01'],
         ];
-        $this->postJson('/purchase-stage-test', $payload)->assertUnprocessable();
-        $this->assertSame(0, DB::table('purchases')->count());
+        $this->postJson('/purchase-stage-test', $payload)->assertOk()->assertJsonPath('data.delivery_tracking', null);
+        $this->assertSame(1, DB::table('purchases')->count());
+        $this->assertSame(0, DB::table('delivery_trackings')->count());
+        $payload['delivery']['expected_on'] = null;
+        $this->postJson('/purchase-stage-test', $payload)->assertOk()->assertJsonPath('data.delivery_tracking', null);
+        $this->assertSame(2, DB::table('purchases')->count());
         $payload['delivery']['expected_on'] = '2026-10-31';
         $this->postJson('/purchase-stage-test', $payload)->assertUnprocessable();
-        $this->assertSame(0, DB::table('purchases')->count());
-        $this->assertSame(0, DB::table('purchase_items')->count());
+        $this->assertSame(2, DB::table('purchases')->count());
+        $this->assertSame(2, DB::table('purchase_items')->count());
         $payload['delivery']['expected_on'] = '2026-12-01';
         $this->postJson('/purchase-stage-test', $payload)->assertOk()->assertJsonPath('data.delivery_tracking.expected_on', '2026-12-01');
         $this->assertSame(1, DB::table('delivery_tracking_events')->count());

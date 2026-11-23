@@ -4,22 +4,26 @@ namespace App\Services\Dashboard\Product;
 
 use App\Models\Category;
 use App\Models\Store;
+use App\Models\ShopifyProductExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Schema;
 
 class ProductService
 {
-    public function index(Store $store, int $perPage = 20, string $sort = 'recent', ?Request $request = null)
+    public function index(Store $store, int $perPage = 50, string $sort = 'recent', ?Request $request = null)
     {
         $request ??= request();
         $query = $store->products()->withStockTotal()->with(['category', 'image']);
 
-        return $this->sortProducts($query->getQuery(), $request, $sort)
+        $page = $this->sortProducts($query->getQuery(), $request, $sort)
             ->paginate($perPage)
             ->appends($request->query());
+        return $this->withShopifyStatus($page, $store);
     }
 
-    public function search(Store $store, Request $request, int $perPage = 20)
+    public function search(Store $store, Request $request, int $perPage = 50)
     {
         $validated = $request->validate([
             'search' => 'nullable|string|max:255',
@@ -43,9 +47,27 @@ class ProductService
             $query->where('products.created_at', '<=', $validated['end_date'].' 23:59:59');
         }
 
-        return $this->sortProducts($query->getQuery(), $request)
+        $page = $this->sortProducts($query->getQuery(), $request)
             ->paginate($perPage)
             ->appends($request->only(['search', 'start_date', 'end_date', 'sort', 'sort_by', 'sort_direction']));
+        return $this->withShopifyStatus($page, $store);
+    }
+
+    private function withShopifyStatus(LengthAwarePaginator $page, Store $store): LengthAwarePaginator
+    {
+        $ids = $page->getCollection()->modelKeys();
+        $linked = collect();
+        if (Schema::hasTable('shopify_product_exports')) {
+            $domain = strtolower(trim((string) config('shopify.store')));
+            if (!str_ends_with($domain, '.myshopify.com')) $domain .= '.myshopify.com';
+            $exports = ShopifyProductExport::where('store_id', $store->id)->where('shop_domain', $domain)
+                ->whereIn('product_id', $ids)->where('status', 'synced')->pluck('product_id');
+            foreach ($exports as $id) $linked->put($id, true);
+        }
+        return $page->through(function ($product) use ($linked) {
+            $product->setAttribute('shopify_linked', $linked->has($product->id));
+            return $product;
+        });
     }
 
     private function sortProducts(Builder $query, Request $request, string $legacySort = 'recent'): Builder

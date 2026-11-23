@@ -94,7 +94,8 @@ class CatalogPublisher
         });
         if ($export->status === 'synced') return $this->result($export);
         try {
-            $this->client->verify();
+            $this->client->verify(true);
+            $publications = $this->client->salesPublications();
             $remote = $this->client->find($export->handle);
             if ($remote && ($remote['metafield']['value'] ?? '') !== $export->id) throw new RuntimeException('El producto encontrado en Shopify no corresponde a este envío. Revisa el vínculo.');
             if ($remote && $export->payload_hash && $export->payload_hash !== $data['hash']) throw new RuntimeException('El producto local cambió después de un envío sin confirmar. Revisa el producto en Shopify antes de continuar.');
@@ -105,6 +106,7 @@ class CatalogPublisher
                     'metafields' => [['namespace' => 'erp', 'key' => 'catalog_export', 'type' => 'single_line_text_field', 'value' => $export->id]]];
                 $remote = $this->client->create($input);
             }
+            $this->client->enableSalesChannels($remote['id'], $publications);
             $this->persist($product, $export, $remote, $data);
             return $this->result($export->fresh());
         } catch (\Throwable $error) {

@@ -27,10 +27,10 @@ class ProductCatalogSortTest extends TestCase
         });
         Schema::create('products', function (Blueprint $table) {
             $table->id(); $table->integer('store_id'); $table->integer('category_id')->nullable();
-            $table->string('name'); $table->decimal('price'); $table->timestamps();
+            $table->string('name'); $table->decimal('price'); $table->string('origin')->nullable(); $table->timestamps();
         });
         Schema::create('variants', function (Blueprint $table) {
-            $table->id(); $table->integer('product_id'); $table->integer('stock'); $table->integer('status')->default(1);
+            $table->id(); $table->integer('product_id'); $table->integer('stock'); $table->integer('status')->default(1); $table->string('shopify_variant_id')->nullable();
         });
         Schema::create('images', function (Blueprint $table) {
             $table->id(); $table->morphs('imageable');
@@ -80,7 +80,7 @@ class ProductCatalogSortTest extends TestCase
 
     public function test_default_and_legacy_stock_order(): void
     {
-        $this->getJson('/test-catalog')->assertOk()->assertJsonPath('data.0.id', 3);
+        $this->getJson('/test-catalog')->assertOk()->assertJsonPath('data.0.id', 3)->assertJsonPath('per_page', 50);
         $this->getJson('/test-catalog?sort=stock')->assertOk()->assertJsonPath('data.0.id', 2);
     }
 
@@ -105,6 +105,34 @@ class ProductCatalogSortTest extends TestCase
         $this->getJson('/test-catalog?sort_direction=invalid')->assertUnprocessable()->assertJsonValidationErrors('sort_direction');
     }
 
+    public function test_only_confirmed_manual_exports_are_marked_in_lists_and_search(): void
+    {
+        config(['shopify.store' => 'catalog-test']);
+        (require database_path('migrations/2026_11_21_100000_create_shopify_product_exports.php'))->up();
+        DB::table('products')->where('id', 1)->update(['origin' => 'gid://shopify/Product/101']);
+        DB::table('variants')->where('product_id', 2)->update(['shopify_variant_id' => 'gid://shopify/ProductVariant/202']);
+        DB::table('shopify_product_exports')->insert(['id' => 'export-test', 'product_id' => 3, 'store_id' => 1,
+            'shop_domain' => 'catalog-test.myshopify.com', 'handle' => 'erp-test', 'status' => 'synced', 'remote_product_id' => 'gid://shopify/Product/303']);
+        $response = $this->getJson('/test-catalog')->assertOk();
+        foreach ($response->json('data') as $product) $this->assertSame($product['id'] === 3, $product['shopify_linked']);
+        $search = app(ProductService::class)->search(Store::findOrFail(1), Request::create('/', 'POST', ['search' => 'Charlie']));
+        $this->assertTrue($search->first()->shopify_linked);
+        $imported = app(ProductService::class)->search(Store::findOrFail(1), Request::create('/', 'POST', ['search' => 'Bravo']));
+        $this->assertFalse($imported->first()->shopify_linked);
+        DB::table('shopify_product_exports')->delete();
+        $this->getJson('/test-catalog')->assertOk()->assertJsonPath('data.0.shopify_linked', false);
+    }
+
+    public function test_unlinked_and_failed_exports_are_not_marked_as_linked(): void
+    {
+        config(['shopify.store' => 'catalog-test']);
+        (require database_path('migrations/2026_11_21_100000_create_shopify_product_exports.php'))->up();
+        DB::table('shopify_product_exports')->insert(['id' => 'failed-export', 'product_id' => 3, 'store_id' => 1,
+            'shop_domain' => 'catalog-test.myshopify.com', 'handle' => 'erp-failed', 'status' => 'failed']);
+        $response = $this->getJson('/test-catalog')->assertOk();
+        foreach ($response->json('data') as $product) $this->assertFalse($product['shopify_linked']);
+    }
+
     public function test_search_preserves_sort_and_date_filters_even_without_a_term(): void
     {
         $service = app(ProductService::class);
@@ -113,6 +141,7 @@ class ProductCatalogSortTest extends TestCase
             'search' => 'a', 'sort_by' => 'price', 'sort_direction' => 'asc',
         ]));
         $this->assertSame([2, 3, 1], $result->getCollection()->pluck('id')->all());
+        $this->assertSame(50, $result->perPage());
         $result = $service->search($store, Request::create('/', 'POST', [
             'search' => '', 'start_date' => '2026-02-01', 'sort_by' => 'stock_total', 'sort_direction' => 'asc',
         ]));

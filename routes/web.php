@@ -27,7 +27,42 @@ Route::get('/config', function () {
     Artisan::call('config:clear');
     Artisan::call('config:cache');
 
-    return "config";
+    // Read the regenerated cache: this request may still hold the previous configuration.
+    $cachePath = app()->getCachedConfigPath();
+    if (function_exists('opcache_invalidate')) {
+        opcache_invalidate($cachePath, true);
+    }
+    $cachedConfig = require $cachePath;
+    $shopify = $cachedConfig['shopify'] ?? [];
+    $environmentFile = app()->environmentFile();
+    $environment = \Illuminate\Support\Env::get('APP_ENV');
+    if ($environment && is_file(app()->environmentPath().DIRECTORY_SEPARATOR.$environmentFile.'.'.$environment)) {
+        $environmentFile .= '.'.$environment;
+    }
+    $environmentPath = app()->environmentPath().DIRECTORY_SEPARATOR.$environmentFile;
+    $fileValues = [];
+    $fileStatus = 'not_readable';
+    if (is_readable($environmentPath)) {
+        try {
+            $fileValues = \Dotenv\Dotenv::parse(file_get_contents($environmentPath));
+            $fileStatus = 'readable';
+        } catch (\Throwable) {
+            $fileStatus = 'invalid_format';
+        }
+    }
+    // Only report this non-secret setting; never return the environment file or access tokens.
+    $serverSlug = getenv('SHOPIFY_CATALOG_STORE_SLUG');
+
+    return response()->json([
+        'message' => 'Configuración actualizada',
+        'catalog_setting_present' => array_key_exists('catalog_store_slug', $shopify),
+        'catalog_store_slug' => $shopify['catalog_store_slug'] ?? null,
+        'environment_file' => basename($environmentFile),
+        'environment_file_status' => $fileStatus,
+        'file_catalog_setting_present' => array_key_exists('SHOPIFY_CATALOG_STORE_SLUG', $fileValues),
+        'file_catalog_store_slug' => $fileValues['SHOPIFY_CATALOG_STORE_SLUG'] ?? null,
+        'server_catalog_store_slug' => $serverSlug === false ? null : $serverSlug,
+    ])->header('Cache-Control', 'no-store');
 });
 
 Route::get('/link', function () {

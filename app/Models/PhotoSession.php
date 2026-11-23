@@ -8,6 +8,7 @@ class PhotoSession extends Model
     protected $guarded = ['id', 'store_id', 'created_by'];
     protected $casts = ['shoot_date' => 'date:Y-m-d', 'delivery_date' => 'date:Y-m-d', 'budget' => 'decimal:2'];
     public function responsible() { return $this->belongsTo(User::class, 'responsible_id'); }
+    public function purchases() { return $this->morphMany(Purchase::class, 'purchaseable'); }
     public function assets() { return $this->hasMany(PhotoSessionAsset::class); }
     public function photoLocation() { return $this->belongsTo(PhotoLocation::class); }
     public function photographerContact() { return $this->belongsTo(PhotoContact::class, 'photographer_contact_id'); }

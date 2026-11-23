@@ -20,7 +20,7 @@ class ProductShopifyPublishController extends Controller
     public function preview(Store $store, Request $request, CatalogPublisher $publisher)
     {
         $actor = $this->authorizeStore($store, $request);
-        $data = $request->validate(['product_ids' => 'required|array|min:1|max:25', 'product_ids.*' => 'required|integer|distinct|min:1', 'mode' => ['sometimes', Rule::in(['catalog', 'reset'])],
+        $data = $request->validate(['product_ids' => 'required|array|min:1|max:35', 'product_ids.*' => 'required|integer|distinct|min:1', 'mode' => ['sometimes', Rule::in(['catalog', 'reset'])],
             'target_status' => ['required', Rule::in(['DRAFT'])]]);
         return responseOk($publisher->preview($store, $actor, array_map('intval', $data['product_ids']), $data['target_status'], $data['mode'] ?? 'catalog'));
     }

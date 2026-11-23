@@ -70,6 +70,19 @@ use App\Http\Controllers\Api\Shopify\PdfManufactureController;
 // });
 // http://erp.test/api/v1/dashboard/sorelle/payments/1/images
 Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api', \App\Http\Middleware\EnsureActiveErpUser::class])->group(function () {
+    Route::prefix('collections')->group(function () {
+        $collections = \App\Http\Controllers\Api\Dashboard\CollectionDashboardController::class;
+        Route::get('/', [$collections, 'index']); Route::post('/', [$collections, 'store']);
+        Route::get('options', [$collections, 'options']);
+        Route::get('{collection_id}', [$collections, 'show'])->whereNumber('collection_id');
+        Route::put('{collection_id}', [$collections, 'update'])->whereNumber('collection_id');
+        Route::post('{collection_id}/processes', [$collections, 'process'])->whereNumber('collection_id');
+        Route::put('{collection_id}/processes/{process_id}', [$collections, 'updateProcess'])->whereNumber(['collection_id', 'process_id']);
+        Route::delete('{collection_id}/processes/{process_id}', [$collections, 'detach'])->whereNumber(['collection_id', 'process_id']);
+        Route::post('{collection_id}/sales', [$collections, 'sale'])->whereNumber('collection_id');
+        Route::delete('{collection_id}/sales/{sale_id}', [$collections, 'removeSale'])->whereNumber(['collection_id', 'sale_id']);
+        Route::post('{collection_id}/sales/{sale_id}/receipts', [$collections, 'receipt'])->whereNumber(['collection_id', 'sale_id']);
+    });
     Route::prefix('photo-session-tasks')->group(function () {
         $tasks = \App\Http\Controllers\Api\Dashboard\PhotoSessionTaskDashboardController::class;
         Route::get('/', [$tasks, 'index']);

@@ -21,6 +21,8 @@ class PurchaseService
         $map = [
             'manufacture' => \App\Models\Manufacture::class,
             'production' => \App\Models\Production::class,
+            'photo_session' => \App\Models\PhotoSession::class,
+            'project_process' => \App\Models\ProjectProcess::class,
             // 'order' => \App\Models\Order::class,
             // 'purchase' => \App\Models\Purchase::class,
         ];
@@ -36,10 +38,13 @@ class PurchaseService
 
     public function purchaseValidate(Store $store, Request $request): array
     {
+        if (in_array($request->input('purchaseable_type'), ['photo_session', 'project_process'], true)) {
+            abort_unless($request->user()?->hasAnyRole(['master', 'ceo', 'admin']), 403);
+        }
         $validated = $request->validate([
             'purchaseable_type' => [
                 'required',
-                Rule::in(['manufacture', 'production'])
+                Rule::in(['manufacture', 'production', 'photo_session', 'project_process'])
             ],
             'purchaseable_id' => 'required|integer',
             'supplier_id' => 'nullable|integer|exists:suppliers,id',
@@ -50,7 +55,7 @@ class PurchaseService
             'production_stage_id' => 'sometimes|nullable|integer',
             'delivery' => 'sometimes|array',
             'delivery.enabled' => 'required_with:delivery|boolean',
-            'delivery.expected_on' => 'required_if:delivery.enabled,true|nullable|date_format:Y-m-d',
+            'delivery.expected_on' => 'nullable|date_format:Y-m-d',
             'delivery.handed_over_on' => 'nullable|date_format:Y-m-d',
         ]);
 
@@ -94,6 +99,11 @@ class PurchaseService
 
             DB::beginTransaction();
 
+            if ($parentModel instanceof \App\Models\ProjectProcess) {
+                $parentModel = \App\Models\ProjectProcess::where('store_id', $store->id)->whereKey($parentModel->id)->lockForUpdate()->firstOrFail();
+                abort_unless($parentModel->source_type === 'other', 422, 'Registra la compra en el proceso original.');
+            }
+
             if ($parentModel instanceof \App\Models\Manufacture && $parentModel->type === 'production') {
                 $parentModel->newQuery()->whereKey($parentModel->id)->lockForUpdate()->firstOrFail();
                 $this->validateStage($store, $parentModel, $purchaseValidated, true);
@@ -111,7 +121,7 @@ class PurchaseService
             //Creamos los items del purchase
             $purchase->items()->createMany($purchaseItems);
 
-            if ($delivery['enabled'] ?? false) {
+            if (($delivery['enabled'] ?? false) && !empty($delivery['expected_on'])) {
                 app(\App\Services\Delivery\DeliveryTrackingService::class)->create($purchase, $delivery, Auth::guard('api')->user());
             }
 
@@ -216,6 +226,9 @@ class PurchaseService
     private function validateStage(Store $store, Model $parent, array $data, bool $creating): void
     {
         abort_unless((int) $parent->store_id === (int) $store->id, 404);
+        if ($parent instanceof \App\Models\ProjectProcess && $parent->source_type !== 'other') {
+            throw ValidationException::withMessages(['purchaseable_type' => 'Registra la compra en el proceso original.']);
+        }
         $isProduction = $parent instanceof \App\Models\Manufacture && $parent->type === 'production';
         if ($isProduction && ($creating || array_key_exists('production_stage_id', $data)) && empty($data['production_stage_id'])) {
             throw ValidationException::withMessages(['production_stage_id' => 'Selecciona la etapa de producción.']);
