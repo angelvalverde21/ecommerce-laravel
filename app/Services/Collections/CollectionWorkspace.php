@@ -1,7 +1,7 @@
 <?php
 namespace App\Services\Collections;
 
-use App\Models\{Manufacture, Order, PhotoSession, Product, Collection, ProjectProcess, ProjectSale};
+use App\Models\{Manufacture, ManufactureVariant, Order, PhotoSession, Product, Collection, ProjectProcess, ProjectSale};
 use App\Services\Dashboard\ProductionStageService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -198,6 +198,22 @@ class CollectionWorkspace
             $timeline[] = ['date' => $date, 'paid' => $runningPaid / 100, 'collected' => $runningCollected / 100];
         }
         $products = Product::where('store_id', $collection->store_id)->whereIn('id', array_unique($productIds))->with('image')->withStockTotal()->get();
+        $manufactures = collect($processes)->where('source_type', 'manufacture')->keyBy('source_id');
+        $variantRows = ManufactureVariant::whereIn('manufacture_id', $manufactures->keys())
+            ->whereHas('variant', fn ($q) => $q->whereIn('product_id', $products->modelKeys()))
+            ->with('variant.optionValues')->orderBy('id')->get()->groupBy(fn ($line) => $line->variant->product_id);
+        foreach ($products as $product) {
+            $lines = ($variantRows->get($product->id) ?? collect())->map(function ($line) use ($manufactures) {
+                $process = $manufactures->get($line->manufacture_id);
+                return ['id' => $line->id, 'variant_id' => $line->variant_id,
+                    'name' => $line->variant->optionValues->pluck('value')->filter()->implode(' / ') ?: ($line->variant->title ?: 'Sin opciones'),
+                    'sku' => $line->variant->sku, 'quantity' => (int) $line->quantity,
+                    'process_id' => $process['id'], 'source_id' => $line->manufacture_id,
+                    'source_name' => $process['name'], 'source_type' => $process['kind']];
+            })->values();
+            $product->setAttribute('manufacture_variants', $lines);
+            $product->setAttribute('manufacture_units', $lines->sum('quantity'));
+        }
         return ['collection' => $collection, 'collections' => $collections->map(fn ($c) => $c->only(['id', 'name', 'description', 'launch_on']))->values(),
             'processes' => $processes, 'products' => $products, 'purchases' => $purchases, 'sales' => $salesRows, 'timeline' => $timeline,
             'overview' => $this->overview($collection->store_id, $products->modelKeys(), $costCents),

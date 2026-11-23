@@ -23,7 +23,10 @@ class CollectionsWorkspaceTest extends TestCase
         Schema::create('manufactures', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('user_id')->nullable(); $t->string('type'); $t->string('name'); $t->dateTime('manufacture_end')->nullable(); $t->timestamps(); });
         Schema::create('photo_sessions', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('created_by')->nullable(); $t->string('name'); $t->string('status'); $t->date('delivery_date')->nullable(); $t->timestamps(); });
         Schema::create('products', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('name'); $t->timestamps(); });
-        Schema::create('variants', function (Blueprint $t) { $t->id(); $t->integer('product_id'); $t->integer('stock')->default(0); $t->integer('status')->default(1); });
+        Schema::create('variants', function (Blueprint $t) { $t->id(); $t->integer('product_id'); $t->string('title')->nullable(); $t->string('sku')->nullable(); $t->integer('stock')->default(0); $t->integer('status')->default(1); });
+        Schema::create('options', function (Blueprint $t) { $t->id(); $t->string('name'); });
+        Schema::create('option_values', function (Blueprint $t) { $t->id(); $t->integer('option_id'); $t->string('value'); });
+        Schema::create('variant_option_values', function (Blueprint $t) { $t->id(); $t->integer('variant_id'); $t->integer('option_value_id'); });
         Schema::create('manufacture_variant', function (Blueprint $t) { $t->id(); $t->integer('manufacture_id'); $t->integer('variant_id'); $t->integer('quantity'); $t->timestamps(); });
         Schema::create('kardexes', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('kardexable_type'); $t->integer('kardexable_id'); $t->integer('variant_id'); $t->string('direction'); $t->integer('quantity'); });
         Schema::create('orders', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('shopify_order_name')->nullable(); $t->string('currency_code')->default('PEN'); $t->string('status')->default('registrado'); $t->json('variants'); $t->timestamps(); });
@@ -197,6 +200,34 @@ class CollectionsWorkspaceTest extends TestCase
         $this->deleteJson("/collections-test/1/$other/processes/$orderProcess")->assertOk();
         $this->getJson("/collections-test/1/$other")->assertOk()->assertJsonCount(0, 'data.products');
         $this->getJson("/collections-test/1/999")->assertNotFound();
+    }
+    public function test_collection_products_include_only_linked_manufacture_variants_with_their_own_quantities(): void
+    {
+        [$collection] = $this->project();
+        $order = $this->source('order'); $production = $this->source('production');
+        $this->attach($collection, $collection, $order); $this->attach($collection, $collection, $production);
+        DB::table('variants')->where('id', 1)->update(['title' => 'Petite', 'sku' => '1659PET', 'stock' => 99]);
+        DB::table('manufacture_variant')->where('manufacture_id', $order->id)->update(['quantity' => 25]);
+        DB::table('manufacture_variant')->where('manufacture_id', $production->id)->update(['quantity' => 14]);
+        DB::table('options')->insert(['id' => 1, 'name' => 'Talla']);
+        DB::table('option_values')->insert(['id' => 1, 'option_id' => 1, 'value' => 'PETITE']);
+        DB::table('variant_option_values')->insert(['variant_id' => 1, 'option_value_id' => 1]);
+        DB::table('variants')->insert(['id' => 2, 'product_id' => 1, 'title' => 'Regular', 'sku' => '1660REG', 'status' => 0]);
+        DB::table('manufacture_variant')->insert(['manufacture_id' => $order->id, 'variant_id' => 2, 'quantity' => 15]);
+        DB::table('variants')->insert(['id' => 3, 'product_id' => 1, 'title' => 'Sin vincular']);
+        $this->source('order'); // Same product in another manufacture must not add units here.
+        $response = $this->getJson("/collections-test/1/$collection")->assertOk()->assertJsonCount(1, 'data.products')
+            ->assertJsonCount(3, 'data.products.0.manufacture_variants')
+            ->assertJsonPath('data.products.0.manufacture_units', 54)
+            ->assertJsonPath('data.products.0.manufacture_variants.0.name', 'PETITE')
+            ->assertJsonPath('data.products.0.manufacture_variants.0.sku', '1659PET')
+            ->assertJsonPath('data.products.0.manufacture_variants.0.quantity', 25)
+            ->assertJsonPath('data.products.0.manufacture_variants.0.source_type', 'order')
+            ->assertJsonPath('data.products.0.manufacture_variants.1.quantity', 14)
+            ->assertJsonPath('data.products.0.manufacture_variants.1.source_type', 'production')
+            ->assertJsonPath('data.products.0.manufacture_variants.2.name', 'Regular');
+        DB::table('manufacture_variant')->where('manufacture_id', $production->id)->update(['quantity' => 5]);
+        $this->getJson("/collections-test/1/$collection")->assertOk()->assertJsonPath('data.products.0.manufacture_units', 45);
     }
     public function test_process_product_counts_distinct_products_instead_of_variants_or_units(): void
     {
