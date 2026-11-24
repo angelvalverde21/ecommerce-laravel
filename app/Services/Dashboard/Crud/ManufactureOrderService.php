@@ -20,7 +20,7 @@ class ManufactureOrderService
             ->orderByDesc('id')
             ->get();
 
-        return $manufactureOrders;
+        return app(\App\Services\Collections\ManufactureCollectionLabels::class)->attach($manufactureOrders, $store->id);
     }
 
     public function store(Store $store, Request $request)

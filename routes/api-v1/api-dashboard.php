@@ -633,6 +633,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
     });
 
     Route::prefix('products')->group(function () {
+        Route::put('/bulk-titles', [ProductDashboardController::class, 'updateTitles']);
         Route::post('/shopify/preview', [\App\Http\Controllers\Api\Dashboard\ProductShopifyPublishController::class, 'preview']);
         Route::post('/{product_id}/shopify-publish', [\App\Http\Controllers\Api\Dashboard\ProductShopifyPublishController::class, 'publish'])->whereNumber('product_id');
         Route::post('/{product_id}/shopify-reset', [\App\Http\Controllers\Api\Dashboard\ProductShopifyPublishController::class, 'reset'])->whereNumber('product_id');

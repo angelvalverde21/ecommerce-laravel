@@ -83,13 +83,14 @@ class ManufactureOrderDashboardController extends Controller
             return $this->index($store);
         }
 
-        $employees = Manufacture::searchOrder($request->search) //Recuerda agrear el trait en el modelo correspondiente, en este caso Manufacture
+        $employees = $store->manufactures()->searchOrder($request->search)
             ->betweenDates($request->start_date, $request->end_date) //Sino hay fechas simplemente pasa de largo, no se considera
+            ->withFinancialSummary()
             ->limit(10)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
 
-        return responseOk($employees);
+        return responseOk(app(\App\Services\Collections\ManufactureCollectionLabels::class)->attach($employees, $store->id));
     }
 }

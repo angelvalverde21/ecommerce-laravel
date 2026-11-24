@@ -26,6 +26,7 @@ class ManufactureProductionService
             ->orderByDesc('id')
             ->get();
 
+        app(\App\Services\Collections\ManufactureCollectionLabels::class)->attach($manufactureOrders, $store->id);
         return $manufactureOrders->each(fn ($production) => $production->setAttribute('can_delete', !$production->has_inventory_movements && !$production->has_inventory_receptions && !$production->archived_at));
     }
 

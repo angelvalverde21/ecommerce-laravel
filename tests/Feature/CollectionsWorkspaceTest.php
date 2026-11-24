@@ -320,6 +320,20 @@ class CollectionsWorkspaceTest extends TestCase
         $this->assertStringStartsWith('2026-11-20', $response->json('data.processes.0.source_created_at'));
     }
 
+    public function test_manufacture_list_labels_include_orders_and_productions_and_exclude_other_store_collections(): void
+    {
+        [$project, $collection] = $this->project();
+        $order = $this->source('order'); $production = $this->source('production'); $independent = $this->source('order');
+        $this->attach($project, $collection, $order);
+        $this->attach($project, $collection, $production);
+        $foreign = Collection::create(['store_id' => 2, 'name' => 'Otra tienda']);
+        ProjectProcess::create(['store_id' => 1, 'collection_id' => $foreign->id, 'kind' => 'order', 'source_type' => 'manufacture', 'source_id' => $independent->id, 'name' => 'No debe mostrarse', 'status' => 'pending']);
+        $rows = app(\App\Services\Collections\ManufactureCollectionLabels::class)->attach(Manufacture::where('store_id', 1)->get(), 1)->keyBy('id');
+        $this->assertSame(['id' => $collection, 'name' => 'Verano'], $rows[$order->id]->getAttribute('collection'));
+        $this->assertSame(['id' => $collection, 'name' => 'Verano'], $rows[$production->id]->getAttribute('collection'));
+        $this->assertNull($rows[$independent->id]->getAttribute('collection'));
+    }
+
     public function test_sources_can_be_independent_then_linked_once_without_duplication(): void
     {
         [$project, $collection] = $this->project(); [$otherProject, $otherCollection] = $this->project();
@@ -459,10 +473,9 @@ class CollectionsWorkspaceTest extends TestCase
             ['manufacture_id' => $source->id, 'variant_id' => 3, 'quantity' => 5],
         ]);
         $this->postJson("/collections-test/1/$collection/processes", ['kind' => 'other', 'name' => 'Actividad'])->assertOk();
-        $this->getJson("/collections-test/1/$collection")->assertOk()
-            ->assertJsonPath('data.processes.0.products_count', 2)
-            ->assertJsonPath('data.processes.1.products_count', 1)
-            ->assertJsonPath('data.processes.2.products_count', 0);
+        $processes = collect($this->getJson("/collections-test/1/$collection")->assertOk()->json('data.processes'));
+        $this->assertSame(2, $processes->firstWhere('source_id', $source->id)['products_count']);
+        $this->assertSame([0, 1, 2], $processes->pluck('products_count')->sort()->values()->all());
     }
     public function test_sales_cannot_claim_more_than_the_order_line_or_received_units(): void
     {

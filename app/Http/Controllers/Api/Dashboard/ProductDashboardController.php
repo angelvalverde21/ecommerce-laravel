@@ -241,6 +241,38 @@ class ProductDashboardController extends Controller
         }
     }
 
+    public function updateTitles(Store $store, Request $request)
+    {
+        $validated = $request->validate([
+            'products' => 'required|array|min:1|max:35',
+            'products.*.id' => 'required|integer|distinct',
+            'products.*.name' => 'required|string|max:255',
+        ]);
+
+        $titles = collect($validated['products'])->map(function ($item) {
+            $item['name'] = trim($item['name']);
+            if ($item['name'] === '') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'products' => 'Todos los productos deben tener un título.',
+                ]);
+            }
+            return $item;
+        });
+
+        $updated = DB::transaction(function () use ($store, $titles) {
+            $products = $store->products()->whereIn('id', $titles->pluck('id'))->lockForUpdate()->get()->keyBy('id');
+            abort_unless($products->count() === $titles->count(), 404, 'Uno o más productos no pertenecen a esta tienda o ya no están disponibles.');
+
+            return $titles->map(function ($item) use ($products) {
+                $product = $products->get($item['id']);
+                $product->update(['name' => $item['name']]);
+                return ['id' => $product->id, 'name' => $product->name];
+            })->values();
+        });
+
+        return responseOk($updated, 'Títulos actualizados correctamente');
+    }
+
     public function duplicate(Store $store, $product_id, Request $request, ProductDuplicationService $duplicator)
     {
         $request->merge(['name' => is_string($request->name) ? trim($request->name) : $request->name]);
