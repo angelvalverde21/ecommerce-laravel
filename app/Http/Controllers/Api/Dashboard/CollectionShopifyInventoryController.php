@@ -29,8 +29,9 @@ class CollectionShopifyInventoryController extends Controller
     public function send(Store $store, Request $request, int $collection_id, CollectionInventoryExporter $exporter)
     {
         $collection = $this->collection($store, $request, $collection_id);
-        $data = $request->validate(['token' => 'required|string|max:300000']);
-        return $this->respond(fn () => $exporter->send($collection, (int) $request->user()->id, $data['token']));
+        $data = $request->validate(['token' => 'required|string|max:300000',
+            'variant_ids' => 'sometimes|required|array|min:1|max:250', 'variant_ids.*' => 'required|integer|distinct|min:1']);
+        return $this->respond(fn () => $exporter->send($collection, (int) $request->user()->id, $data['token'], isset($data['variant_ids']) ? array_map('intval', $data['variant_ids']) : null));
     }
 
     private function respond(callable $action)

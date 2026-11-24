@@ -128,14 +128,44 @@ class CollectionsWorkspaceTest extends TestCase
             'shop' => ['myshopifyDomain' => 'test-shop.myshopify.com'], 'currentAppInstallation' => ['accessScopes' => [['handle' => 'write_inventory']]],
             'location' => ['id' => 'gid://shopify/Location/1', 'name' => 'Principal', 'isActive' => true, 'fulfillsOnlineOrders' => true],
         ]]);
-        if (str_contains($request['query'], 'CollectionInventoryLevels')) return $http::response(['data' => ['nodes' => [[
+        if (str_contains($request['query'], 'CollectionInventoryLevels')) return $http::response(['data' => ['nodes' => array_merge([[
             'id' => 'gid://shopify/ProductVariant/101', 'sku' => config('tests.inventory_remote_sku'), 'product' => ['id' => config('tests.inventory_remote_product')], 'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/201', 'tracked' => true, 'inventoryLevel' => ['quantities' => [['name' => 'available', 'quantity' => 5]]]],
-        ]]]]);
+        ]], config('tests.inventory_extra_nodes', []))]]);
         if (str_contains($request['query'], 'SendCollectionInventory')) {
             if (config('tests.inventory_conflict')) return $http::response(['data' => ['inventorySetQuantities' => ['inventoryAdjustmentGroup' => null, 'userErrors' => [['message' => 'Stock changed since review.']]]]]);
             return $http::response(['data' => ['inventorySetQuantities' => ['inventoryAdjustmentGroup' => ['createdAt' => '2026-11-23T20:00:00Z'], 'userErrors' => []]]]);
         }
         throw new \RuntimeException('Unexpected Shopify request in test.');
+    }
+    public function test_readding_manufacture_variants_preserves_planned_quantities_and_prices(): void
+    {
+        Schema::table('manufacture_variant', fn (Blueprint $table) => $table->decimal('price', 10, 2)->nullable());
+        $source = $this->source('order');
+        DB::table('manufacture_variant')->where('manufacture_id', $source->id)->update(['quantity' => 20, 'price' => 59]);
+        DB::table('variants')->insert(['id' => 2, 'product_id' => 1, 'stock' => 0]);
+        Route::post('/manufacture-batch-regression', fn (Request $request) => app(\App\Http\Controllers\Api\Dashboard\ManufactureVariantDashboardController::class)
+            ->batch(Store::findOrFail(1), $request, $source->id));
+        $this->postJson('/manufacture-batch-regression', [1, 2, 1])->assertOk();
+        $this->assertDatabaseHas('manufacture_variant', ['manufacture_id' => $source->id, 'variant_id' => 1, 'quantity' => 20, 'price' => 59]);
+        $this->assertDatabaseHas('manufacture_variant', ['manufacture_id' => $source->id, 'variant_id' => 2, 'quantity' => 0]);
+        $this->assertSame(2, DB::table('manufacture_variant')->where('manufacture_id', $source->id)->count());
+    }
+    public function test_inventory_export_overwrites_available_stock_with_erp_quantity_including_reductions_and_zero(): void
+    {
+        [$collection, $endpoint] = $this->inventoryExportSetup();
+        $manufactures = DB::table('collections_processes')->where('collection_id', $collection)->where('source_type', 'manufacture')->pluck('source_id');
+        foreach ([20, 3, 0] as $quantity) {
+            DB::table('manufacture_variant')->whereIn('manufacture_id', $manufactures)->update(['quantity' => 0]);
+            DB::table('manufacture_variant')->where('manufacture_id', $manufactures->first())->update(['quantity' => $quantity]);
+            $token = $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 100])->assertOk()
+                ->assertJsonPath('data.items.0.current_units', 5)->assertJsonPath('data.items.0.export_units', $quantity)->json('data.token');
+            $this->postJson($endpoint.'/send', ['token' => $token])->assertOk()->assertJsonPath('data.sent_units', $quantity);
+            \Illuminate\Support\Facades\Http::assertSent(fn ($request) => str_contains($request['query'], 'SendCollectionInventory')
+                && data_get($request['variables'], 'input.name') === 'available'
+                && data_get($request['variables'], 'input.quantities.0.quantity') === $quantity
+                && data_get($request['variables'], 'input.quantities.0.changeFromQuantity') === 5);
+        }
+        $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 4]);
     }
     public function test_inventory_export_requires_review_then_sends_planned_percentage_once_without_changing_erp_stock(): void
     {
@@ -151,6 +181,32 @@ class CollectionsWorkspaceTest extends TestCase
             && data_get($r['variables'], 'input.quantities.0.quantity') === 8 && data_get($r['variables'], 'input.quantities.0.changeFromQuantity') === 5);
         $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 4]);
         $this->assertDatabaseHas('manufacture_variant', ['variant_id' => 1, 'quantity' => 11]);
+    }
+    public function test_inventory_confirmation_sends_only_checked_variants_and_retries_each_subset_once(): void
+    {
+        [$collection, $endpoint] = $this->inventoryExportSetup();
+        DB::table('variants')->insert(['id' => 2, 'product_id' => 1, 'sku' => 'B-M', 'shopify_variant_id' => 'gid://shopify/ProductVariant/102', 'stock' => 9]);
+        $source = DB::table('collections_processes')->where('collection_id', $collection)->where('source_type', 'manufacture')->value('source_id');
+        DB::table('manufacture_variant')->insert(['manufacture_id' => $source, 'variant_id' => 2, 'quantity' => 10]);
+        config(['tests.inventory_extra_nodes' => [[
+            'id' => 'gid://shopify/ProductVariant/102', 'sku' => 'B-M', 'product' => ['id' => 'gid://shopify/Product/501'],
+            'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/202', 'tracked' => true, 'inventoryLevel' => ['quantities' => [['name' => 'available', 'quantity' => 7]]]],
+        ]]]);
+        $token = $this->postJson($endpoint.'/preview', ['variant_ids' => [1, 2], 'percentage' => 80])->assertOk()->json('data.token');
+        foreach ([[], [999], [1, 1]] as $invalid) {
+            $this->postJson($endpoint.'/send', ['token' => $token, 'variant_ids' => $invalid])->assertUnprocessable();
+        }
+        \Illuminate\Support\Facades\Http::assertSentCount(2);
+        $this->postJson($endpoint.'/send', ['token' => $token, 'variant_ids' => [2]])->assertOk()->assertJsonPath('data.sent_variants', 1)->assertJsonPath('data.sent_units', 8);
+        $this->postJson($endpoint.'/send', ['token' => $token, 'variant_ids' => [2]])->assertOk();
+        \Illuminate\Support\Facades\Http::assertSentCount(3);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r['query'], 'SendCollectionInventory') && data_get($r['variables'], 'input.quantities') === [
+            ['inventoryItemId' => 'gid://shopify/InventoryItem/202', 'locationId' => 'gid://shopify/Location/1', 'quantity' => 8, 'changeFromQuantity' => 7],
+        ]);
+        $this->postJson($endpoint.'/send', ['token' => $token, 'variant_ids' => [2, 1]])->assertOk()->assertJsonPath('data.sent_variants', 2)->assertJsonPath('data.sent_units', 24);
+        $this->postJson($endpoint.'/send', ['token' => $token, 'variant_ids' => [1, 2]])->assertOk();
+        \Illuminate\Support\Facades\Http::assertSentCount(4);
+        $this->assertDatabaseHas('variants', ['id' => 2, 'stock' => 9]);
     }
     public function test_inventory_preview_accepts_blank_manual_skus_only_with_exact_persisted_product_and_variant_bindings(): void
     {

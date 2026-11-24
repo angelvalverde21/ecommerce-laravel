@@ -67,7 +67,8 @@ class ManufactureVariantDashboardController extends Controller
 
             foreach ($validated as $item) {
 
-                $manufacture_variant = $manufacture->manufactureVariants()->updateOrCreate(
+                // Re-adding an existing variant must preserve its planned quantity and price.
+                $manufacture_variant = $manufacture->manufactureVariants()->firstOrCreate(
                     [
                         'variant_id' => $item,
                     ],

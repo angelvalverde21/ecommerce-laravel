@@ -82,14 +82,22 @@ class CollectionInventoryExporter
             'token' => Crypt::encryptString(json_encode($approved))];
     }
 
-    public function send(Collection $collection, int $actor, string $token): array
+    public function send(Collection $collection, int $actor, string $token, ?array $variantIds = null): array
     {
         try { $approved = json_decode(Crypt::decryptString($token), true, 512, JSON_THROW_ON_ERROR); }
         catch (\Throwable) { abort(422, 'La revisión no es válida. Revisa nuevamente el envío.'); }
         abort_unless(($approved['action'] ?? '') === 'collection_inventory' && ($approved['store'] ?? null) === $collection->store_id
             && ($approved['collection'] ?? null) === $collection->id && ($approved['actor'] ?? null) === $actor
             && ($approved['domain'] ?? '') === $this->connection($collection) && ($approved['expires'] ?? 0) > now()->timestamp, 422, 'La revisión venció o cambió la conexión. Revisa nuevamente el envío.');
-        $cacheKey = 'collection-inventory:'.hash('sha256', $token);
+        $reviewedIds = array_column($approved['items'], 'variant_id');
+        $variantIds ??= $reviewedIds;
+        abort_unless(count($variantIds) > 0 && count(array_unique($variantIds)) === count($variantIds)
+            && !array_diff($variantIds, $reviewedIds), 422, 'Selecciona al menos una variante incluida en la revisión.');
+        sort($variantIds, SORT_NUMERIC);
+        $items = array_values(array_filter($approved['items'], fn ($item) => in_array($item['variant_id'], $variantIds, true)));
+        // Bind retries to this exact subset, independently of the original full review.
+        $operationKey = hash('sha256', $approved['key'].'|'.implode(',', $variantIds));
+        $cacheKey = 'collection-inventory:'.hash('sha256', $token.'|'.implode(',', $variantIds));
         $lock = Cache::lock('shopify-inventory:'.$approved['domain'], 90);
         abort_unless($lock->get(), 409, 'Hay otro envío de inventario en curso. Espera antes de reintentar.');
         try {
@@ -98,9 +106,9 @@ class CollectionInventoryExporter
             abort_unless(hash_equals($approved['hash'], hash('sha256', json_encode($lines))), 409, 'Las unidades previstas o los vínculos cambiaron. Revisa nuevamente el envío.');
             $modern = strcmp((string) config('shopify.catalog_version'), '2026-04') >= 0;
             $quantities = array_map(fn ($item) => ['inventoryItemId' => $item['inventory_item_id'], 'locationId' => $approved['location'],
-                'quantity' => $item['export_units'], $modern ? 'changeFromQuantity' : 'compareQuantity' => $item['current_units']], $approved['items']);
+                'quantity' => $item['export_units'], $modern ? 'changeFromQuantity' : 'compareQuantity' => $item['current_units']], $items);
             $data = $this->client->request('mutation SendCollectionInventory($input: InventorySetQuantitiesInput!, $key: String!) { inventorySetQuantities(input: $input) @idempotent(key: $key) { inventoryAdjustmentGroup { createdAt } userErrors { field message } } }',
-                ['input' => ['name' => 'available', 'reason' => 'correction', 'referenceDocumentUri' => 'erp://collections/'.$collection->id.'/inventory/'.$approved['key'], 'quantities' => $quantities], 'key' => $approved['key']]);
+                ['input' => ['name' => 'available', 'reason' => 'correction', 'referenceDocumentUri' => 'erp://collections/'.$collection->id.'/inventory/'.$operationKey, 'quantities' => $quantities], 'key' => $operationKey]);
             $result = $data['inventorySetQuantities'] ?? [];
             if (!empty($result['userErrors']) || empty($result['inventoryAdjustmentGroup'])) throw new RuntimeException('Shopify no confirmó el cambio de stock. '.mb_substr(implode(' ', array_column($result['userErrors'] ?? [], 'message')), 0, 1000));
             $result = ['sent_variants' => count($quantities), 'sent_units' => array_sum(array_column($quantities, 'quantity')), 'message' => 'Stock confirmado en Shopify.'];
