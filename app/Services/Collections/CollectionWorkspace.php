@@ -208,7 +208,8 @@ class CollectionWorkspace
                 $process = $manufactures->get($line->manufacture_id);
                 return ['id' => $line->id, 'variant_id' => $line->variant_id,
                     'name' => $line->variant->optionValues->pluck('value')->filter()->implode(' / ') ?: ($line->variant->title ?: 'Sin opciones'),
-                    'sku' => $line->variant->sku, 'quantity' => (int) $line->quantity,
+                    'sku' => $line->variant->sku, 'shopify_variant_id' => $line->variant->shopify_variant_id,
+                    'quantity' => (int) $line->quantity,
                     'process_id' => $process['id'], 'source_id' => $line->manufacture_id,
                     'source_name' => $process['name'], 'source_type' => $process['kind']];
             })->values();

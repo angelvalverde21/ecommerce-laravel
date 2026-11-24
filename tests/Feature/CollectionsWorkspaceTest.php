@@ -108,7 +108,7 @@ class CollectionsWorkspaceTest extends TestCase
     }
     private function inventoryExportSetup(): array
     {
-        config(['shopify.store' => 'test-shop.myshopify.com', 'shopify.token' => 'fake-token', 'shopify.catalog_store_slug' => 'sorelle', 'shopify.catalog_version' => '2026-10', 'cache.default' => 'array', 'tests.inventory_conflict' => false]);
+        config(['shopify.store' => 'test-shop.myshopify.com', 'shopify.token' => 'fake-token', 'shopify.catalog_store_slug' => 'sorelle', 'shopify.catalog_version' => '2026-10', 'cache.default' => 'array', 'tests.inventory_conflict' => false, 'tests.inventory_remote_sku' => 'B-S', 'tests.inventory_remote_product' => 'gid://shopify/Product/501']);
         \Illuminate\Support\Facades\Cache::flush();
         \Illuminate\Support\Facades\Http::preventStrayRequests();
         \Illuminate\Support\Facades\Http::fake(fn ($request) => $this->inventoryShopifyResponse($request));
@@ -129,7 +129,7 @@ class CollectionsWorkspaceTest extends TestCase
             'location' => ['id' => 'gid://shopify/Location/1', 'name' => 'Principal', 'isActive' => true, 'fulfillsOnlineOrders' => true],
         ]]);
         if (str_contains($request['query'], 'CollectionInventoryLevels')) return $http::response(['data' => ['nodes' => [[
-            'id' => 'gid://shopify/ProductVariant/101', 'sku' => 'B-S', 'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/201', 'tracked' => true, 'inventoryLevel' => ['quantities' => [['name' => 'available', 'quantity' => 5]]]],
+            'id' => 'gid://shopify/ProductVariant/101', 'sku' => config('tests.inventory_remote_sku'), 'product' => ['id' => config('tests.inventory_remote_product')], 'inventoryItem' => ['id' => 'gid://shopify/InventoryItem/201', 'tracked' => true, 'inventoryLevel' => ['quantities' => [['name' => 'available', 'quantity' => 5]]]],
         ]]]]);
         if (str_contains($request['query'], 'SendCollectionInventory')) {
             if (config('tests.inventory_conflict')) return $http::response(['data' => ['inventorySetQuantities' => ['inventoryAdjustmentGroup' => null, 'userErrors' => [['message' => 'Stock changed since review.']]]]]);
@@ -151,6 +151,20 @@ class CollectionsWorkspaceTest extends TestCase
             && data_get($r['variables'], 'input.quantities.0.quantity') === 8 && data_get($r['variables'], 'input.quantities.0.changeFromQuantity') === 5);
         $this->assertDatabaseHas('variants', ['id' => 1, 'stock' => 4]);
         $this->assertDatabaseHas('manufacture_variant', ['variant_id' => 1, 'quantity' => 11]);
+    }
+    public function test_inventory_preview_accepts_blank_manual_skus_only_with_exact_persisted_product_and_variant_bindings(): void
+    {
+        [$collection, $endpoint] = $this->inventoryExportSetup();
+        config(['tests.inventory_remote_sku' => null]);
+        $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 20])->assertUnprocessable();
+        (require database_path('migrations/2026_11_21_100000_create_shopify_product_exports.php'))->up();
+        \App\Models\ShopifyProductExport::create(['id' => (string) \Illuminate\Support\Str::uuid(), 'store_id' => 1, 'product_id' => 1,
+            'shop_domain' => 'test-shop.myshopify.com', 'handle' => 'manual-blusa', 'status' => 'synced',
+            'remote_product_id' => 'gid://shopify/Product/501', 'variant_links' => [1 => ['variant_id' => 'gid://shopify/ProductVariant/101']]]);
+        $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 20])->assertOk()->assertJsonPath('data.items.0.export_units', 4);
+        config(['tests.inventory_remote_product' => 'gid://shopify/Product/999']);
+        $this->postJson($endpoint.'/preview', ['variant_ids' => [1], 'percentage' => 20])->assertUnprocessable();
+        $this->assertDatabaseHas('variants', ['id' => 1, 'sku' => 'B-S', 'stock' => 4]);
     }
     public function test_inventory_export_rejects_changed_plans_tampered_tokens_and_cross_collection_replays(): void
     {

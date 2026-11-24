@@ -40,6 +40,10 @@ class CatalogPublisher
             $product = $products[$id];
             $item = ['id' => $id, 'name' => $product->name, 'status' => 'ready', 'issues' => [], 'variants' => [], 'token' => null];
             $export = $exports->get($id);
+            if ($export?->status === 'reconciling') {
+                $item['status'] = 'invalid'; $item['issues'][] = 'Completa la conciliación con el producto manual antes de volver a exportar.';
+                $items[] = $item; continue;
+            }
             if ($mode === 'reset') {
                 if (!$export || $export->store_id !== $store->id || filled($product->origin)) {
                     $item['status'] = 'invalid'; $item['issues'][] = 'Solo se pueden restablecer productos exportados desde este ERP.';
@@ -85,6 +89,7 @@ class CatalogPublisher
             $product->newQuery()->whereKey($product->id)->lockForUpdate()->firstOrFail();
             $export = ShopifyProductExport::firstOrCreate(['product_id' => $product->id, 'shop_domain' => $connection['domain']],
                 ['id' => (string) Str::uuid(), 'handle' => 'erp-'.Str::uuid(), 'store_id' => $product->store_id]);
+            abort_if($export->status === 'reconciling', 409, 'La conciliación de este producto está en curso.');
             if ($export->status === 'synced') return $export;
             abort_if(in_array($export->status, ['resetting', 'reset_failed'], true), 409, 'Completa el restablecimiento antes de publicar.');
             abort_if(filled($product->origin) || (!$export->attempted_at && $product->variants()->whereNotNull('shopify_variant_id')->exists()), 409, 'El producto ya tiene un vínculo externo.');
@@ -133,6 +138,7 @@ class CatalogPublisher
             $product->newQuery()->whereKey($product->id)->lockForUpdate()->firstOrFail();
             $export = ShopifyProductExport::where('product_id', $product->id)->where('shop_domain', $connection['domain'])->first();
             if (!$export) return null;
+            abort_if($export->status === 'reconciling', 409, 'La conciliación de este producto está en curso.');
             abort_unless($export->id === ($approved['export'] ?? null) && $export->store_id === $product->store_id, 409, 'La exportación cambió. Revisa nuevamente.');
             abort_if(in_array($export->status, ['sending', 'resetting'], true) && $export->attempted_at?->gt(now()->subMinutes(3)), 409, 'Hay una operación en curso. Espera antes de reintentar.');
             $export->update(['status' => 'resetting', 'attempted_at' => now(), 'user_id' => $actor]);

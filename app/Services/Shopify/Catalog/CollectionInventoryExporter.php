@@ -2,8 +2,8 @@
 
 namespace App\Services\Shopify\Catalog;
 
-use App\Models\Collection;
-use Illuminate\Support\Facades\{Cache, Crypt, DB};
+use App\Models\{Collection, ShopifyProductExport};
+use Illuminate\Support\Facades\{Cache, Crypt, DB, Schema};
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -21,8 +21,8 @@ class CollectionInventoryExporter
             ->where('cp.collection_id', $collection->id)->where('cp.store_id', $collection->store_id)
             ->where('m.store_id', $collection->store_id)->whereIn('m.type', ['order', 'production'])
             ->where('p.store_id', $collection->store_id)->whereIn('v.id', $ids)
-            ->groupBy('v.id', 'v.sku', 'v.shopify_variant_id', 'p.name')->orderBy('v.id')
-            ->select(['v.id', 'v.sku', 'v.shopify_variant_id', 'p.name'])->selectRaw('SUM(mv.quantity) as planned_units')->get();
+            ->groupBy('v.id', 'v.product_id', 'v.sku', 'v.shopify_variant_id', 'p.name')->orderBy('v.id')
+            ->select(['v.id', 'v.product_id', 'v.sku', 'v.shopify_variant_id', 'p.name'])->selectRaw('SUM(mv.quantity) as planned_units')->get();
         abort_unless($rows->count() === count($ids), 422, 'Una variante ya no pertenece a las manufacturas de esta colección. Actualiza la selección.');
         return $rows->map(function ($row) use ($percentage) {
             $remote = (string) $row->shopify_variant_id;
@@ -31,7 +31,7 @@ class CollectionInventoryExporter
             $planned = max(0, (int) $row->planned_units);
             $quantity = intdiv($planned * $percentage, 100);
             abort_if($quantity > 2147483647, 422, 'La cantidad supera el límite de inventario de Shopify.');
-            return ['variant_id' => (int) $row->id, 'sku' => $row->sku, 'name' => $row->name,
+            return ['variant_id' => (int) $row->id, 'product_id' => (int) $row->product_id, 'sku' => $row->sku, 'name' => $row->name,
                 'remote_variant_id' => $remote, 'planned_units' => $planned, 'export_units' => $quantity];
         })->all();
     }
@@ -54,15 +54,24 @@ class CollectionInventoryExporter
         abort_unless(preg_match('~^gid://shopify/Location/\d+$~D', $location['id'] ?? '') && ($location['isActive'] ?? false) && ($location['fulfillsOnlineOrders'] ?? false), 422, 'La sucursal principal de Shopify debe estar activa y habilitada para pedidos online.');
         $nodes = [];
         foreach (array_chunk(array_column($lines, 'remote_variant_id'), 100) as $batch) {
-            $data = $this->client->request('query CollectionInventoryLevels($ids: [ID!]!, $location: ID!) { nodes(ids: $ids) { ... on ProductVariant { id sku inventoryItem { id tracked inventoryLevel(locationId: $location) { quantities(names: ["available"]) { name quantity } } } } } }', ['ids' => $batch, 'location' => $location['id']]);
+            $data = $this->client->request('query CollectionInventoryLevels($ids: [ID!]!, $location: ID!) { nodes(ids: $ids) { ... on ProductVariant { id sku product { id } inventoryItem { id tracked inventoryLevel(locationId: $location) { quantities(names: ["available"]) { name quantity } } } } } }', ['ids' => $batch, 'location' => $location['id']]);
             foreach ($data['nodes'] ?? [] as $node) if (isset($node['id'])) $nodes[$node['id']] = $node;
         }
+        $exports = Schema::hasTable('shopify_product_exports') ? ShopifyProductExport::where('store_id', $collection->store_id)
+            ->where('shop_domain', $domain)->where('status', 'synced')->whereIn('product_id', array_column($lines, 'product_id'))->get()->keyBy('product_id') : collect();
         $items = [];
         foreach ($lines as $line) {
             $node = $nodes[$line['remote_variant_id']] ?? [];
             $item = $node['inventoryItem'] ?? [];
             $available = collect($item['inventoryLevel']['quantities'] ?? [])->firstWhere('name', 'available');
-            abort_unless(($node['sku'] ?? null) === $line['sku'] && preg_match('~^gid://shopify/InventoryItem/\d+$~D', $item['id'] ?? '') && ($item['tracked'] ?? false) && isset($available['quantity']) && is_int($available['quantity']), 422, 'Revisa el vínculo, el seguimiento de inventario y la sucursal del SKU '.$line['sku'].' en Shopify.');
+            $export = $exports->get($line['product_id']);
+            $binding = $export?->variant_links[$line['variant_id']] ?? null;
+            // Manually created products can have no SKU. Accept only a persisted,
+            // exact product AND variant association from the approved reconciliation.
+            $approvedManual = blank($node['sku'] ?? null) && $export
+                && $export->remote_product_id === ($node['product']['id'] ?? null)
+                && ($binding['variant_id'] ?? null) === $line['remote_variant_id'];
+            abort_unless((($node['sku'] ?? null) === $line['sku'] || $approvedManual) && preg_match('~^gid://shopify/InventoryItem/\d+$~D', $item['id'] ?? '') && ($item['tracked'] ?? false) && isset($available['quantity']) && is_int($available['quantity']), 422, 'Revisa el vínculo, el seguimiento de inventario y la sucursal del SKU '.$line['sku'].' en Shopify.');
             $items[] = $line + ['inventory_item_id' => $item['id'], 'current_units' => $available['quantity']];
         }
         $approved = ['action' => 'collection_inventory', 'store' => $collection->store_id, 'collection' => $collection->id, 'actor' => $actor,
