@@ -173,12 +173,14 @@ class CollectionWorkspace
                     $events[] = ['date' => substr($payment->date ?: $payment->created_at, 0, 10), 'paid' => $amount, 'collected' => 0];
                 }
                 $processes[] = [...$process->toArray(), 'name' => $owner->name, 'status' => $status, 'progress' => $progress, 'due_on' => $due ? substr($due, 0, 10) : null,
+                    'source_created_at' => ($owner->created_at ?? $process->created_at)?->toISOString(),
                     'collection_name' => $collection->name, 'purchases' => $rows->toArray(), 'purchases_amount' => $processCost / 100,
                     'paid' => $processPaid / 100, 'stages' => $stages, 'products_count' => count($processProductIds),
                     'owner_type' => match ($process->source_type) { 'manufacture' => 'manufacture', 'photo_session' => 'photo_session', default => 'project_process' },
                     'owner_id' => $owner->id];
             }
         }
+        usort($processes, fn ($a, $b) => strcmp($b['source_created_at'] ?? '', $a['source_created_at'] ?? '') ?: ($b['id'] <=> $a['id']));
         $processIds = array_column($processes, 'id');
         $sales = ProjectSale::whereIn('process_id', $processIds)->with(['order', 'receipts'])->get();
         $salesCents = 0; $collectedCents = 0; $unitsSold = 0; $salesRows = [];

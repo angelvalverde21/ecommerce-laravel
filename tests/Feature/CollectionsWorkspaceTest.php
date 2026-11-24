@@ -303,6 +303,23 @@ class CollectionsWorkspaceTest extends TestCase
         $sales = User::create(['name' => 'Ventas']); $sales->assignRole('sales'); $sales->stores()->attach(1); $this->actingAs($sales, 'api');
         $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/productions/'.$foreign->id)->assertForbidden();
     }
+    public function test_processes_use_source_creation_dates_and_sort_newest_first_regardless_of_attachment_order(): void
+    {
+        [$project, $collection] = $this->project();
+        $newer = $this->source();
+        $older = $this->source();
+        $newer->forceFill(['created_at' => '2026-11-20 12:00:00', 'manufacture_end' => '2026-12-01 00:00:00'])->save();
+        $older->forceFill(['created_at' => '2026-10-10 12:00:00'])->save();
+        $newerProcess = $this->attach($project, $collection, $newer);
+        $olderProcess = $this->attach($project, $collection, $older);
+        $response = $this->getJson("/collections-test/1/$project")->assertOk();
+        $response->assertJsonPath('data.processes.0.id', $newerProcess)
+            ->assertJsonPath('data.processes.1.id', $olderProcess)
+            ->assertJsonPath('data.processes.0.due_on', '2026-12-01')
+            ->assertJsonPath('data.processes.1.due_on', null);
+        $this->assertStringStartsWith('2026-11-20', $response->json('data.processes.0.source_created_at'));
+    }
+
     public function test_sources_can_be_independent_then_linked_once_without_duplication(): void
     {
         [$project, $collection] = $this->project(); [$otherProject, $otherCollection] = $this->project();
