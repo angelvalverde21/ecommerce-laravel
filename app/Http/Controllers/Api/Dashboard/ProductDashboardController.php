@@ -227,7 +227,7 @@ class ProductDashboardController extends Controller
             $product->update([
                 'name'        => $validated['name'],
                 'slug'        => $validated['slug'] ?? Str::slug($validated['name']),
-                'body'        => $validated['body'] ?? $product->body,
+                'body'        => array_key_exists('body', $validated) ? $validated['body'] : $product->body,
                 'category_id' => $validated['category_id'],
                 // 'user_id'     => Auth::id(), // se actualiza con el usuario logueado
                 'status'      => $validated['status'] ?? $product->status,
