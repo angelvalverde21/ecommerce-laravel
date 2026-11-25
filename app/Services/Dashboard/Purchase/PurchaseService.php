@@ -39,7 +39,8 @@ class PurchaseService
     public function purchaseValidate(Store $store, Request $request): array
     {
         if (in_array($request->input('purchaseable_type'), ['photo_session', 'project_process'], true)) {
-            abort_unless($request->user()?->hasAnyRole(['master', 'ceo', 'admin']), 403);
+            $roles = $request->input('purchaseable_type') === 'photo_session' && $request->filled('photo_source_kind') ? ['master', 'ceo', 'admin', 'marketing'] : ['master', 'ceo', 'admin'];
+            abort_unless($request->user()?->hasAnyRole($roles), 403);
         }
         $validated = $request->validate([
             'purchaseable_type' => [
@@ -57,7 +58,24 @@ class PurchaseService
             'delivery.enabled' => 'required_with:delivery|boolean',
             'delivery.expected_on' => 'nullable|date_format:Y-m-d',
             'delivery.handed_over_on' => 'nullable|date_format:Y-m-d',
+            'photo_source_kind' => 'sometimes|required|in:photographer,model,location,task',
+            'photo_source_id' => 'required_with:photo_source_kind|integer|min:1',
         ]);
+
+        if (!empty($validated['photo_source_kind'])) {
+            abort_unless($validated['purchaseable_type'] === 'photo_session', 422, 'El origen debe pertenecer a una sesión fotográfica.');
+            $session = \App\Models\PhotoSession::where('store_id', $store->id)->findOrFail($validated['purchaseable_id']);
+            $source = app(\App\Services\PhotoSessions\PhotoPurchaseSource::class)->resolve($session, $validated['photo_source_kind'], (int) $validated['photo_source_id']);
+            if (!$source['recipient_name']) {
+                $request->validate(['supplier_id' => ['required', 'integer', Rule::exists('suppliers', 'id')->where('store_id', $store->id)]]);
+                $supplier = \App\Models\Supplier::where('store_id', $store->id)->findOrFail($validated['supplier_id']);
+                $validated['photo_recipient_name'] = $supplier->user?->name ?: $supplier->name;
+            } else {
+                $validated['photo_recipient_name'] = $source['recipient_name'];
+                $validated['supplier_id'] = null; $validated['supplier_address_id'] = null;
+                $request->merge(['supplier_id' => null, 'supplier_address_id' => null]);
+            }
+        }
 
         if ($request->exists('supplier_id') || $request->exists('supplier_address_id')) {
             $validated['supplier_address_id'] = app(\App\Services\Dashboard\Supplier\SupplierAddressService::class)
@@ -150,6 +168,8 @@ class PurchaseService
 
     public function update(Store $store, Request $request, $purchase_id)
     {
+        $existing = \App\Models\Purchase::where('store_id', $store->id)->findOrFail($purchase_id);
+        if ($existing->photo_source_kind) $request->merge(['photo_source_kind' => $existing->photo_source_kind, 'photo_source_id' => $existing->photo_source_id]);
         $validated = $this->purchaseValidate($store, $request);
         unset($validated['delivery']); // Delivery changes use their audited endpoint.
 

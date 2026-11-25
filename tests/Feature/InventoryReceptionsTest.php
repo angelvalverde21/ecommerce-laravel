@@ -183,6 +183,23 @@ class InventoryReceptionsTest extends TestCase
         $legacy = $service->variants($store, 1);
         $this->assertTrue($legacy->first()->variant->relationLoaded('manufactureKardexes'));
         $this->assertCount(1, $legacy->first()->variant->manufactureKardexes);
+
+        // Saved receipts must appear in the card without changing stock or counting twice after posting.
+        $draft = $this->postJson('/receipts-test/1', $this->draft([['variant_id' => 1, 'quantity' => 124]]))->assertOk();
+        $summary = $service->show($store, 1, false, true);
+        $this->assertEquals(124, $summary->pending_reception_units);
+        $this->assertEquals(4, $summary->sum_kardexes);
+        $this->assertSame(10, DB::table('variants')->where('id', 1)->value('stock'));
+        $this->assertEquals(0, $service->show($store, 3, false, true)->pending_reception_units);
+        $id = $draft->json('data.id');
+        $this->postJson("/receipts-test/1/$id/post", ['revision' => 1])->assertOk();
+        $summary = $service->show($store, 1, false, true);
+        $this->assertEquals(0, $summary->pending_reception_units);
+        $this->assertEquals(128, $summary->sum_kardexes);
+        $this->postJson("/receipts-test/1/$id/reverse", ['reason' => 'Correccion de recepcion'])->assertOk();
+        $summary = $service->show($store, 1, false, true);
+        $this->assertEquals(0, $summary->pending_reception_units);
+        $this->assertEquals(4, $summary->sum_kardexes);
     }
 
     public function test_numbers_are_per_source_persist_after_reversal_and_are_used_in_pdf(): void

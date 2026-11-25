@@ -180,6 +180,20 @@ class Manufacture extends Model
             }, 'sum_kardexes');
     }
 
+    public function scopeWithReceptionSummary(Builder $query): Builder
+    {
+        return $query->selectSub(function ($q) {
+            $q->from('inventory_reception_items')
+                ->join('inventory_receptions', 'inventory_receptions.id', '=', 'inventory_reception_items.inventory_reception_id')
+                ->whereColumn('inventory_receptions.source_id', 'manufactures.id')
+                ->whereColumn('inventory_receptions.store_id', 'manufactures.store_id')
+                ->where('inventory_receptions.source_type', (new self)->getMorphClass())
+                ->where('inventory_receptions.status', 'draft')
+                ->whereNull('inventory_receptions.reversed_at')
+                ->selectRaw('COALESCE(SUM(inventory_reception_items.quantity), 0)');
+        }, 'pending_reception_units');
+    }
+
     public function scopeWithDeliveryTrackingCount(Builder $query): Builder
     {
         return $query->withCount(['purchases as tracked_purchases_count' => fn (Builder $purchases) =>

@@ -158,6 +158,98 @@ class PhotoSessionTest extends TestCase
         $contact = new PhotoContact(['kind' => $kind, 'name' => $kind.' de prueba', 'active' => true]);
         $contact->store_id = $store; $contact->save(); return $contact;
     }
+    private function expenseSetup(): array
+    {
+        (require database_path('migrations/2025_08_11_074749_create_gateways_table.php'))->up();
+        (require database_path('migrations/2026_02_05_180755_create_payments_table.php'))->up();
+        Schema::create('suppliers', function (Blueprint $table) { $table->id(); $table->integer('store_id'); $table->integer('user_id'); $table->string('name')->nullable(); });
+        (require database_path('migrations/2026_11_25_100000_create_photo_session_expenses.php'))->up();
+        DB::table('gateways')->insert([['id' => 1, 'store_id' => 1, 'name' => 'cash', 'title' => 'Efectivo'], ['id' => 2, 'store_id' => 2, 'name' => 'cash', 'title' => 'Otra tienda']]);
+        $session = $this->photoSessionRecord(); $contact = $this->contactRecord('photographer'); $session->photographers()->attach($contact->id);
+        $url = '/api/v1/sorelle/dashboard/photo-sessions/'.$session->id.'/expenses';
+        return [$session, $contact, $url, ['source_kind' => 'photographer', 'source_id' => $contact->id, 'request_key' => (string) Str::uuid(),
+            'amount' => '200.00', 'date' => now('America/Lima')->toDateString(), 'gateway_id' => 1, 'comment' => 'Adelanto de fotografía', 'direction' => 'out']];
+    }
+    private function photoPurchaseSetup(): array
+    {
+        [$session, $contact] = $this->expenseSetup();
+        Schema::create('units', function (Blueprint $t) { $t->id(); $t->string('name'); });
+        DB::table('units')->insert(['id' => 1, 'name' => 'Unidad']);
+        Schema::create('purchases', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('user_id')->nullable(); $t->integer('supplier_id')->nullable(); $t->integer('supplier_address_id')->nullable(); $t->morphs('purchaseable'); $t->text('observations')->nullable(); $t->date('purchase_start')->nullable(); $t->date('purchase_end')->nullable(); $t->timestamps(); });
+        Schema::create('purchase_items', function (Blueprint $t) { $t->id(); $t->integer('purchase_id'); $t->string('name'); $t->integer('unit_id'); $t->decimal('quantity', 10, 2); $t->decimal('price', 10, 2); $t->decimal('subtotal', 10, 2); $t->timestamps(); });
+        Schema::create('attachments', function (Blueprint $t) { $t->id(); $t->morphs('attachable'); });
+        (require database_path('migrations/2026_11_13_100000_create_delivery_tracking_tables.php'))->up();
+        (require database_path('migrations/2026_11_25_110000_add_photo_source_to_purchases.php'))->up();
+        return [$session, $contact, ['purchaseable_type' => 'photo_session', 'purchaseable_id' => $session->id, 'photo_source_kind' => 'photographer', 'photo_source_id' => $contact->id,
+            'supplier_id' => null, 'observations' => 'Sesión', 'purchase_items' => [['name' => 'Horas de fotografía', 'unit_id' => 1, 'quantity' => 3, 'price' => 100, 'subtotal' => 999]]]];
+    }
+    public function test_photo_item_purchases_have_quantity_description_and_price_and_reuse_the_contact(): void
+    {
+        [$session, $contact, $payload] = $this->photoPurchaseSetup();
+        $id = $this->postJson('/api/v1/sorelle/dashboard/purchases', $payload)->assertOk()->assertJsonPath('data.photo_recipient_name', $contact->name)
+            ->assertJsonPath('data.items.0.name', 'Horas de fotografía')->assertJsonPath('data.items.0.subtotal', 300)->json('data.id');
+        $this->assertDatabaseCount('payments', 0); $this->assertDatabaseCount('suppliers', 0);
+        $url = '/api/v1/sorelle/dashboard/photo-sessions/'.$session->id.'/item-purchases?source_kind=photographer&source_id='.$contact->id;
+        $this->getJson($url)->assertOk()->assertJsonCount(1, 'data.purchases')->assertJsonPath('data.total_purchases', 300)->assertJsonPath('data.total_paid', 0);
+        $purchase = \App\Models\Purchase::findOrFail($id);
+        $purchase->payments()->create(['store_id' => 1, 'user_id' => User::first()->id, 'amount' => 120, 'gateway_id' => 1, 'status' => 'paid', 'direction' => 'out', 'date' => now()]);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.total_purchases', 300)->assertJsonPath('data.total_paid', 120);
+        $this->getJson('/api/v1/sorelle/dashboard/photo-sessions/'.$session->id)->assertOk()->assertJsonPath('data.purchase_totals.photographer:'.$contact->id, 300)->assertJsonPath('data.expense_totals.photographer:'.$contact->id, 120);
+        $unassigned = $this->contactRecord('photographer');
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'photo_source_id' => $unassigned->id])->assertNotFound();
+        $this->assertDatabaseCount('purchases', 1);
+    }
+    public function test_task_purchases_require_a_supplier_in_the_session_store(): void
+    {
+        [$session, $contact, $payload] = $this->photoPurchaseSetup();
+        $task = $session->tasks()->create(['store_id' => 1, 'title' => 'Maquillaje', 'created_by' => User::first()->id, 'status' => 'pending']);
+        $payload = [...$payload, 'photo_source_kind' => 'task', 'photo_source_id' => $task->id];
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', $payload)->assertUnprocessable();
+        DB::table('suppliers')->insert(['id' => 1, 'store_id' => 1, 'user_id' => User::first()->id]);
+        DB::table('suppliers')->insert(['id' => 2, 'store_id' => 2, 'user_id' => User::first()->id]);
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'supplier_id' => 2])->assertUnprocessable();
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'supplier_id' => 1])->assertOk()->assertJsonPath('data.supplier_id', 1);
+    }
+    public function test_photo_expenses_reuse_the_assigned_contact_and_record_multiple_payments_without_duplicates(): void
+    {
+        [$session, $contact, $url, $payload] = $this->expenseSetup();
+        $this->getJson($url.'?source_kind=photographer&source_id='.$contact->id)->assertOk()->assertJsonPath('data.source.recipient_name', $contact->name)->assertJsonCount(0, 'data.expenses');
+        $id = $this->postJson($url, [...$payload, 'recipient_name' => 'No debe reemplazar el contacto'])->assertOk()->assertJsonPath('data.recipient_name', $contact->name)->json('data.payment_id');
+        $this->postJson($url, [...$payload, 'recipient_name' => 'No debe reemplazar el contacto'])->assertOk()->assertJsonPath('data.payment_id', $id);
+        $this->postJson($url, [...$payload, 'amount' => '201.00'])->assertConflict();
+        $this->postJson($url, [...$payload, 'request_key' => (string) Str::uuid(), 'amount' => '300.00'])->assertOk();
+        $this->getJson($url.'?source_kind=photographer&source_id='.$contact->id)->assertOk()->assertJsonPath('data.total_paid', 500)->assertJsonCount(2, 'data.expenses');
+        $this->getJson('/api/v1/sorelle/dashboard/photo-sessions/'.$session->id)->assertOk()->assertJsonPath('data.expense_totals.photographer:'.$contact->id, 500);
+        $this->assertDatabaseCount('payments', 2); $this->assertDatabaseCount('photo_contacts', 1); $this->assertDatabaseCount('suppliers', 0);
+        $this->assertDatabaseHas('payments', ['id' => $id, 'paymentable_type' => 'photo_session', 'paymentable_id' => $session->id, 'direction' => 'out', 'status' => 'paid']);
+    }
+    public function test_photo_expenses_validate_ownership_amount_gateway_and_access(): void
+    {
+        [$session, $contact, $url, $payload] = $this->expenseSetup();
+        foreach ([['amount' => 0], ['amount' => -1], ['amount' => '1.001'], ['gateway_id' => 2], ['comment' => ''], ['direction' => 'in']] as $change) {
+            $this->postJson($url, [...$payload, ...$change])->assertUnprocessable();
+        }
+        $foreign = $this->contactRecord('photographer', 2); $session->photographers()->attach($foreign->id);
+        $this->postJson($url, [...$payload, 'source_id' => $foreign->id])->assertNotFound();
+        $unassigned = $this->contactRecord('photographer');
+        $this->postJson($url, [...$payload, 'source_id' => $unassigned->id])->assertNotFound();
+        $this->assertDatabaseCount('payments', 0);
+        $user = User::first(); $user->syncRoles(['sales']); $this->actingAs($user->fresh(), 'api');
+        $this->postJson($url, $payload)->assertForbidden();
+    }
+    public function test_task_expenses_require_a_supplier_and_locations_use_their_contact(): void
+    {
+        [$session, $contact, $url, $payload] = $this->expenseSetup();
+        $task = $session->tasks()->create(['store_id' => 1, 'title' => 'Maquillaje', 'created_by' => User::first()->id, 'status' => 'pending']);
+        DB::table('suppliers')->insert(['id' => 1, 'store_id' => 1, 'user_id' => User::first()->id]);
+        DB::table('suppliers')->insert(['id' => 2, 'store_id' => 2, 'user_id' => User::first()->id]);
+        $taskPayload = [...$payload, 'source_kind' => 'task', 'source_id' => $task->id];
+        $this->postJson($url, $taskPayload)->assertUnprocessable();
+        $this->postJson($url, [...$taskPayload, 'supplier_id' => 2])->assertUnprocessable();
+        $this->postJson($url, [...$taskPayload, 'supplier_id' => 1])->assertOk()->assertJsonPath('data.supplier_id', 1);
+        $location = new PhotoLocation(['name' => 'Estudio', 'type' => 'studio', 'contact_name' => 'Dueña del estudio', 'active' => true]); $location->store_id = 1; $location->save(); $session->locations()->attach($location->id);
+        $this->postJson($url, [...$payload, 'request_key' => (string) Str::uuid(), 'source_kind' => 'location', 'source_id' => $location->id])->assertOk()->assertJsonPath('data.recipient_name', 'Dueña del estudio');
+    }
     public function test_internal_responsible_options_and_validation_only_allow_active_store_employees(): void
     {
         $employee = User::create(['name' => 'Empleado activo']); $employee->stores()->attach(1);

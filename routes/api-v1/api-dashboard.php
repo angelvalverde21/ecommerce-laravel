@@ -112,6 +112,9 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::get('{photo_session}', [$sessions, 'show'])->whereNumber('photo_session');
         Route::put('{photo_session}', [$sessions, 'update'])->whereNumber('photo_session');
         Route::put('{photo_session}/assignments', [$sessions, 'assignments'])->whereNumber('photo_session');
+        Route::get('{photo_session}/expenses', [\App\Http\Controllers\Api\Dashboard\PhotoSessionExpenseController::class, 'index'])->whereNumber('photo_session');
+        Route::get('{photo_session}/item-purchases', [\App\Http\Controllers\Api\Dashboard\PhotoSessionPurchaseController::class, 'index'])->whereNumber('photo_session');
+        Route::post('{photo_session}/expenses', [\App\Http\Controllers\Api\Dashboard\PhotoSessionExpenseController::class, 'store'])->whereNumber('photo_session');
         Route::prefix('{photo_session}/assets')->whereNumber('photo_session')->group(function () use ($assets) {
             Route::get('/', [$assets, 'index']); Route::post('/', [$assets, 'store']);
             Route::get('{asset_id}/parts/{part}', [$assets, 'part'])->whereNumber('part');

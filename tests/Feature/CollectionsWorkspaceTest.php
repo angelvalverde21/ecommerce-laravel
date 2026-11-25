@@ -637,6 +637,17 @@ class CollectionsWorkspaceTest extends TestCase
         $result = $this->getJson("/collections-test/1/$project")->assertOk()->assertJsonCount(2, 'data.purchases');
         $this->assertEquals(120, $result->json('data.summary.purchases'));
     }
+    public function test_direct_photo_session_payments_are_counted_once_in_collection_cost_and_recovery(): void
+    {
+        [$collection] = $this->project();
+        $process = $this->postJson('/collections-test/1/'.$collection.'/processes', ['kind' => 'photo_session', 'name' => 'Fotos de campaña'])->assertOk()->json('data');
+        $session = PhotoSession::findOrFail($process['source_id']);
+        foreach ([200, 300] as $amount) $session->payments()->create(['store_id' => 1, 'amount' => $amount, 'direction' => 'out', 'status' => 'paid', 'date' => '2026-11-25']);
+        $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.paid', 500)
+            ->assertJsonPath('data.summary.purchases', 500)->assertJsonPath('data.overview.total_spent', 500)
+            ->assertJsonPath('data.timeline.0.paid', 500)->assertJsonCount(0, 'data.purchases');
+        $this->assertDatabaseCount('payments', 2);
+    }
     public function test_migration_removes_projects_and_preserves_collection_ids_processes_and_financial_history(): void
     {
         foreach (['collections_receipts', 'collections_sales', 'collections_products', 'collections_processes', 'collections'] as $table) Schema::drop($table);

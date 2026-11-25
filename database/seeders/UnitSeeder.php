@@ -23,6 +23,7 @@ class UnitSeeder extends Seeder
             ['name' => 'Millar(es)',     'label' => 'Millar(s)',     'singular' => 'millar',      'plural' => 'millares',     'abbreviation' => 'ml',   'type' => 'count',   'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Centimetro(s)', 'label' => 'Centímetro(s)', 'singular' => 'centimetro',  'plural' => 'centimetros',  'abbreviation' => 'cm',   'type' => 'length',  'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Corte(s)',      'label' => 'Corte',       'singular' => 'Corte',         'plural' => 'Cortes',        'abbreviation' => 'cor',  'type' => 'count',   'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Hora(s)',       'label' => 'Hora(s)',      'singular' => 'hora',        'plural' => 'horas',        'abbreviation' => 'h',    'type' => 'time',    'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }

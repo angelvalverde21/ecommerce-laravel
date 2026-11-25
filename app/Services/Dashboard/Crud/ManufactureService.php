@@ -42,6 +42,7 @@ class ManufactureService
     {
         $query = $store->manufactures()
             ->withFinancialSummary()
+            ->withReceptionSummary()
             ->withDeliveryTrackingCount();
         if (!$summaryOnly) {
             $query->with('payments');

@@ -82,7 +82,24 @@ class PhotoSessionDashboardController extends Controller
     private function present(PhotoSession $session): array
     {
         $session->load(['responsible:id,name', 'photographerContact:id,name', 'photoLocation.address.district.province.department', 'photographers', 'models.images', 'locations.address.district.province.department']);
+        $totals = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('photo_session_expenses')) {
+            $totals = DB::table('photo_session_expenses as e')->join('payments as p', 'p.id', '=', 'e.payment_id')
+                ->where('e.photo_session_id', $session->id)->where('p.status', 'paid')->groupBy('e.source_kind', 'e.source_id')
+                ->select(['e.source_kind', 'e.source_id'])->selectRaw("SUM(CASE WHEN p.direction = 'out' THEN p.amount ELSE -p.amount END) as total")
+                ->get()->mapWithKeys(fn ($row) => [$row->source_kind.':'.$row->source_id => (float) $row->total])->all();
+        }
+        $purchaseTotals = [];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('purchases', 'photo_source_kind')) {
+            foreach ($session->purchases()->whereNotNull('photo_source_kind')->with(['items', 'payments'])->get() as $purchase) {
+                $key = $purchase->photo_source_kind.':'.$purchase->photo_source_id;
+                $purchaseTotals[$key] = ($purchaseTotals[$key] ?? 0) + $purchase->items->sum(fn ($item) => round((float) $item->quantity * (float) $item->price, 2));
+                $totals[$key] = ($totals[$key] ?? 0) + $purchase->payments->where('status', 'paid')->sum(fn ($payment) => (float) $payment->amount * ($payment->direction === 'out' ? 1 : -1));
+            }
+        }
         return [...$session->toArray(), 'model_ids' => $session->models->modelKeys(), 'photographer_ids' => $session->photographers->modelKeys(), 'location_ids' => $session->locations->modelKeys(),
+            'purchase_totals' => (object) $purchaseTotals,
+            'expense_totals' => (object) $totals,
             'locations' => $session->locations->map(fn ($location) => app(PhotoLocationAddresses::class)->present($location))];
     }
 

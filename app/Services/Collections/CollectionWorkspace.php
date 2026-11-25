@@ -167,8 +167,9 @@ class CollectionWorkspace
                     $purchases[] = [...$purchase->toArray(), 'process_id' => $process->id, 'process_name' => $owner->name,
                         'collection_id' => $collection->id, 'collection_name' => $collection->name, 'amount' => $cents / 100, 'paid' => $purchasePaid / 100];
                 }
-                if ($owner instanceof Manufacture) foreach ($owner->payments()->where('status', 'paid')->get() as $payment) {
+                if ($owner instanceof Manufacture || $owner instanceof PhotoSession) foreach ($owner->payments()->where('status', 'paid')->get() as $payment) {
                     $amount = (int) round((float) $payment->amount * 100) * ($payment->direction === 'out' ? 1 : -1);
+                    if ($owner instanceof PhotoSession) { $costCents += $amount; $processCost += $amount; }
                     $paidCents += $amount; $processPaid += $amount;
                     $events[] = ['date' => substr($payment->date ?: $payment->created_at, 0, 10), 'paid' => $amount, 'collected' => 0];
                 }
