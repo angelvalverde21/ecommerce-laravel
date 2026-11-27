@@ -210,6 +210,21 @@ class PhotoSessionTest extends TestCase
         $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'supplier_id' => 2])->assertUnprocessable();
         $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'supplier_id' => 1])->assertOk()->assertJsonPath('data.supplier_id', 1);
     }
+    public function test_studio_purchases_reuse_the_location_name_without_requesting_another_supplier(): void
+    {
+        [$session, $contact, $payload] = $this->photoPurchaseSetup();
+        $location = new PhotoLocation(['name' => 'CREA STUDIO', 'type' => 'studio', 'contact_name' => null, 'active' => true]);
+        $location->store_id = 1; $location->save(); $session->locations()->attach($location->id);
+        $url = '/api/v1/sorelle/dashboard/photo-sessions/'.$session->id.'/item-purchases?source_kind=location&source_id='.$location->id;
+        $this->getJson($url)->assertOk()->assertJsonPath('data.source.recipient_name', 'CREA STUDIO');
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'photo_source_kind' => 'location', 'photo_source_id' => $location->id])
+            ->assertOk()->assertJsonPath('data.photo_recipient_name', 'CREA STUDIO')->assertJsonPath('data.supplier_id', null);
+        $this->assertDatabaseCount('suppliers', 0);
+        $location->update(['contact_name' => 'Persona de contacto']);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.source.recipient_name', 'CREA STUDIO');
+        $unassigned = new PhotoLocation(['name' => 'Otro estudio', 'type' => 'studio', 'active' => true]); $unassigned->store_id = 1; $unassigned->save();
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'photo_source_kind' => 'location', 'photo_source_id' => $unassigned->id])->assertNotFound();
+    }
     public function test_photo_expenses_reuse_the_assigned_contact_and_record_multiple_payments_without_duplicates(): void
     {
         [$session, $contact, $url, $payload] = $this->expenseSetup();

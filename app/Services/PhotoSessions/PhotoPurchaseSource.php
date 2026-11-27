@@ -15,6 +15,6 @@ class PhotoPurchaseSource
         $record = $relation->where('store_id', $session->store_id)->findOrFail($id);
         if (in_array($kind, ['photographer', 'model'], true)) abort_unless($record->kind === $kind, 404);
         return ['kind' => $kind, 'id' => $record->id, 'name' => $record->name ?? $record->title,
-            'recipient_name' => $kind === 'task' ? null : ($kind === 'location' ? $record->contact_name : $record->name)];
+            'recipient_name' => $kind === 'task' ? null : $record->name];
     }
 }
