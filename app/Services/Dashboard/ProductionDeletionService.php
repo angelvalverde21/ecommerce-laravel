@@ -11,10 +11,21 @@ class ProductionDeletionService
 {
     public function delete(Store $store, int $id): void
     {
-        DB::transaction(function () use ($store, $id) {
-            $production = $store->manufactures()->where('type', 'production')->lockForUpdate()->findOrFail($id);
+        $this->deleteManufacture($store, $id, 'production');
+    }
+
+    public function deleteOrder(Store $store, int $id): void
+    {
+        $this->deleteManufacture($store, $id, 'order');
+    }
+
+    private function deleteManufacture(Store $store, int $id, string $type): void
+    {
+        DB::transaction(function () use ($store, $id, $type) {
+            $production = $store->manufactures()->where('type', $type)->lockForUpdate()->findOrFail($id);
             if ($production->archived_at) throw ValidationException::withMessages(['production' => 'Restaura la producción archivada antes de eliminarla.']);
             if ($production->kardexes()->exists() || (Schema::hasTable('inventory_receptions') && InventoryReception::whereIn('source_type', [Manufacture::class, $production->getMorphClass()])->where('source_id', $id)->exists())) {
+                if ($type === 'order') throw ValidationException::withMessages(['order' => 'No se puede eliminar esta orden de compra porque tiene recepciones o movimientos de inventario registrados.']);
                 throw ValidationException::withMessages(['production' => 'Esta producción tiene recepciones o movimientos de inventario. Puedes archivarla para conservar su stock e historial.']);
             }
             if (Schema::hasTable('collections_processes')) {

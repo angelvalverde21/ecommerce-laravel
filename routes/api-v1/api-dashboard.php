@@ -295,7 +295,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
 
                 // Route::get('/', [ManufactureOrderDashboardController::class, 'show']); //show o mostrar por id
                 Route::put('/', [ManufactureOrderDashboardController::class, 'update']); //actualizar
-                // Route::delete('/', [ManufactureOrderDashboardController::class, 'destroy']); //borrar
+                Route::delete('/', [ManufactureOrderDashboardController::class, 'destroy'])->whereNumber('order_id');
 
             });
         });

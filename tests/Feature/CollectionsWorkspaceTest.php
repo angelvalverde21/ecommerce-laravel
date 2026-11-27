@@ -280,6 +280,33 @@ class CollectionsWorkspaceTest extends TestCase
         $this->putJson($endpoint.'/'.$production->id.'/archive', ['archived' => true])->assertOk();
         $this->assertDatabaseCount('inventory_receptions', 1);
     }
+    public function test_purchase_order_delete_route_removes_the_order_and_updates_its_collection_without_touching_catalog(): void
+    {
+        [$collection] = $this->project();
+        $order = Manufacture::create(['store_id' => 1, 'type' => 'order', 'name' => 'Borrador']);
+        DB::table('manufacture_variant')->insert(['manufacture_id' => $order->id, 'variant_id' => 1, 'quantity' => 10, 'price' => 25]);
+        $process = $this->attach($collection, $collection, $order);
+        $this->deleteJson('/api/v1/sorelle/dashboard/manufactures/orders/'.$order->id)->assertOk()->assertJsonPath('data.deleted', true);
+        $this->assertDatabaseMissing('manufactures', ['id' => $order->id]);
+        $this->assertDatabaseMissing('manufacture_variant', ['manufacture_id' => $order->id]);
+        $this->assertDatabaseMissing('collections_processes', ['id' => $process]);
+        $this->assertDatabaseHas('collections', ['id' => $collection]); $this->assertDatabaseCount('variants', 1);
+    }
+    public function test_purchase_order_delete_preserves_inventory_receptions_and_rejects_wrong_store_type_and_permissions(): void
+    {
+        $base = '/api/v1/sorelle/dashboard/manufactures/orders/';
+        $order = $this->source('order');
+        $this->deleteJson($base.$order->id)->assertUnprocessable()->assertJsonValidationErrors('order');
+        DB::table('kardexes')->where('kardexable_id', $order->id)->delete();
+        $order->inventoryReceptions()->create(['store_id' => 1]);
+        $this->deleteJson($base.$order->id)->assertUnprocessable();
+        $this->assertDatabaseHas('manufactures', ['id' => $order->id]); $this->assertDatabaseCount('inventory_receptions', 1);
+        $foreign = Manufacture::create(['store_id' => 2, 'type' => 'order', 'name' => 'Ajena']);
+        $production = Manufacture::create(['store_id' => 1, 'type' => 'production', 'name' => 'Producción']);
+        $this->deleteJson($base.$foreign->id)->assertNotFound(); $this->deleteJson($base.$production->id)->assertNotFound();
+        $sales = User::create(['name' => 'Ventas']); $sales->assignRole('sales'); $sales->stores()->attach(1); $this->actingAs($sales, 'api');
+        $this->deleteJson($base.$order->id)->assertForbidden();
+    }
     public function test_deletes_a_production_and_its_planned_variants_without_deleting_the_catalog(): void
     {
         $production = Manufacture::create(['store_id' => 1, 'type' => 'production', 'name' => 'Borrador']);

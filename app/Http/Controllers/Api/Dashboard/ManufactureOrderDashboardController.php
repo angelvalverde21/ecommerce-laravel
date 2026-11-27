@@ -72,9 +72,13 @@ class ManufactureOrderDashboardController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Store $store)
+    public function destroy(Store $store, Request $request, int $order_id)
     {
-        //
+        $user = $request->user();
+        abort_unless($user && $user->hasAnyRole(['master', 'ceo', 'admin']), 403);
+        abort_unless($user->hasRole('master') || $user->stores()->whereKey($store->id)->exists(), 403);
+        app(\App\Services\Dashboard\ProductionDeletionService::class)->deleteOrder($store, $order_id);
+        return responseOk(['deleted' => true], 'Orden de compra eliminada correctamente.');
     }
 
     public function search(Store $store, SearchRequest $request)
