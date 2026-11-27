@@ -91,6 +91,7 @@ Route::prefix('v1/{store}/dashboard')->middleware('api')->middleware(['auth:api'
         Route::get('/', [$tasks, 'index']);
         Route::post('/', [$tasks, 'store']);
         Route::put('{task_id}', [$tasks, 'update'])->whereNumber('task_id');
+        Route::delete('{task_id}', [$tasks, 'destroy'])->whereNumber('task_id');
         Route::put('{task_id}/status', [$tasks, 'status'])->whereNumber('task_id');
         Route::get('{task_id}/events', [$tasks, 'events'])->whereNumber('task_id');
     });

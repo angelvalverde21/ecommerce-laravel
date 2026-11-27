@@ -71,6 +71,20 @@ class PhotoSessionTaskDashboardController extends Controller
         return responseOk($this->present($task, $store, $request));
     }
 
+    public function destroy(Store $store, int $task_id, Request $request)
+    {
+        $this->authorizeStore($store, $request);
+        abort_unless($this->canManage($request->user()), 403);
+        $data = $request->validate(['version' => 'required|integer|min:1']);
+        DB::transaction(function () use ($store, $task_id, $data) {
+            $task = $this->find($store, $task_id, true);
+            $this->checkVersion($task, $data['version']);
+            $task->events()->delete();
+            $task->delete();
+        });
+        return responseOk(['id' => $task_id], 'Tarea eliminada.');
+    }
+
     public function status(Store $store, int $task_id, Request $request)
     {
         $this->authorizeStore($store, $request);

@@ -524,6 +524,28 @@ class PhotoSessionTest extends TestCase
         $this->actingAs($ceo->fresh(), 'api');
         $this->getJson('/api/v1/sorelle/dashboard/photo-sessions?q='.urlencode($session->name))->assertOk()->assertJsonPath('data.0.tasks_count', 2)->assertJsonPath('data.0.completed_tasks_count', 1)->assertJsonPath('data.0.overdue_tasks_count', 0);
     }
+    public function test_deleting_a_task_checks_permissions_version_and_scope_and_preserves_its_purchases(): void
+    {
+        [$session, $contact, $payload] = $this->photoPurchaseSetup();
+        $task = $session->tasks()->create(['store_id' => 1, 'title' => 'Taxi', 'created_by' => User::first()->id, 'status' => 'pending']);
+        $task->events()->create(['type' => 'created', 'changes' => [], 'created_at' => now()]);
+        DB::table('suppliers')->insert(['id' => 1, 'store_id' => 1, 'user_id' => User::first()->id]);
+        $id = $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'photo_source_kind' => 'task', 'photo_source_id' => $task->id, 'supplier_id' => 1])->assertOk()->json('data.id');
+        $base = '/api/v1/sorelle/dashboard/photo-session-tasks/';
+        $this->deleteJson($base.$task->id, ['version' => 1])->assertForbidden();
+        $this->taskCeo();
+        $this->deleteJson($base.$task->id, ['version' => 99])->assertConflict();
+        $foreignSession = $this->photoSessionRecord(2);
+        $foreignTask = $foreignSession->tasks()->create(['store_id' => 2, 'title' => 'Ajena']);
+        $this->deleteJson($base.$foreignTask->id, ['version' => 1])->assertNotFound();
+        $this->deleteJson($base.$task->id, ['version' => 1])->assertOk();
+        $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
+        $this->assertDatabaseMissing('task_events', ['task_id' => $task->id]);
+        $this->assertDatabaseHas('purchases', ['id' => $id, 'photo_source_id' => $task->id]);
+        $this->getJson('/api/v1/sorelle/dashboard/photo-sessions/'.$session->id.'/item-purchases?source_kind=task')->assertOk()->assertJsonPath('data.total_purchases', 300);
+        $this->getJson('/api/v1/sorelle/dashboard/photo-sessions/'.$session->id.'/item-purchases?source_kind=task&source_id='.$task->id)->assertOk()->assertJsonCount(1, 'data.purchases');
+        $this->getJson('/api/v1/sorelle/dashboard/photo-session-tasks?photo_session_id='.$session->id)->assertOk()->assertJsonPath('summary.total', 0);
+    }
     public function test_task_assignments_require_active_store_employees_and_session_scope(): void
     {
         $this->taskCeo(); $session = $this->photoSessionRecord(); $foreignSession = $this->photoSessionRecord(2);
