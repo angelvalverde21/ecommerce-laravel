@@ -91,8 +91,8 @@ class PhotoSessionDashboardController extends Controller
         }
         $purchaseTotals = [];
         if (\Illuminate\Support\Facades\Schema::hasColumn('purchases', 'photo_source_kind')) {
-            foreach ($session->purchases()->whereNotNull('photo_source_kind')->with(['items', 'payments'])->get() as $purchase) {
-                $key = $purchase->photo_source_kind.':'.$purchase->photo_source_id;
+            foreach ($session->purchases()->with(['items', 'payments'])->get() as $purchase) {
+                $key = $purchase->photo_source_kind ? $purchase->photo_source_kind.':'.$purchase->photo_source_id : 'general:'.$session->id;
                 $purchaseTotals[$key] = ($purchaseTotals[$key] ?? 0) + $purchase->items->sum(fn ($item) => round((float) $item->quantity * (float) $item->price, 2));
                 $totals[$key] = ($totals[$key] ?? 0) + $purchase->payments->where('status', 'paid')->sum(fn ($payment) => (float) $payment->amount * ($payment->direction === 'out' ? 1 : -1));
             }

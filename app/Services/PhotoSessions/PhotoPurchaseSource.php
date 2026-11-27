@@ -7,6 +7,10 @@ class PhotoPurchaseSource
 {
     public function resolve(PhotoSession $session, string $kind, int $id): array
     {
+        if ($kind === 'general') {
+            abort_unless($id === $session->id, 404);
+            return ['kind' => 'general', 'id' => $session->id, 'name' => 'Gastos generales', 'recipient_name' => null];
+        }
         $relation = match ($kind) {
             'photographer' => $session->photographers(), 'model' => $session->models(),
             'location' => $session->locations(), 'task' => $session->tasks(),

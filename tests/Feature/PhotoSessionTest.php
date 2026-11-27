@@ -199,6 +199,41 @@ class PhotoSessionTest extends TestCase
         $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'photo_source_id' => $unassigned->id])->assertNotFound();
         $this->assertDatabaseCount('purchases', 1);
     }
+    public function test_section_purchases_include_all_records_and_keep_other_sections_and_sessions_separate(): void
+    {
+        [$session, $contact, $payload] = $this->photoPurchaseSetup();
+        $url = '/api/v1/sorelle/dashboard/purchases';
+        $id = $this->postJson($url, $payload)->assertOk()->json('data.id');
+        $other = $this->contactRecord('photographer');
+        $session->photographers()->attach($other->id);
+        $this->postJson($url, [...$payload, 'photo_source_id' => $other->id])->assertOk();
+        $section = '/api/v1/sorelle/dashboard/photo-sessions/'.$session->id.'/item-purchases?source_kind=';
+        $this->getJson($section.'photographer')->assertOk()->assertJsonCount(2, 'data.purchases')->assertJsonPath('data.total_purchases', 600);
+        $this->getJson($section.'model')->assertOk()->assertJsonCount(0, 'data.purchases')->assertJsonPath('data.total_purchases', 0);
+        $session->photographers()->detach($contact->id);
+        $this->getJson($section.'photographer&source_id='.$contact->id)->assertOk()->assertJsonCount(1, 'data.purchases')->assertJsonPath('data.purchases.0.id', $id);
+        $another = $this->photoSessionRecord();
+        $this->getJson('/api/v1/sorelle/dashboard/photo-sessions/'.$another->id.'/item-purchases?source_kind=photographer')->assertOk()->assertJsonCount(0, 'data.purchases');
+    }
+    public function test_general_session_expenses_reuse_purchases_and_are_included_in_the_session_totals(): void
+    {
+        [$session, $contact, $payload] = $this->photoPurchaseSetup();
+        DB::table('suppliers')->insert(['id' => 1, 'store_id' => 1, 'user_id' => User::first()->id]);
+        $payload = [...$payload, 'photo_source_kind' => 'general', 'photo_source_id' => $session->id, 'supplier_id' => 1];
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', $payload)->assertOk()->assertJsonPath('data.photo_source_kind', 'general');
+        $url = '/api/v1/sorelle/dashboard/photo-sessions/'.$session->id.'/item-purchases?source_kind=general&source_id='.$session->id;
+        $this->getJson($url)->assertOk()->assertJsonCount(1, 'data.purchases')->assertJsonPath('data.total_purchases', 300)->assertJsonPath('data.source.recipient_name', null);
+        $this->getJson('/api/v1/sorelle/dashboard/photo-sessions/'.$session->id)->assertOk()->assertJsonPath('data.purchase_totals.general:'.$session->id, 300);
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'photo_source_id' => $session->id + 99])->assertNotFound();
+        $purchase = $session->purchases()->first();
+        $purchase->update(['photo_source_kind' => null, 'photo_source_id' => null]);
+        $this->getJson($url)->assertOk()->assertJsonCount(1, 'data.purchases')->assertJsonPath('data.total_purchases', 300);
+        $this->getJson('/api/v1/sorelle/dashboard/photo-sessions/'.$session->id)->assertOk()->assertJsonPath('data.purchase_totals.general:'.$session->id, 300);
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'supplier_id' => null])->assertOk()->assertJsonPath('data.supplier_id', null)->assertJsonPath('data.photo_recipient_name', null);
+        $this->getJson($url)->assertOk()->assertJsonCount(2, 'data.purchases')->assertJsonPath('data.total_purchases', 600);
+        DB::table('suppliers')->insert(['id' => 2, 'store_id' => 2, 'user_id' => User::first()->id]);
+        $this->postJson('/api/v1/sorelle/dashboard/purchases', [...$payload, 'supplier_id' => 2])->assertUnprocessable();
+    }
     public function test_task_purchases_require_a_supplier_in_the_session_store(): void
     {
         [$session, $contact, $payload] = $this->photoPurchaseSetup();

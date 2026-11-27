@@ -58,7 +58,7 @@ class PurchaseService
             'delivery.enabled' => 'required_with:delivery|boolean',
             'delivery.expected_on' => 'nullable|date_format:Y-m-d',
             'delivery.handed_over_on' => 'nullable|date_format:Y-m-d',
-            'photo_source_kind' => 'sometimes|required|in:photographer,model,location,task',
+            'photo_source_kind' => 'sometimes|required|in:photographer,model,location,task,general',
             'photo_source_id' => 'required_with:photo_source_kind|integer|min:1',
         ]);
 
@@ -67,9 +67,9 @@ class PurchaseService
             $session = \App\Models\PhotoSession::where('store_id', $store->id)->findOrFail($validated['purchaseable_id']);
             $source = app(\App\Services\PhotoSessions\PhotoPurchaseSource::class)->resolve($session, $validated['photo_source_kind'], (int) $validated['photo_source_id']);
             if (!$source['recipient_name']) {
-                $request->validate(['supplier_id' => ['required', 'integer', Rule::exists('suppliers', 'id')->where('store_id', $store->id)]]);
-                $supplier = \App\Models\Supplier::where('store_id', $store->id)->findOrFail($validated['supplier_id']);
-                $validated['photo_recipient_name'] = $supplier->user?->name ?: $supplier->name;
+                $request->validate(['supplier_id' => [$source['kind'] === 'general' ? 'nullable' : 'required', 'integer', Rule::exists('suppliers', 'id')->where('store_id', $store->id)]]);
+                $supplier = !empty($validated['supplier_id']) ? \App\Models\Supplier::where('store_id', $store->id)->findOrFail($validated['supplier_id']) : null;
+                $validated['photo_recipient_name'] = $supplier ? ($supplier->user?->name ?: $supplier->name) : null;
             } else {
                 $validated['photo_recipient_name'] = $source['recipient_name'];
                 $validated['supplier_id'] = null; $validated['supplier_address_id'] = null;
