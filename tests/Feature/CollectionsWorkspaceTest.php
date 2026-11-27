@@ -23,13 +23,13 @@ class CollectionsWorkspaceTest extends TestCase
         Schema::create('manufactures', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('user_id')->nullable(); $t->string('type'); $t->string('name'); $t->dateTime('manufacture_end')->nullable(); $t->timestamps(); });
         (require database_path('migrations/2026_11_23_170000_add_archived_at_to_manufactures.php'))->up();
         Schema::create('inventory_receptions', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->morphs('source'); $t->timestamps(); });
-        Schema::create('photo_sessions', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('created_by')->nullable(); $t->string('name'); $t->string('status'); $t->date('delivery_date')->nullable(); $t->timestamps(); });
+        Schema::create('photo_sessions', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->integer('created_by')->nullable(); $t->string('name'); $t->string('status'); $t->decimal('budget', 12, 2)->nullable(); $t->date('delivery_date')->nullable(); $t->timestamps(); });
         Schema::create('products', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('name'); $t->timestamps(); });
         Schema::create('variants', function (Blueprint $t) { $t->id(); $t->integer('product_id'); $t->string('title')->nullable(); $t->string('sku')->nullable(); $t->string('shopify_variant_id')->nullable(); $t->integer('stock')->default(0); $t->integer('status')->default(1); });
         Schema::create('options', function (Blueprint $t) { $t->id(); $t->string('name'); });
         Schema::create('option_values', function (Blueprint $t) { $t->id(); $t->integer('option_id'); $t->string('value'); });
         Schema::create('variant_option_values', function (Blueprint $t) { $t->id(); $t->integer('variant_id'); $t->integer('option_value_id'); });
-        Schema::create('manufacture_variant', function (Blueprint $t) { $t->id(); $t->integer('manufacture_id'); $t->integer('variant_id'); $t->integer('quantity'); $t->timestamps(); });
+        Schema::create('manufacture_variant', function (Blueprint $t) { $t->id(); $t->integer('manufacture_id'); $t->integer('variant_id'); $t->integer('quantity'); $t->decimal('price', 12, 2)->nullable(); $t->timestamps(); });
         Schema::create('kardexes', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('kardexable_type'); $t->integer('kardexable_id'); $t->integer('variant_id'); $t->string('direction'); $t->integer('quantity'); });
         Schema::create('orders', function (Blueprint $t) { $t->id(); $t->integer('store_id'); $t->string('shopify_order_name')->nullable(); $t->string('currency_code')->default('PEN'); $t->string('status')->default('registrado'); $t->json('variants'); $t->timestamps(); });
         Schema::create('production_stages', function (Blueprint $t) { $t->id(); $t->string('code'); $t->string('name'); $t->integer('position'); });
@@ -139,7 +139,6 @@ class CollectionsWorkspaceTest extends TestCase
     }
     public function test_readding_manufacture_variants_preserves_planned_quantities_and_prices(): void
     {
-        Schema::table('manufacture_variant', fn (Blueprint $table) => $table->decimal('price', 10, 2)->nullable());
         $source = $this->source('order');
         DB::table('manufacture_variant')->where('manufacture_id', $source->id)->update(['quantity' => 20, 'price' => 59]);
         DB::table('variants')->insert(['id' => 2, 'product_id' => 1, 'stock' => 0]);
@@ -561,8 +560,10 @@ class CollectionsWorkspaceTest extends TestCase
         $this->postJson("/collections-test/1/$project/sales/$sale/receipts", [...$receipt, 'reference' => 'DEV-1', 'direction' => 'out', 'amount' => 10])->assertOk();
         $result = $this->getJson("/collections-test/1/$project")->assertOk();
         $this->assertEquals(50, $result->json('data.summary.collected'));
-        $this->assertEquals(50, $result->json('data.summary.recovery_percent'));
-        $this->assertEquals(50, $result->json('data.summary.remaining_recovery'));
+        $this->assertEquals(50, $result->json('data.summary.cash_recovery_percent'));
+        $this->assertEquals(50, $result->json('data.summary.cash_remaining_recovery'));
+        $this->assertNull($result->json('data.summary.recovery_percent'));
+        $this->assertEquals(0, $result->json('data.summary.remaining_recovery'));
         $this->assertEquals(-50, $result->json('data.summary.cash_balance'));
         $this->assertEquals(50, $result->json('data.timeline.0.collected'));
     }
@@ -637,15 +638,101 @@ class CollectionsWorkspaceTest extends TestCase
         $result = $this->getJson("/collections-test/1/$project")->assertOk()->assertJsonCount(2, 'data.purchases');
         $this->assertEquals(120, $result->json('data.summary.purchases'));
     }
-    public function test_direct_photo_session_payments_are_counted_once_in_collection_cost_and_recovery(): void
+    public function test_collection_includes_every_photo_session_expense_section_without_duplicates(): void
+    {
+        (require database_path('migrations/2026_11_25_110000_add_photo_source_to_purchases.php'))->up();
+        [$collection] = $this->project();
+        $process = $this->postJson('/collections-test/1/'.$collection.'/processes', ['kind' => 'photo_session', 'name' => 'Fotos'])->assertOk()->json('data');
+        $session = PhotoSession::findOrFail($process['source_id']);
+        $kinds = ['photographer', 'model', 'location', 'task', 'general'];
+        foreach ($kinds as $index => $kind) {
+            $purchase = $session->purchases()->create(['store_id' => 1, 'photo_source_kind' => $kind, 'photo_source_id' => $index + 1, 'photo_recipient_name' => $kind]);
+            $purchase->items()->create(['name' => 'Servicio '.$kind, 'quantity' => 1, 'price' => ($index + 1) * 100, 'subtotal' => ($index + 1) * 100]);
+            $purchase->payments()->create(['store_id' => 1, 'amount' => 25, 'direction' => 'out', 'status' => 'paid', 'date' => '2026-11-27']);
+        }
+        $foreignSession = new PhotoSession(['name' => 'Otra sesión', 'status' => 'planned']); $foreignSession->store_id = 1; $foreignSession->save();
+        $foreignSession->purchases()->create(['store_id' => 1, 'photo_source_kind' => 'model', 'photo_source_id' => 100]);
+        $response = $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonCount(5, 'data.purchases')->assertJsonCount(5, 'data.processes.0.purchases')
+            ->assertJsonPath('data.summary.purchases', 1500)->assertJsonPath('data.summary.paid', 125);
+        $this->assertEqualsCanonicalizing($kinds, array_column($response->json('data.purchases'), 'photo_source_kind'));
+        $this->assertCount(5, array_unique(array_column($response->json('data.purchases'), 'id')));
+    }
+    public function test_manufacture_expense_classification_uses_the_original_order_or_production_type(): void
+    {
+        [$collection] = $this->project();
+        $order = $this->source('order');
+        $id = $this->attach($collection, $collection, $order);
+        ProjectProcess::whereKey($id)->update(['kind' => 'production']);
+        $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.processes.0.kind', 'order')->assertJsonPath('data.processes.0.manufacture_type', 'order');
+    }
+    public function test_expected_order_cost_and_photo_budget_are_separate_from_registered_purchases_and_payments(): void
+    {
+        [$collection] = $this->project();
+        $order = $this->source('order'); $this->attach($collection, $collection, $order);
+        DB::table('manufacture_variant')->where('manufacture_id', $order->id)->update(['quantity' => 4, 'price' => 25]);
+        $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.planned_expense', 100)
+            ->assertJsonPath('data.summary.realized_expense', 0)->assertJsonPath('data.overview.remaining_recovery', 0);
+        $purchase = $order->purchases()->create(['store_id' => 1]);
+        $purchase->items()->create(['name' => 'Entrega parcial', 'quantity' => 2, 'price' => 30, 'subtotal' => 60]);
+        $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.planned_expense', 100)
+            ->assertJsonPath('data.summary.realized_expense', 60)->assertJsonPath('data.summary.paid', 0)->assertJsonPath('data.overview.remaining_recovery', 60);
+        $purchase->payments()->create(['store_id' => 1, 'amount' => 20, 'direction' => 'out', 'status' => 'paid', 'date' => '2026-11-27']);
+        $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.realized_expense', 60)->assertJsonPath('data.summary.paid', 20);
+        $photo = new PhotoSession(['name' => 'Fotos', 'status' => 'planned', 'budget' => 200]); $photo->store_id = 1; $photo->save();
+        $this->postJson('/collections-test/1/'.$collection.'/processes', ['kind' => 'photo_session', 'source_id' => $photo->id])->assertOk();
+        $photoPurchase = $photo->purchases()->create(['store_id' => 1]);
+        $photoPurchase->items()->create(['name' => 'Fotos', 'quantity' => 1, 'price' => 120, 'subtotal' => 120]);
+        $production = $this->source('production'); $this->attach($collection, $collection, $production);
+        $productionPurchase = $production->purchases()->create(['store_id' => 1]);
+        $productionPurchase->items()->create(['name' => 'Materiales', 'quantity' => 1, 'price' => 70, 'subtotal' => 70]);
+        $response = $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.planned_expense', 370)
+            ->assertJsonPath('data.summary.pending_expense', 120)
+            ->assertJsonPath('data.summary.planned_expense_missing', 1)->assertJsonPath('data.summary.realized_expense', 250)
+            ->assertJsonPath('data.overview.total_spent', 250)->assertJsonPath('data.overview.remaining_recovery', 250);
+        $process = collect($response->json('data.processes'))->firstWhere('kind', 'production');
+        $this->assertNull($process['expense_estimate']); $this->assertEquals(70, $process['planned_expense']); $this->assertEquals(70, $process['realized_expense']);
+    }
+    public function test_forecast_includes_unpurchased_orders_per_process_and_does_not_double_count_received_purchases(): void
+    {
+        [$collection] = $this->project();
+        $first = $this->source('order'); $this->attach($collection, $collection, $first);
+        $second = $this->source('order'); $this->attach($collection, $collection, $second);
+        DB::table('manufacture_variant')->where('manufacture_id', $first->id)->update(['quantity' => 2, 'price' => 25]);
+        DB::table('manufacture_variant')->where('manufacture_id', $second->id)->update(['quantity' => 4, 'price' => 25]);
+        $purchase = $first->purchases()->create(['store_id' => 1]);
+        $purchase->items()->create(['name' => 'Compra realizada', 'quantity' => 1, 'price' => 200, 'subtotal' => 200]);
+        $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.planned_expense', 300)
+            ->assertJsonPath('data.summary.realized_expense', 200)->assertJsonPath('data.summary.pending_expense', 100);
+        $partial = $second->purchases()->create(['store_id' => 1]);
+        $partial->items()->create(['name' => 'Recepción parcial', 'quantity' => 2, 'price' => 25, 'subtotal' => 50]);
+        $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.planned_expense', 300)
+            ->assertJsonPath('data.summary.realized_expense', 250)->assertJsonPath('data.summary.pending_expense', 50);
+        $final = $second->purchases()->create(['store_id' => 1]);
+        $final->items()->create(['name' => 'Recepción final', 'quantity' => 2, 'price' => 25, 'subtotal' => 50]);
+        $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.planned_expense', 300)
+            ->assertJsonPath('data.summary.realized_expense', 300)->assertJsonPath('data.summary.pending_expense', 0);
+        $final->items()->update(['price' => 30, 'subtotal' => 60]);
+        $response = $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.planned_expense', 310)
+            ->assertJsonPath('data.summary.realized_expense', 310)->assertJsonPath('data.summary.pending_expense', 0);
+        foreach ($response->json('data.processes') as $process) $this->assertGreaterThanOrEqual($process['realized_expense'], $process['planned_expense']);
+    }
+    public function test_direct_photo_session_payments_do_not_become_registered_purchase_expenses(): void
     {
         [$collection] = $this->project();
         $process = $this->postJson('/collections-test/1/'.$collection.'/processes', ['kind' => 'photo_session', 'name' => 'Fotos de campaña'])->assertOk()->json('data');
         $session = PhotoSession::findOrFail($process['source_id']);
-        foreach ([200, 300] as $amount) $session->payments()->create(['store_id' => 1, 'amount' => $amount, 'direction' => 'out', 'status' => 'paid', 'date' => '2026-11-25']);
+        Schema::create('photo_session_expenses', function (Blueprint $table) {
+            $table->id(); $table->integer('photo_session_id'); $table->integer('payment_id'); $table->string('source_kind'); $table->integer('source_id'); $table->string('recipient_name');
+        });
+        foreach ([200, 300] as $index => $amount) {
+            $payment = $session->payments()->create(['store_id' => 1, 'amount' => $amount, 'direction' => 'out', 'status' => 'paid', 'date' => '2026-11-25']);
+            DB::table('photo_session_expenses')->insert(['photo_session_id' => $session->id, 'payment_id' => $payment->id, 'source_kind' => $index === 0 ? 'photographer' : 'model', 'source_id' => $index + 1, 'recipient_name' => $index === 0 ? 'Fotógrafo' : 'Modelo']);
+        }
         $this->getJson('/collections-test/1/'.$collection)->assertOk()->assertJsonPath('data.summary.paid', 500)
-            ->assertJsonPath('data.summary.purchases', 500)->assertJsonPath('data.overview.total_spent', 500)
-            ->assertJsonPath('data.timeline.0.paid', 500)->assertJsonCount(0, 'data.purchases');
+            ->assertJsonPath('data.summary.purchases', 0)->assertJsonPath('data.summary.realized_expense', 0)->assertJsonPath('data.overview.total_spent', 0)
+            ->assertJsonPath('data.timeline.0.paid', 500)->assertJsonCount(2, 'data.purchases')->assertJsonPath('data.purchases.0.record_kind', 'direct_payment')
+            ->assertJsonPath('data.purchases.0.photo_source_kind', 'photographer')->assertJsonPath('data.purchases.1.photo_source_kind', 'model');
+        $this->assertEquals(500, array_sum($this->getJson('/collections-test/1/'.$collection)->json('data.purchases.*.amount')));
         $this->assertDatabaseCount('payments', 2);
     }
     public function test_migration_removes_projects_and_preserves_collection_ids_processes_and_financial_history(): void
@@ -669,7 +756,7 @@ class CollectionsWorkspaceTest extends TestCase
         $this->assertDatabaseHas('collections_sales', ['id' => 16, 'process_id' => 15]);
         $this->assertDatabaseHas('collections_receipts', ['id' => 17, 'sale_id' => 16, 'reference' => 'COBRO-ORIGINAL']);
         $result = $this->getJson('/collections-test/1/12')->assertOk()->assertJsonPath('data.collection.id', 12);
-        foreach (['purchases' => 60, 'paid' => 20, 'sales' => 50, 'collected' => 20, 'recovery_percent' => 100] as $key => $amount) $this->assertEquals($amount, $result->json('data.summary.'.$key));
+        foreach (['purchases' => 60, 'paid' => 20, 'sales' => 50, 'collected' => 20, 'recovery_percent' => 83.3, 'cash_recovery_percent' => 100] as $key => $amount) $this->assertEquals($amount, $result->json('data.summary.'.$key));
     }
     public function test_each_collection_measures_only_its_own_investment(): void
     {

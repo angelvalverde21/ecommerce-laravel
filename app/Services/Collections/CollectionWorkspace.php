@@ -115,6 +115,16 @@ class CollectionWorkspace
         }, 3);
     }
 
+    private function plannedExpenseCents($owner): ?int
+    {
+        if ($owner instanceof PhotoSession) return $owner->budget !== null ? (int) round((float) $owner->budget * 100) : null;
+        if (!$owner instanceof Manufacture || !Schema::hasColumn('manufacture_variant', 'price')) return null;
+        $lines = $owner->manufactureVariants()->get(['quantity', 'price']);
+        if ($lines->isEmpty() || $lines->contains(fn ($line) => (float) $line->quantity > 0 && $line->price === null)) return null;
+        $cents = $lines->sum(fn ($line) => (int) round((float) $line->quantity * (float) $line->price * 100));
+        return $owner->type === 'production' && $cents === 0 ? null : $cents;
+    }
+
     public function snapshot(Collection $collection): array
     {
         $collection->load('processes.responsible:id,name');
@@ -123,6 +133,7 @@ class CollectionWorkspace
         $selected = collect([$collection]);
         $processes = []; $purchases = []; $productIds = []; $events = []; $paidCents = 0; $costCents = 0;
         $planned = 0; $received = 0; $overdue = 0;
+        $plannedCostCents = 0; $missingPlans = 0;
         $today = now('America/Lima')->toDateString();
         foreach ($selected as $collection) {
             foreach ($collection->processes as $process) {
@@ -152,6 +163,8 @@ class CollectionWorkspace
                 $due = $process->due_on ?: ($owner instanceof PhotoSession ? $owner->getRawOriginal('delivery_date') : $owner->manufacture_end);
                 if ($due && substr($due, 0, 10) < $today && !in_array($status, ['completed', 'archived', 'cancelled'])) $overdue++;
                 $processPaid = 0; $processCost = 0;
+                $plannedExpense = $this->plannedExpenseCents($owner);
+                if ($plannedExpense === null) $missingPlans++;
                 $rows = $owner->purchases()->where('store_id', $collection->store_id)->with(['items.unit', 'supplier.user', 'payments', 'deliveryTracking'])->withCount('attachments')->get();
                 foreach ($rows as $purchase) {
                     $cents = $purchase->items->sum(fn ($item) => (int) round((float) $item->quantity * (float) $item->price * 100));
@@ -165,17 +178,34 @@ class CollectionWorkspace
                     }
                     $paidCents += $purchasePaid; $processPaid += $purchasePaid;
                     $purchases[] = [...$purchase->toArray(), 'process_id' => $process->id, 'process_name' => $owner->name,
-                        'collection_id' => $collection->id, 'collection_name' => $collection->name, 'amount' => $cents / 100, 'paid' => $purchasePaid / 100];
+                        'collection_id' => $collection->id, 'collection_name' => $collection->name, 'amount' => $cents / 100, 'realized_expense' => $cents / 100, 'paid' => $purchasePaid / 100];
                 }
                 if ($owner instanceof Manufacture || $owner instanceof PhotoSession) foreach ($owner->payments()->where('status', 'paid')->get() as $payment) {
                     $amount = (int) round((float) $payment->amount * 100) * ($payment->direction === 'out' ? 1 : -1);
-                    if ($owner instanceof PhotoSession) { $costCents += $amount; $processCost += $amount; }
+                    if ($owner instanceof PhotoSession) {
+                        $source = Schema::hasTable('photo_session_expenses') ? DB::table('photo_session_expenses')->where('photo_session_id', $owner->id)->where('payment_id', $payment->id)->first() : null;
+                        $purchases[] = ['id' => 'payment-'.$payment->id, 'reference' => 'Pago directo #'.$payment->id, 'record_kind' => 'direct_payment',
+                            'purchaseable_type' => 'photo_session', 'photo_source_kind' => $source?->source_kind ?? 'general', 'photo_source_id' => $source?->source_id,
+                            'photo_recipient_name' => $source?->recipient_name ?: ($payment->comment ?: 'Pago de la sesión'),
+                            'purchase_start' => $payment->date ?: $payment->created_at, 'created_at' => $payment->created_at,
+                            'process_id' => $process->id, 'process_name' => $owner->name, 'collection_id' => $collection->id, 'collection_name' => $collection->name,
+                            'amount' => $amount / 100, 'realized_expense' => 0, 'paid' => $amount / 100];
+                    }
                     $paidCents += $amount; $processPaid += $amount;
                     $events[] = ['date' => substr($payment->date ?: $payment->created_at, 0, 10), 'paid' => $amount, 'collected' => 0];
                 }
-                $processes[] = [...$process->toArray(), 'name' => $owner->name, 'status' => $status, 'progress' => $progress, 'due_on' => $due ? substr($due, 0, 10) : null,
+                // Forecast includes incurred purchases and the remaining commitment for this same process.
+                // Never add the full order again once its purchases have been registered.
+                $pendingExpense = max(0, ($plannedExpense ?? 0) - $processCost);
+                $forecastExpense = $processCost + $pendingExpense;
+                $plannedCostCents += $forecastExpense;
+                $processes[] = [...$process->toArray(), 'kind' => $owner instanceof Manufacture ? $owner->type : $process->kind,
+                    'manufacture_type' => $owner instanceof Manufacture ? $owner->type : null,
+                    'name' => $owner->name, 'status' => $status, 'progress' => $progress, 'due_on' => $due ? substr($due, 0, 10) : null,
                     'source_created_at' => ($owner->created_at ?? $process->created_at)?->toISOString(),
                     'collection_name' => $collection->name, 'purchases' => $rows->toArray(), 'purchases_amount' => $processCost / 100,
+                    'expense_estimate' => $plannedExpense === null ? null : $plannedExpense / 100,
+                    'planned_expense' => $forecastExpense / 100, 'pending_expense' => $pendingExpense / 100, 'realized_expense' => $processCost / 100,
                     'paid' => $processPaid / 100, 'stages' => $stages, 'products_count' => count($processProductIds),
                     'owner_type' => match ($process->source_type) { 'manufacture' => 'manufacture', 'photo_session' => 'photo_session', default => 'project_process' },
                     'owner_id' => $owner->id];
@@ -224,9 +254,12 @@ class CollectionWorkspace
             'overview' => $this->overview($collection->store_id, $products->modelKeys(), $costCents),
             'summary' => ['processes' => count($processes), 'completed' => collect($processes)->where('status', 'completed')->count(), 'overdue' => $overdue,
                 'planned_units' => $planned, 'received_units' => $received, 'attributed_units' => $unitsSold,
-                'purchases' => $costCents / 100, 'paid' => $paidCents / 100, 'pending_payment' => max(0, $costCents - $paidCents) / 100,
+                'planned_expense' => $plannedCostCents / 100, 'pending_expense' => ($plannedCostCents - $costCents) / 100, 'planned_expense_missing' => $missingPlans,
+                'realized_expense' => $costCents / 100, 'purchases' => $costCents / 100, 'paid' => $paidCents / 100, 'pending_payment' => max(0, $costCents - $paidCents) / 100,
                 'sales' => $salesCents / 100, 'collected' => $collectedCents / 100, 'cash_balance' => ($collectedCents - $paidCents) / 100,
-                'remaining_recovery' => max(0, $paidCents - $collectedCents) / 100,
-                'recovery_percent' => $paidCents > 0 ? round(100 * $collectedCents / $paidCents, 1) : null]];
+                'cash_remaining_recovery' => max(0, $paidCents - $collectedCents) / 100,
+                'cash_recovery_percent' => $paidCents > 0 ? round(100 * $collectedCents / $paidCents, 1) : null,
+                'remaining_recovery' => max(0, $costCents - $salesCents) / 100,
+                'recovery_percent' => $costCents > 0 ? round(100 * $salesCents / $costCents, 1) : null]];
     }
 }
